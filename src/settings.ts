@@ -20,6 +20,7 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'emphasisMarker',
     'strongMarker',
     'unorderedListMarker',
+    'thematicBreakMarker',
     'normalizeOrderedListNumbering',
     'ensureFinalNewline',
 ];
@@ -48,6 +49,21 @@ export async function registerSettings(): Promise<void> {
             public: true,
             label: 'Normalize ordered list numbering',
             description: 'Renumber ordered lists sequentially, keeping the first item’s number.',
+        },
+        thematicBreakMarker: {
+            value: DEFAULT_OPTIONS.thematicBreakMarker,
+            type: SettingItemType.String,
+            section: SECTION,
+            public: true,
+            isEnum: true,
+            options: {
+                '---': '---',
+                '- - -': '- - -',
+                '***': '***',
+                '* * *': '* * *',
+            },
+            label: 'Horizontal rule marker',
+            description: 'Marker used for horizontal rules.',
         },
         emphasisMarker: {
             value: DEFAULT_OPTIONS.emphasisMarker,

@@ -1,6 +1,7 @@
 import type { Rule } from '../types';
 import { listMarkers } from './listMarkers';
 import { orderedListNumbers } from './orderedListNumbers';
+import { thematicBreaks } from './thematicBreaks';
 import { emphasisStyle } from './emphasisStyle';
 import { listSpacing } from './listSpacing';
 import { listIndentation } from './listIndentation';
@@ -18,6 +19,7 @@ import { finalNewline } from './finalNewline';
 export const rules: Rule[] = [
     listMarkers,
     orderedListNumbers,
+    thematicBreaks,
     emphasisStyle,
     listSpacing,
     listIndentation,

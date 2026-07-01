@@ -7,7 +7,7 @@
 1. Ordered stays
 2. Untouched
 
-***
+* * *
 
 - Already a dash
 - [ ] Task item
