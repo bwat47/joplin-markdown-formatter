@@ -47,7 +47,9 @@ joplin.plugins.register({
             },
         });
 
-        await joplin.views.menuItems.create('formatMarkdownNoteMenuItem', 'formatMarkdownNote', MenuItemLocation.Edit);
+        await joplin.views.menuItems.create('formatMarkdownNoteMenuItem', 'formatMarkdownNote', MenuItemLocation.Edit, {
+            accelerator: 'CmdOrCtrl+Alt+F',
+        });
 
         logger.info('Plugin started.');
     },
