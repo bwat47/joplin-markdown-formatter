@@ -1,0 +1,16 @@
+{
+	"manifest_version": 1,
+	"id": "com.bwat47.joplin-markdown-formatter",
+	"app_min_version": "3.5",
+	"version": "1.0.0",
+	"name": "Markdown Formatter",
+	"description": "",
+	"author": "bwat47",
+	"homepage_url": "https://github.com/bwat47/joplin-markdown-formatter",
+	"repository_url": "https://github.com/bwat47/joplin-markdown-formatter",
+	"keywords": [],
+	"categories": [],
+	"screenshots": [],
+	"icons": {},
+	"promo_tile": {}
+}
