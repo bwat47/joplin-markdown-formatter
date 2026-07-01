@@ -1,10 +1,17 @@
 import joplin from 'api';
-import { MenuItemLocation } from 'api/types';
+import { ContentScriptType, MenuItemLocation } from 'api/types';
+import { EDITOR_CONTENT_SCRIPT_ID, SET_NOTE_TEXT_COMMAND } from './constants';
 import { formatMarkdown } from './formatter';
 import logger from './logger';
 
 joplin.plugins.register({
     onStart: async function () {
+        await joplin.contentScripts.register(
+            ContentScriptType.CodeMirrorPlugin,
+            EDITOR_CONTENT_SCRIPT_ID,
+            './contentScripts/codeMirror.js'
+        );
+
         await joplin.commands.register({
             name: 'formatMarkdownNote',
             label: 'Format Markdown',
@@ -21,7 +28,12 @@ joplin.plugins.register({
                         logger.debug('Note already formatted; no changes.');
                         return;
                     }
-                    await joplin.commands.execute('editor.setText', formatted);
+                    // Replace via the content script so the change is a normal
+                    // CodeMirror transaction (undoable), not an editor reload.
+                    await joplin.commands.execute('editor.execCommand', {
+                        name: SET_NOTE_TEXT_COMMAND,
+                        args: [formatted],
+                    });
                 } catch (error) {
                     logger.error('Formatting failed; note left unchanged.', error);
                 }

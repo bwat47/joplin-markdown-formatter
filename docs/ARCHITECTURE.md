@@ -73,5 +73,13 @@ because the mdast/micromark ecosystem is ESM-only.
 ## Joplin shell
 
 The plugin registers a `formatMarkdownNote` command (Edit menu). It reads the selected note's body, runs
-the pure formatter, and writes back via `joplin.commands.execute('editor.setText', ...)` only when the text
-actually changed (avoids dirtying `updated_time`). Any formatter error aborts the write-back.
+the pure formatter, and writes back only when the text actually changed (avoids dirtying `updated_time`).
+Any formatter error aborts the write-back.
+
+The write-back goes through a CodeMirror 6 content script
+([src/contentScripts/codeMirror.ts](../src/contentScripts/codeMirror.ts)) rather than the built-in
+`editor.setText` command: `setText` reloads the editor content, which wipes the undo history. The content
+script registers a `markdownFormatter__setNoteText` editor command (invoked from the main plugin via
+`editor.execCommand`) that dispatches a normal CodeMirror transaction — undoable with Ctrl+Z — and replaces
+only the changed span (common prefix/suffix trimmed), which also keeps the cursor and scroll position
+stable when the edit is elsewhere in the document.
