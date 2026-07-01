@@ -33,8 +33,9 @@ describe('formatMarkdown fixtures', () => {
             ? JSON.parse(fs.readFileSync(optionsPath, 'utf8'))
             : {};
 
-        const actual = formatMarkdown(input, options);
-        expect(actual).toBe(expected);
-        expect(formatMarkdown(actual, options)).toBe(actual);
+        const result = formatMarkdown(input, options);
+        expect(result.text).toBe(expected);
+        expect(result.skippedRules).toEqual([]);
+        expect(formatMarkdown(result.text, options).text).toBe(result.text);
     });
 });

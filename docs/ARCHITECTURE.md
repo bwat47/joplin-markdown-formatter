@@ -21,10 +21,16 @@ degradation falls out of the architecture rather than needing per-syntax handlin
 ## Pipeline
 
 `formatMarkdown(text, options)` in [src/formatter/pipeline.ts](../src/formatter/pipeline.ts) runs each
-enabled rule as its own **parse → analyze → edit → apply** pass. The text is re-parsed after every rule so
-byte offsets are always valid; notes are small, so repeated parsing is cheap and eliminates cross-rule
-offset-invalidation bugs. Within a rule, `applyEdits` rejects overlapping or out-of-bounds edits by
-throwing — the plugin shell catches and keeps the original note untouched.
+enabled rule as its own **parse → analyze → edit → apply → verify** pass. The text is re-parsed after
+every rule so byte offsets are always valid; notes are small, so repeated parsing is cheap and eliminates
+cross-rule offset-invalidation bugs. Within a rule, `applyEdits` rejects overlapping or out-of-bounds
+edits by throwing — the plugin shell catches and keeps the original note untouched.
+
+**Structural safety check** ([src/formatter/verify.ts](../src/formatter/verify.ts)): every rule's output
+is re-parsed and compared to the tree it started from, after normalizing away the differences rules are
+*allowed* to make (positions, tight/loose `spread`, adjacent bullet lists merged by marker
+normalization). If a rule changed what the document means, its edits are dropped and the rule name is
+reported in `FormatResult.skippedRules` — a rule bug degrades to a logged no-op, never a corrupted note.
 
 ## Layout
 
@@ -48,19 +54,36 @@ src/
 ## Rules
 
 Each rule implements `{ name, isEnabled(options), apply(context): Edit[] }`. Current rules, in execution
-order (content-level normalization first, whitespace cleanup after, final newline last):
+order (content normalization → list structure → layout → whitespace cleanup → final newline):
 
-| Rule                 | Option                  | Behavior                                                     |
-| -------------------- | ----------------------- | ------------------------------------------------------------ |
-| `listMarkers`        | `unorderedListMarker`   | Rewrite unordered bullets (`-`/`*`/`+`) to the configured one |
-| `collapseBlankLines` | `collapseBlankLines`    | Collapse 2+ blank lines to one, outside protected ranges     |
-| `finalNewline`       | `ensureFinalNewline`    | Exactly one trailing newline at EOF                          |
-
-Planned (options already defined in `FormatterOptions`): list spacing (tight/loose/preserve), list
-indentation (tabs/2/4 spaces), emphasis/strong markers, table alignment, ordered-list renumbering.
+| Rule                 | Option                          | Behavior                                                                 |
+| -------------------- | ------------------------------- | ------------------------------------------------------------------------ |
+| `listMarkers`        | `unorderedListMarker`           | Rewrite unordered bullets (`-`/`*`/`+`) to the configured one            |
+| `orderedListNumbers` | `normalizeOrderedListNumbering` | Renumber ordered lists sequentially from the first item's number         |
+| `emphasisStyle`      | `emphasisMarker`/`strongMarker` | Normalize `*`/`_` and `**`/`__` delimiters (intraword-safe)              |
+| `listSpacing`        | `listSpacing`                   | Force lists tight or loose; `preserve` (default) leaves them as written  |
+| `listIndentation`    | `indentation`                   | Tab/2/4-space indent per level before the marker, one space after it     |
+| `alignTables`        | `alignTables`                   | Pad table cells so pipes line up, respecting column alignment            |
+| `collapseBlankLines` | `collapseBlankLines`            | Collapse 2+ blank lines to one, outside protected ranges                 |
+| `finalNewline`       | `ensureFinalNewline`            | Exactly one trailing newline at EOF                                      |
 
 "Protected ranges" (`protectedRanges.ts`) are the source spans of literal-content nodes — fenced/indented
 code, inline code, YAML front matter, HTML blocks. Whitespace-level rules skip anything overlapping them.
+
+### Documented limitations
+
+- Lists inside blockquotes are exempt from `listIndentation` and `listSpacing` (the `>` prefix makes
+  leading-whitespace rewriting ambiguous); marker and numbering normalization still apply there. Tables
+  inside blockquotes are exempt from `alignTables`. Lists inside footnote definitions are not reindented.
+- Table column widths count UTF-16 code units, so CJK/emoji cell content won't align visually.
+- Emphasis conversion toward `_` skips intraword delimiters and delimiters that would merge with adjacent
+  runs — CommonMark forbids or reinterprets those; the nodes are left as written.
+
+## Settings
+
+[src/settings.ts](../src/settings.ts) registers one Joplin settings section whose keys are identical to
+the `FormatterOptions` property names; `loadFormatterOptions()` merges saved values over
+`DEFAULT_OPTIONS`. The command loads settings on every run, so changes apply immediately.
 
 ## Testing
 

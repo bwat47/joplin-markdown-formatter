@@ -2,10 +2,13 @@ import joplin from 'api';
 import { ContentScriptType, MenuItemLocation } from 'api/types';
 import { EDITOR_CONTENT_SCRIPT_ID, SET_NOTE_TEXT_COMMAND } from './constants';
 import { formatMarkdown } from './formatter';
+import { loadFormatterOptions, registerSettings } from './settings';
 import logger from './logger';
 
 joplin.plugins.register({
     onStart: async function () {
+        await registerSettings();
+
         await joplin.contentScripts.register(
             ContentScriptType.CodeMirrorPlugin,
             EDITOR_CONTENT_SCRIPT_ID,
@@ -23,8 +26,12 @@ joplin.plugins.register({
                 }
 
                 try {
-                    const formatted = formatMarkdown(note.body);
-                    if (formatted === note.body) {
+                    const options = await loadFormatterOptions();
+                    const result = formatMarkdown(note.body, options);
+                    if (result.skippedRules.length > 0) {
+                        logger.warn('Rules skipped by the structural safety check:', result.skippedRules.join(', '));
+                    }
+                    if (result.text === note.body) {
                         logger.debug('Note already formatted; no changes.');
                         return;
                     }
@@ -32,7 +39,7 @@ joplin.plugins.register({
                     // CodeMirror transaction (undoable), not an editor reload.
                     await joplin.commands.execute('editor.execCommand', {
                         name: SET_NOTE_TEXT_COMMAND,
-                        args: [formatted],
+                        args: [result.text],
                     });
                 } catch (error) {
                     logger.error('Formatting failed; note left unchanged.', error);
