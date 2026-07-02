@@ -92,13 +92,14 @@ export async function registerSettings(): Promise<void> {
             public: true,
             isEnum: true,
             options: {
+                semantic: 'Semantic (keep tight/loose as authored, fix mixed spacing)',
                 preserve: 'Preserve as written',
                 tight: 'Tight (no blank lines between items)',
                 loose: 'Loose (blank line between items)',
             },
             label: 'List spacing',
             description:
-                'Note: Tightening is skipped for a whole list when any item holds multi-block content (e.g. a second paragraph)',
+                'Semantic keeps each list tight or loose as authored and only makes mixed spacing consistent, so rendering never changes. Note: Tightening is skipped for a whole list when any item holds multi-block content (e.g. a second paragraph)',
         },
         indentation: {
             value: DEFAULT_OPTIONS.indentation,

@@ -20,7 +20,7 @@ understand is left alone.
 - Renumber ordered lists sequentially while preserving the first item's number.
 - Normalize emphasis and bold delimiters.
 - Normalize heading levels so they increase by at most one level at a time.
-- Preserve, tighten (when list doesn't contain block content), or loosen list spacing.
+- Normalize list spacing: semantic (keep each list tight or loose as authored, fixing mixed spacing), preserve, tight, or loose.
 - Normalize nested list indentation with tabs, 2 spaces, or 4 spaces.
 - Normalize Horizontal rule format and spacing above/below.
 - Optionally align GitHub Flavored Markdown tables.
@@ -52,7 +52,7 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Normalize heading level increments | On                  | Lower skipped heading levels so headings increase one level at a time.  |
 | Emphasis (italic) marker           | `*emphasis*`        | Prefer `*` or `_` for emphasis delimiters.                              |
 | Bold marker                        | `**bold**`          | Prefer `**` or `__` for strong delimiters.                              |
-| List spacing                       | Preserve as written | Preserve, tighten, or loosen spacing between list items.                |
+| List spacing                       | Semantic            | Semantic keeps each list tight or loose as authored and only fixes mixed spacing, so rendering never changes. Preserve, tight, and loose are also available. |
 | List indentation                   | Tabs                | Indentation used before nested list markers.                            |
 | Align table columns                | Off                 | Pad table cells so pipes line up.                                       |
 | Ensure blank lines around headings | On                  | Add one blank line before and after headings with neighboring content.  |

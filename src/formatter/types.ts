@@ -9,7 +9,7 @@
 
 import type { Root } from 'mdast';
 
-export type ListSpacing = 'tight' | 'loose' | 'preserve';
+export type ListSpacing = 'semantic' | 'tight' | 'loose' | 'preserve';
 export type Indentation = 'tabs' | 'spaces2' | 'spaces4';
 export type EmphasisMarker = '*' | '_';
 export type StrongMarker = '**' | '__';
@@ -23,7 +23,10 @@ export interface FormatterOptions {
     ensureHeadingBlankLines: boolean;
     /** Lower skipped heading levels so headings increase by at most one level at a time. */
     normalizeHeadingLevels: boolean;
-    /** Force lists tight or loose, or leave their spacing as authored. */
+    /**
+     * Force lists tight or loose, keep each list's authored tight/loose
+     * meaning while fixing mixed spacing (semantic), or leave spacing alone.
+     */
     listSpacing: ListSpacing;
     /** Indentation unit for nested list content. */
     indentation: Indentation;
@@ -47,7 +50,7 @@ export const DEFAULT_OPTIONS: FormatterOptions = {
     collapseBlankLines: true,
     ensureHeadingBlankLines: true,
     normalizeHeadingLevels: true,
-    listSpacing: 'preserve',
+    listSpacing: 'semantic',
     indentation: 'tabs',
     alignTables: false,
     emphasisMarker: '*',
