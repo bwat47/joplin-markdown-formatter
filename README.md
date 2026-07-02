@@ -6,6 +6,8 @@ The formatter is designed for note cleanup rather than wholesale rewriting: it p
 known structures, then applies targeted edits to the original text. Syntax it does not explicitly
 understand is left alone.
 
+![formatting example](./images/format_example.gif)
+
 ## Features
 
 - Normalize unordered list markers to `-` or `*`.
