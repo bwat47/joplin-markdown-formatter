@@ -1,6 +1,8 @@
 import type { Edit, Rule, RuleContext } from '../types';
-import { computeLineStarts, isBlankLine } from '../lines';
+import type { Root } from 'mdast';
+import { computeLineStarts } from '../lines';
 import { getProtectedRanges, intersectsProtectedRange } from '../protectedRanges';
+import { walk } from '../walk';
 
 /**
  * Trim trailing spaces/tabs on each line, except for the two trailing spaces
@@ -16,6 +18,7 @@ export const trimTrailingWhitespace: Rule = {
     apply({ text, tree }: RuleContext): Edit[] {
         const edits: Edit[] = [];
         const protectedRanges = getProtectedRanges(tree);
+        const hardBreakStarts = getHardBreakStarts(tree);
         const lineStarts = computeLineStarts(text);
         const lineEnd = (i: number): number => lineStarts[i + 1] ?? text.length;
 
@@ -34,9 +37,7 @@ export const trimTrailingWhitespace: Rule = {
             const trimEnd = contentEnd;
             if (intersectsProtectedRange(protectedRanges, trimStart, trimEnd)) continue;
 
-            const hasLineEnding = contentEnd < end;
-            const preserveHardBreak =
-                hasLineEnding && !isBlankLine(text, start, end) && trailingWhitespace[0].endsWith('  ');
+            const preserveHardBreak = hardBreakStarts.has(trimStart) && trailingWhitespace[0].endsWith('  ');
             const replacement = preserveHardBreak ? '  ' : '';
             if (text.slice(trimStart, trimEnd) === replacement) continue;
 
@@ -46,3 +47,14 @@ export const trimTrailingWhitespace: Rule = {
         return edits;
     },
 };
+
+function getHardBreakStarts(tree: Root): Set<number> {
+    const starts = new Set<number>();
+    walk(tree, (node) => {
+        if (node.type !== 'break') return;
+        const start = node.position?.start.offset;
+        if (start === undefined) return;
+        starts.add(start);
+    });
+    return starts;
+}

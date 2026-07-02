@@ -20,6 +20,13 @@ describe('trimTrailingWhitespace', () => {
         expect(formatMarkdown(input, options).text).toBe(expected);
     });
 
+    test('trims two spaces that do not parse as hard line breaks', () => {
+        const input = ['# Heading  ', '', 'paragraph  ', '', '| A | B |  ', '| - | - |', '| C | D |'].join('\n');
+        const expected = ['# Heading', '', 'paragraph', '', '| A | B |', '| - | - |', '| C | D |'].join('\n');
+
+        expect(formatMarkdown(input, options).text).toBe(expected);
+    });
+
     test('preserves trailing whitespace inside fenced code blocks', () => {
         const input = ['```txt', 'code   ', '```', '', 'outside   '].join('\n');
         const expected = ['```txt', 'code   ', '```', '', 'outside'].join('\n');
