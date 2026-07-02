@@ -9,8 +9,8 @@
         "lint": "eslint --ext .ts src/",
         "lint:fix": "eslint --ext .ts src/ --fix",
         "format": "prettier --write \"src/**/*.ts\"",
-        "test": "jest --passWithNoTests",
-        "test:watch": "jest --watch"
+        "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+        "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch"
     },
     "license": "MIT",
     "keywords": [
@@ -22,7 +22,9 @@
     "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@types/jest": "^30.0.0",
+        "@types/mdast": "^4.0.4",
         "@types/node": "^25.6.2",
+        "@types/unist": "^3.0.3",
         "@typescript-eslint/eslint-plugin": "^8.62.1",
         "@typescript-eslint/parser": "^8.62.1",
         "chalk": "^4.1.0",
@@ -42,5 +44,12 @@
         "typescript": "^6.0.3",
         "webpack": "^5.108.3",
         "webpack-cli": "^7.1.0"
+    },
+    "dependencies": {
+        "mdast-util-from-markdown": "^2.0.3",
+        "mdast-util-frontmatter": "^2.0.1",
+        "mdast-util-gfm": "^3.1.0",
+        "micromark-extension-frontmatter": "^2.0.0",
+        "micromark-extension-gfm": "^3.0.0"
     }
 }

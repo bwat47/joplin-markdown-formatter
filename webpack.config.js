@@ -24,6 +24,8 @@ const allPossibleCategories = [{'name':'appearance'},{'name':'developer tools'},
 const rootDir = path.resolve(__dirname);
 const userConfigFilename = './plugin.config.json';
 const userConfigPath = path.resolve(rootDir, userConfigFilename);
+const webpackConfigOverrideFilename = './webpack.config.override.js';
+const webpackConfigOverridePath = path.resolve(rootDir, webpackConfigOverrideFilename);
 const distDir = path.resolve(rootDir, 'dist');
 const srcDir = path.resolve(rootDir, 'src');
 const publishDir = path.resolve(rootDir, 'publish');
@@ -343,6 +345,15 @@ const updateVersion = () => {
 	}
 };
 
+function applyWebpackConfigOverride(configs) {
+	if (!fs.pathExistsSync(webpackConfigOverridePath)) return configs;
+
+	const override = require(webpackConfigOverrideFilename);
+	if (typeof override !== 'function') throw new Error(`${webpackConfigOverrideFilename} must export a function`);
+
+	return override(configs, { rootDir, srcDir, distDir, publishDir }) || configs;
+}
+
 function main(environ) {
 	const configName = environ['joplin-plugin-config'];
 	if (!configName) throw new Error('A config file must be specified via the --joplin-plugin-config flag');
@@ -371,6 +382,8 @@ function main(environ) {
 		createArchive: [createArchiveConfig],
 	};
 
+	const resolvedConfigs = applyWebpackConfigOverride(configs);
+
 	// If we are running the first config step, we clean up and create the build
 	// directories.
 	if (configName === 'buildMain') {
@@ -384,7 +397,7 @@ function main(environ) {
 		return [];
 	}
 
-	return configs[configName];
+	return resolvedConfigs[configName];
 }
 
 

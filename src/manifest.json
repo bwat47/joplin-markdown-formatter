@@ -1,16 +1,20 @@
 {
-	"manifest_version": 1,
-	"id": "com.bwat47.joplin-markdown-formatter",
-	"app_min_version": "3.5",
-	"version": "1.0.0",
-	"name": "Markdown Formatter",
-	"description": "",
-	"author": "bwat47",
-	"homepage_url": "https://github.com/bwat47/joplin-markdown-formatter",
-	"repository_url": "https://github.com/bwat47/joplin-markdown-formatter",
-	"keywords": [],
-	"categories": [],
-	"screenshots": [],
-	"icons": {},
-	"promo_tile": {}
+    "manifest_version": 1,
+    "id": "com.bwat47.joplin-markdown-formatter",
+    "app_min_version": "3.5",
+    "version": "1.0.0",
+    "platforms": ["desktop", "mobile"],
+    "name": "Markdown Formatter",
+    "description": "Reformat/Normalize markdown with some configurable settings",
+    "author": "bwat47",
+    "homepage_url": "https://github.com/bwat47/joplin-markdown-formatter",
+    "repository_url": "https://github.com/bwat47/joplin-markdown-formatter",
+    "keywords": ["markdown", "format", "normalize", "formatter"],
+    "categories": ["editor", "productivity"],
+    "screenshots": [],
+    "icons": {},
+    "promo_tile": {
+        "src": "images/markdown-formatter-promo.png",
+        "label": "Markdown Formatter Promo Tile"
+    }
 }
