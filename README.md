@@ -6,9 +6,9 @@
 
 # Markdown Formatter
 
-A Joplin plugin that formats the current note's Markdown with configurable, conservative rules.
+A Joplin plugin that formats the current note's Markdown with some configurable rules.
 
-The formatter is designed for note cleanup rather than wholesale rewriting: it parses Markdown to find
+The plugin parses Markdown to find
 known structures, then applies targeted edits to the original text. Syntax it does not explicitly
 understand is left alone.
 
@@ -31,11 +31,12 @@ understand is left alone.
 
 ## Usage
 
-Install the plugin, open a Markdown note, then run:
+Install the plugin, open a Markdown note, then:
 
 - `Edit -> Format Markdown`
 - `Ctrl+Alt+F` on Windows/Linux
 - `Cmd+Alt+F` on macOS
+- Click `Format Markdown` button in the formatting toolbar
 
 The command formats the currently open note. If the note is already formatted, it does not write the note
 back.
@@ -44,19 +45,19 @@ back.
 
 Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 
-| Setting                          | Default             | Description                                                             |
-| -------------------------------- | ------------------- | ----------------------------------------------------------------------- |
-| Unordered list marker            | `-`                 | Rewrite unordered bullets to dash or asterisk.                          |
-| Normalize ordered list numbering | On                  | Renumber ordered lists sequentially, keeping the first item number.     |
-| Normalize heading level increments | On                  | Lower skipped heading levels so headings increase one level at a time.   |
-| Emphasis (italic) marker         | `*emphasis*`        | Prefer `*` or `_` for emphasis delimiters.                              |
-| Bold marker                      | `**bold**`          | Prefer `**` or `__` for strong delimiters.                              |
-| List spacing                     | Preserve as written | Preserve, tighten, or loosen spacing between list items.                |
-| List indentation                 | Tabs                | Indentation used before nested list markers.                            |
-| Align table columns              | Off                 | Pad table cells so pipes line up.                                       |
-| Ensure blank lines around headings | On                  | Add one blank line before and after headings with neighboring content.   |
-| Collapse consecutive blank lines | On                  | Reduce runs of blank lines to one blank line outside protected content. |
-| Ensure trailing newline          | On                  | End the note with exactly one newline.                                  |
+| Setting                            | Default             | Description                                                             |
+| ---------------------------------- | ------------------- | ----------------------------------------------------------------------- |
+| Unordered list marker              | `-`                 | Rewrite unordered bullets to dash or asterisk.                          |
+| Normalize ordered list numbering   | On                  | Renumber ordered lists sequentially, keeping the first item number.     |
+| Normalize heading level increments | On                  | Lower skipped heading levels so headings increase one level at a time.  |
+| Emphasis (italic) marker           | `*emphasis*`        | Prefer `*` or `_` for emphasis delimiters.                              |
+| Bold marker                        | `**bold**`          | Prefer `**` or `__` for strong delimiters.                              |
+| List spacing                       | Preserve as written | Preserve, tighten, or loosen spacing between list items.                |
+| List indentation                   | Tabs                | Indentation used before nested list markers.                            |
+| Align table columns                | Off                 | Pad table cells so pipes line up.                                       |
+| Ensure blank lines around headings | On                  | Add one blank line before and after headings with neighboring content.  |
+| Collapse consecutive blank lines   | On                  | Reduce runs of blank lines to one blank line outside protected content. |
+| Ensure trailing newline            | On                  | End the note with exactly one newline.                                  |
 
 ## Safety Model
 
