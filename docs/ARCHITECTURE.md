@@ -36,7 +36,7 @@ reported in `FormatResult.skippedRules` — a rule bug degrades to a logged no-o
 
 ```
 src/
-  index.ts                  Joplin plugin shell: command registration, editor.setText write-back
+  index.ts                  Joplin plugin shell: command registration, content-script editor bridge
   logger.ts                 Prefixed console logger
   formatter/                Pure core - no Joplin imports, fully unit-testable
     index.ts                Public surface (formatMarkdown, options types)
@@ -94,16 +94,26 @@ optional `options.json` (partial `FormatterOptions`). The harness (`fixtures.tes
 `edits.test.ts` unit-tests edit application. Jest runs in ESM mode (`NODE_OPTIONS=--experimental-vm-modules`)
 because the mdast/micromark ecosystem is ESM-only.
 
+## Packaging
+
+The generated Joplin webpack scaffold copies non-TypeScript files from `src/` into `dist/`, which is
+useful for real plugin assets such as `manifest.json` and content-script resources. Test-only assets are
+excluded by [webpack.config.override.js](../webpack.config.override.js), which appends ignore patterns for
+fixtures and test files to the generated `CopyPlugin` configuration. The main `webpack.config.js` only
+contains a small hook to load that override so framework updates are easier to re-apply.
+
 ## Joplin shell
 
-The plugin registers a `formatMarkdownNote` command (Edit menu). It reads the selected note's body, runs
-the pure formatter, and writes back only when the text actually changed (avoids dirtying `updated_time`).
-Any formatter error aborts the write-back.
+The plugin registers a `formatMarkdownNote` command (Edit menu). It reads the live CodeMirror editor text
+through the content script, runs the pure formatter, and writes back only when the text actually changed
+(avoids dirtying `updated_time`). Any formatter error aborts the write-back.
 
 The write-back goes through a CodeMirror 6 content script
 ([src/contentScripts/codeMirror.ts](../src/contentScripts/codeMirror.ts)) rather than the built-in
 `editor.setText` command: `setText` reloads the editor content, which wipes the undo history. The content
-script registers a `markdownFormatter__setNoteText` editor command (invoked from the main plugin via
-`editor.execCommand`) that dispatches a normal CodeMirror transaction — undoable with Ctrl+Z — and replaces
-only the changed span (common prefix/suffix trimmed), which also keeps the cursor and scroll position
-stable when the edit is elsewhere in the document.
+script registers `markdownFormatter__getNoteText` and `markdownFormatter__setNoteText` editor commands
+(invoked from the main plugin via `editor.execCommand`). The setter receives the text that was formatted
+plus the replacement text and dispatches only if the editor still matches that source text, avoiding stale
+buffer overwrites if the user types while formatting is in flight. The replacement is a normal CodeMirror
+transaction — undoable with Ctrl+Z — and replaces only the changed span (common prefix/suffix trimmed),
+which also keeps the cursor and scroll position stable when the edit is elsewhere in the document.
