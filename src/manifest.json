@@ -9,7 +9,7 @@
     "author": "bwat47",
     "homepage_url": "https://github.com/bwat47/joplin-markdown-formatter",
     "repository_url": "https://github.com/bwat47/joplin-markdown-formatter",
-    "keywords": ["markdown", "format", "normalize", "formatter"],
+    "keywords": ["markdown", "format", "normalize", "formatter", "prettify"],
     "categories": ["editor", "productivity"],
     "screenshots": [],
     "icons": {},
