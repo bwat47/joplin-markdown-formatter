@@ -35,7 +35,7 @@ Install the plugin, open a Markdown note, then run:
 - `Ctrl+Alt+F` on Windows/Linux
 - `Cmd+Alt+F` on macOS
 
-The command formats the selected note body. If the note is already formatted, it does not write the note
+The command formats the currently open note. If the note is already formatted, it does not write the note
 back.
 
 ## Settings
