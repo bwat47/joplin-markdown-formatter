@@ -13,6 +13,7 @@ understand is left alone.
 - Normalize emphasis and bold delimiters.
 - Preserve, tighten, or loosen list spacing.
 - Normalize nested list indentation with tabs, 2 spaces, or 4 spaces.
+- Normalize Horizontal rule format and spacing above/below.
 - Optionally align GitHub Flavored Markdown tables.
 - Collapse repeated blank lines outside protected content.
 - Ensure the note ends with exactly one trailing newline.
