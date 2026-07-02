@@ -26,6 +26,7 @@ understand is left alone.
 - Optionally align GitHub Flavored Markdown tables.
 - Ensure headings have a blank line before and after neighboring content.
 - Collapse repeated blank lines outside protected content.
+- Trim trailing whitespace outside protected content, preserving two-space hard line breaks.
 - Ensure the note ends with exactly one trailing newline.
 - Apply changes through CodeMirror so formatting is undoable with Joplin's normal undo command.
 
@@ -57,6 +58,7 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Align table columns                | Off                 | Pad table cells so pipes line up.                                       |
 | Ensure blank lines around headings | On                  | Add one blank line before and after headings with neighboring content.  |
 | Collapse consecutive blank lines   | On                  | Reduce runs of blank lines to one blank line outside protected content. |
+| Trim trailing whitespace           | On                  | Remove trailing spaces and tabs outside protected content, preserving two-space hard line breaks. |
 | Ensure trailing newline            | On                  | End the note with exactly one newline.                                  |
 
 ## Safety Model
