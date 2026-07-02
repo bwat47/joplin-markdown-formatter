@@ -1,6 +1,6 @@
 import joplin from 'api';
 import { ContentScriptType, MenuItemLocation } from 'api/types';
-import { EDITOR_CONTENT_SCRIPT_ID, SET_NOTE_TEXT_COMMAND } from './constants';
+import { EDITOR_CONTENT_SCRIPT_ID, GET_NOTE_TEXT_COMMAND, SET_NOTE_TEXT_COMMAND } from './constants';
 import { formatMarkdown } from './formatter';
 import { loadFormatterOptions, registerSettings } from './settings';
 import logger from './logger';
@@ -19,19 +19,21 @@ joplin.plugins.register({
             name: 'formatMarkdownNote',
             label: 'Format Markdown',
             execute: async () => {
-                const note = await joplin.workspace.selectedNote();
-                if (!note) {
-                    logger.debug('No note selected; nothing to format.');
-                    return;
-                }
-
                 try {
+                    const currentText = await joplin.commands.execute('editor.execCommand', {
+                        name: GET_NOTE_TEXT_COMMAND,
+                    });
+                    if (typeof currentText !== 'string') {
+                        logger.warn('Could not read editor text; formatting skipped.');
+                        return;
+                    }
+
                     const options = await loadFormatterOptions();
-                    const result = formatMarkdown(note.body, options);
+                    const result = formatMarkdown(currentText, options);
                     if (result.skippedRules.length > 0) {
                         logger.warn('Rules skipped by the structural safety check:', result.skippedRules.join(', '));
                     }
-                    if (result.text === note.body) {
+                    if (result.text === currentText) {
                         logger.debug('Note already formatted; no changes.');
                         return;
                     }
@@ -39,7 +41,7 @@ joplin.plugins.register({
                     // CodeMirror transaction (undoable), not an editor reload.
                     await joplin.commands.execute('editor.execCommand', {
                         name: SET_NOTE_TEXT_COMMAND,
-                        args: [result.text],
+                        args: [currentText, result.text],
                     });
                 } catch (error) {
                     logger.error('Formatting failed; note left unchanged.', error);

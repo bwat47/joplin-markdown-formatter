@@ -1,14 +1,15 @@
 /**
  * CodeMirror 6 content script.
  *
- * Registers an editor command that replaces the note text through a normal
- * CodeMirror transaction, so the change lands in the editor's undo history —
- * unlike the built-in `editor.setText`, which reloads the content and cannot
- * be undone. Only the changed span is replaced, which also keeps the cursor
- * and scroll position stable whenever the edit is elsewhere in the document.
+ * Registers editor commands that read and replace the live note text. Replacing
+ * goes through a normal CodeMirror transaction, so the change lands in the
+ * editor's undo history — unlike the built-in `editor.setText`, which reloads
+ * the content and cannot be undone. Only the changed span is replaced, which
+ * also keeps the cursor and scroll position stable whenever the edit is
+ * elsewhere in the document.
  */
 
-import { SET_NOTE_TEXT_COMMAND } from '../constants';
+import { GET_NOTE_TEXT_COMMAND, SET_NOTE_TEXT_COMMAND } from '../constants';
 
 interface EditorViewLike {
     state: { doc: { toString(): string; length: number } };
@@ -48,10 +49,15 @@ export default () => {
             // The legacy CodeMirror 5 editor passes a different wrapper; skip it.
             if (!codeMirror.cm6 || !codeMirror.editor || !codeMirror.registerCommand) return;
 
-            codeMirror.registerCommand(SET_NOTE_TEXT_COMMAND, (newText: unknown) => {
-                if (typeof newText !== 'string') return;
+            codeMirror.registerCommand(GET_NOTE_TEXT_COMMAND, () => {
+                return codeMirror.editor?.state.doc.toString();
+            });
+
+            codeMirror.registerCommand(SET_NOTE_TEXT_COMMAND, (expectedText: unknown, newText: unknown) => {
+                if (typeof expectedText !== 'string' || typeof newText !== 'string') return;
                 const view = codeMirror.editor as EditorViewLike;
                 const currentText = view.state.doc.toString();
+                if (currentText !== expectedText) return;
                 if (newText === currentText) return;
                 view.dispatch({ changes: computeMinimalChange(currentText, newText) });
             });
