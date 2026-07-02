@@ -15,6 +15,7 @@ const SECTION = 'markdownFormatter';
 const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'collapseBlankLines',
     'ensureHeadingBlankLines',
+    'normalizeHeadingLevels',
     'listSpacing',
     'indentation',
     'alignTables',
@@ -124,6 +125,14 @@ export async function registerSettings(): Promise<void> {
             public: true,
             label: 'Ensure blank lines around headings',
             description: 'Add one blank line before and after headings when neighboring content exists.',
+        },
+        normalizeHeadingLevels: {
+            value: DEFAULT_OPTIONS.normalizeHeadingLevels,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Normalize heading level increments',
+            description: 'Lower skipped heading levels so headings increase by at most one level at a time.',
         },
         collapseBlankLines: {
             value: DEFAULT_OPTIONS.collapseBlankLines,

@@ -65,6 +65,7 @@ order (content normalization → list structure → layout → whitespace cleanu
 | `listSpacing`        | `listSpacing`                   | Force lists tight or loose; `preserve` (default) leaves them as written  |
 | `listIndentation`    | `indentation`                   | Tab/2/4-space indent per level before the marker, one space after it     |
 | `alignTables`        | `alignTables`                   | Pad table cells so pipes line up, respecting column alignment            |
+| `headingLevels`      | `normalizeHeadingLevels`        | Lower skipped heading levels so headings increase by at most one level   |
 | `headingSpacing`     | `ensureHeadingBlankLines`       | Ensure headings have one blank line before and after them                |
 | `collapseBlankLines` | `collapseBlankLines`            | Collapse 2+ blank lines to one, outside protected ranges                 |
 | `finalNewline`       | `ensureFinalNewline`            | Exactly one trailing newline at EOF                                      |
