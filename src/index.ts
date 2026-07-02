@@ -1,5 +1,5 @@
 import joplin from 'api';
-import { ContentScriptType, MenuItemLocation } from 'api/types';
+import { ContentScriptType, MenuItemLocation, ToolbarButtonLocation } from 'api/types';
 import { EDITOR_CONTENT_SCRIPT_ID, GET_NOTE_TEXT_COMMAND, SET_NOTE_TEXT_COMMAND } from './constants';
 import { formatMarkdown } from './formatter';
 import { loadFormatterOptions, registerSettings } from './settings';
@@ -18,6 +18,7 @@ joplin.plugins.register({
         await joplin.commands.register({
             name: 'formatMarkdownNote',
             label: 'Format Markdown',
+            iconName: 'fas fa-align-left',
             execute: async () => {
                 try {
                     const currentText = await joplin.commands.execute('editor.execCommand', {
@@ -52,6 +53,11 @@ joplin.plugins.register({
         await joplin.views.menuItems.create('formatMarkdownNoteMenuItem', 'formatMarkdownNote', MenuItemLocation.Edit, {
             accelerator: 'CmdOrCtrl+Alt+F',
         });
+        await joplin.views.toolbarButtons.create(
+            'formatMarkdownNoteToolbarButton',
+            'formatMarkdownNote',
+            ToolbarButtonLocation.EditorToolbar
+        );
 
         logger.info('Plugin started.');
     },
