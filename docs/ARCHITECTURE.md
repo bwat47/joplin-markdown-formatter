@@ -68,6 +68,7 @@ order (content normalization → list structure → layout → whitespace cleanu
 | `headingLevels`      | `normalizeHeadingLevels`        | Lower skipped heading levels so headings increase by at most one level   |
 | `headingSpacing`     | `ensureHeadingBlankLines`       | Ensure headings have one blank line before and after them                |
 | `collapseBlankLines` | `collapseBlankLines`            | Collapse 2+ blank lines to one, outside protected ranges                 |
+| `trimTrailingWhitespace` | `trimTrailingWhitespace`    | Trim trailing spaces/tabs outside protected ranges, preserving two-space hard breaks |
 | `finalNewline`       | `ensureFinalNewline`            | Exactly one trailing newline at EOF                                      |
 
 "Protected ranges" (`protectedRanges.ts`) are the source spans of literal-content nodes — fenced/indented

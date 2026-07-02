@@ -14,6 +14,7 @@ const SECTION = 'markdownFormatter';
 
 const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'collapseBlankLines',
+    'trimTrailingWhitespace',
     'ensureHeadingBlankLines',
     'normalizeHeadingLevels',
     'listSpacing',
@@ -142,6 +143,15 @@ export async function registerSettings(): Promise<void> {
             public: true,
             label: 'Collapse consecutive blank lines',
             description: 'Reduce runs of blank lines to a single blank line (outside code blocks).',
+        },
+        trimTrailingWhitespace: {
+            value: DEFAULT_OPTIONS.trimTrailingWhitespace,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Trim trailing whitespace',
+            description:
+                'Remove trailing spaces and tabs outside protected content, preserving two-space hard line breaks.',
         },
         ensureFinalNewline: {
             value: DEFAULT_OPTIONS.ensureFinalNewline,
