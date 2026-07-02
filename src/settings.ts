@@ -95,6 +95,8 @@ export async function registerSettings(): Promise<void> {
                 loose: 'Loose (blank line between items)',
             },
             label: 'List spacing',
+            description:
+                'Note: Tightening is skipped for a whole list when any item holds multi-block content (e.g. a second paragraph)',
         },
         indentation: {
             value: DEFAULT_OPTIONS.indentation,

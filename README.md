@@ -13,7 +13,7 @@ understand is left alone.
 - Normalize unordered list markers to `-` or `*`.
 - Renumber ordered lists sequentially while preserving the first item's number.
 - Normalize emphasis and bold delimiters.
-- Preserve, tighten, or loosen list spacing.
+- Preserve, tighten (when list doesn't contain block content), or loosen list spacing.
 - Normalize nested list indentation with tabs, 2 spaces, or 4 spaces.
 - Normalize Horizontal rule format and spacing above/below.
 - Optionally align GitHub Flavored Markdown tables.
