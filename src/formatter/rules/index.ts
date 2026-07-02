@@ -6,6 +6,8 @@ import { emphasisStyle } from './emphasisStyle';
 import { listSpacing } from './listSpacing';
 import { listIndentation } from './listIndentation';
 import { alignTables } from './alignTables';
+import { headingLevels } from './headingLevels';
+import { headingSpacing } from './headingSpacing';
 import { collapseBlankLines } from './collapseBlankLines';
 import { finalNewline } from './finalNewline';
 
@@ -24,6 +26,8 @@ export const rules: Rule[] = [
     listSpacing,
     listIndentation,
     alignTables,
+    headingLevels,
+    headingSpacing,
     collapseBlankLines,
     finalNewline,
 ];

@@ -16,6 +16,10 @@ describe('isStructurallyEqual', () => {
         expect(equal('- a\n- b\n', '- a\n\n- b\n')).toBe(true);
     });
 
+    test('heading depth normalization is ignored', () => {
+        expect(equal('# a\n\n#### b\n', '# a\n\n## b\n')).toBe(true);
+    });
+
     test('adjacent bullet lists merged by marker normalization are equal', () => {
         expect(equal('* a\n\n- b\n', '- a\n- b\n')).toBe(true);
     });

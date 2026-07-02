@@ -19,6 +19,10 @@ export type ThematicBreakMarker = '---' | '- - -' | '***' | '* * *';
 export interface FormatterOptions {
     /** Collapse runs of 2+ blank lines (outside code/front matter/HTML) to a single blank line. */
     collapseBlankLines: boolean;
+    /** Ensure headings have one blank line before and after neighboring content. */
+    ensureHeadingBlankLines: boolean;
+    /** Lower skipped heading levels so headings increase by at most one level at a time. */
+    normalizeHeadingLevels: boolean;
     /** Force lists tight or loose, or leave their spacing as authored. */
     listSpacing: ListSpacing;
     /** Indentation unit for nested list content. */
@@ -41,6 +45,8 @@ export interface FormatterOptions {
 
 export const DEFAULT_OPTIONS: FormatterOptions = {
     collapseBlankLines: true,
+    ensureHeadingBlankLines: true,
+    normalizeHeadingLevels: true,
     listSpacing: 'preserve',
     indentation: 'tabs',
     alignTables: false,
