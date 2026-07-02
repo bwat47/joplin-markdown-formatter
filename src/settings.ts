@@ -14,6 +14,7 @@ const SECTION = 'markdownFormatter';
 
 const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'collapseBlankLines',
+    'ensureHeadingBlankLines',
     'listSpacing',
     'indentation',
     'alignTables',
@@ -115,6 +116,14 @@ export async function registerSettings(): Promise<void> {
             public: true,
             label: 'Align table columns',
             description: 'Pad table cells so the pipes line up.',
+        },
+        ensureHeadingBlankLines: {
+            value: DEFAULT_OPTIONS.ensureHeadingBlankLines,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Ensure blank lines around headings',
+            description: 'Add one blank line before and after headings when neighboring content exists.',
         },
         collapseBlankLines: {
             value: DEFAULT_OPTIONS.collapseBlankLines,
