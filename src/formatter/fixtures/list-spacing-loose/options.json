@@ -1,3 +1,4 @@
 {
-    "listSpacing": "loose"
+    "listSpacing": "loose",
+    "indentation": "spaces4"
 }

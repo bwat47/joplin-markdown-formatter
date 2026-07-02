@@ -49,6 +49,15 @@ export const listSpacing: Rule = {
             return false;
         };
 
+        const insertedLineStarts = new Set<number>();
+        const ensureBlankLineBetween = (fromOffset: number, toOffset: number): void => {
+            if (hasBlankLineBetween(fromOffset, toOffset)) return;
+            const nextLineStart = lineStarts[lineIndexOfOffset(lineStarts, toOffset)];
+            if (insertedLineStarts.has(nextLineStart)) return;
+            insertedLineStarts.add(nextLineStart);
+            edits.push({ start: nextLineStart, end: nextLineStart, replacement: '\n' });
+        };
+
         walkWithAncestors(tree, (node: Node, ancestors: Node[]) => {
             if (node.type !== 'list') return;
             if (ancestors.some((ancestor) => ancestor.type === 'blockquote')) return;
@@ -77,14 +86,20 @@ export const listSpacing: Rule = {
                     if (from !== undefined && to !== undefined) removeBlankLinesBetween(from, to);
                 }
             } else {
-                // loose: ensure one blank line between consecutive items.
+                // loose: ensure one blank line between an item's own blocks
+                // and between consecutive items.
+                for (const item of items) {
+                    for (let i = 0; i < item.children.length - 1; i++) {
+                        const from = item.children[i].position?.end?.offset;
+                        const to = item.children[i + 1].position?.start?.offset;
+                        if (from !== undefined && to !== undefined) ensureBlankLineBetween(from, to);
+                    }
+                }
                 for (let i = 0; i < items.length - 1; i++) {
                     const from = items[i].position?.end?.offset;
                     const to = items[i + 1].position?.start?.offset;
                     if (from === undefined || to === undefined) continue;
-                    if (hasBlankLineBetween(from, to)) continue;
-                    const nextLineStart = lineStarts[lineIndexOfOffset(lineStarts, to)];
-                    edits.push({ start: nextLineStart, end: nextLineStart, replacement: '\n' });
+                    ensureBlankLineBetween(from, to);
                 }
             }
         });
