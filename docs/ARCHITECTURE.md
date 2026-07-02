@@ -62,7 +62,7 @@ order (content normalization → list structure → layout → whitespace cleanu
 | `orderedListNumbers` | `normalizeOrderedListNumbering` | Renumber ordered lists sequentially from the first item's number         |
 | `thematicBreaks`     | `thematicBreakMarker`           | Rewrite horizontal rules to the configured marker with one blank line around them |
 | `emphasisStyle`      | `emphasisMarker`/`strongMarker` | Normalize `*`/`_` and `**`/`__` delimiters (intraword-safe)              |
-| `listSpacing`        | `listSpacing`                   | Force lists tight or loose; `preserve` (default) leaves them as written  |
+| `listSpacing`        | `listSpacing`                   | Force lists tight or loose; `semantic` (default) keeps each list's authored tight/loose meaning, only fixing mixed spacing; `preserve` leaves lists as written |
 | `listIndentation`    | `indentation`                   | Tab/2/4-space indent per level before the marker, one space after it     |
 | `alignTables`        | `alignTables`                   | Pad table cells so pipes line up, respecting column alignment            |
 | `headingLevels`      | `normalizeHeadingLevels`        | Lower skipped heading levels so headings increase by at most one level   |

@@ -9,6 +9,12 @@ import { computeLineStarts, isBlankLine, lineIndexOfOffset } from '../lines';
  * between items). Each list node is handled independently, so nested lists
  * are normalized too.
  *
+ * Semantic mode keeps each list's authored meaning: per CommonMark a list is
+ * loose when any blank line separates two items or two blocks within an item,
+ * and it then renders loose everywhere. So a loose list with mixed spacing is
+ * made consistently loose, and a tight list is left untouched — no edit ever
+ * changes how the list renders.
+ *
  * Tightening is skipped for a whole list when any item holds multi-block
  * content (e.g. a second paragraph) — such content needs its blank lines and
  * the list renders loose regardless. A trailing nested list inside an item
@@ -58,11 +64,35 @@ export const listSpacing: Rule = {
             edits.push({ start: nextLineStart, end: nextLineStart, replacement: '\n' });
         };
 
+        /**
+         * CommonMark looseness, read from the text itself: a blank line
+         * between two items or between two blocks within an item.
+         */
+        const isLooseList = (items: ListItem[]): boolean => {
+            for (const item of items) {
+                for (let i = 0; i < item.children.length - 1; i++) {
+                    const from = item.children[i].position?.end?.offset;
+                    const to = item.children[i + 1].position?.start?.offset;
+                    if (from !== undefined && to !== undefined && hasBlankLineBetween(from, to)) return true;
+                }
+            }
+            for (let i = 0; i < items.length - 1; i++) {
+                const from = items[i].position?.end?.offset;
+                const to = items[i + 1].position?.start?.offset;
+                if (from !== undefined && to !== undefined && hasBlankLineBetween(from, to)) return true;
+            }
+            return false;
+        };
+
         walkWithAncestors(tree, (node: Node, ancestors: Node[]) => {
             if (node.type !== 'list') return;
             if (ancestors.some((ancestor) => ancestor.type === 'blockquote')) return;
             const list = node as List;
             const items = list.children;
+
+            // Semantic: tight lists have no blank lines to remove, so only
+            // loose lists need work — make their spacing consistently loose.
+            if (options.listSpacing === 'semantic' && !isLooseList(items)) return;
 
             if (options.listSpacing === 'tight') {
                 // An item with block content after its first child (other than a
