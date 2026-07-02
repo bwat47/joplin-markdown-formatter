@@ -1,3 +1,9 @@
+> [!NOTE]
+> This plugin was created entirely with AI tools.
+
+> [!NOTE]
+> This plugin only works in the Markdown editor.
+
 # Markdown Formatter
 
 A Joplin plugin that formats the current note's Markdown with configurable, conservative rules.
