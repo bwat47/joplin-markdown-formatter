@@ -9,13 +9,13 @@ The formatter never re-prints the document from an AST (the Prettier / remark-st
 follows the ESLint-fixer model:
 
 1. Parse the markdown to an mdast tree **with source positions** (`mdast-util-from-markdown` + GFM +
-   front matter extensions — matching Joplin's dialect).
+   front matter + math extensions, with ambiguous single-dollar inline math disabled).
 2. Each rule uses the tree only to *locate* things, then emits targeted string edits
    (`{ start, end, replacement }`) against the original source text.
 3. Edits are validated (in-bounds, non-overlapping) and applied.
 
 Bytes no rule explicitly touches survive verbatim. Syntax the parser doesn't recognize (`==highlight==`,
-plugin syntax, raw HTML, math) parses as plain text/paragraph nodes and passes through untouched — graceful
+plugin syntax, raw HTML) parses as plain text/paragraph nodes and passes through untouched — graceful
 degradation falls out of the architecture rather than needing per-syntax handling.
 
 ## Pipeline
@@ -68,6 +68,7 @@ order (content normalization → list structure → layout → whitespace cleanu
 | `headingLevels`      | `normalizeHeadingLevels`        | Lower skipped heading levels so headings increase by at most one level   |
 | `headingSpacing`     | `ensureHeadingBlankLines`       | Ensure headings have one blank line before and after them                |
 | `codeBlockSpacing`   | `ensureCodeBlockBlankLines`     | Ensure code blocks have one blank line before and after them             |
+| `mathBlockSpacing`   | `ensureMathBlockBlankLines`     | Ensure math blocks have one blank line before and after them             |
 | `tableSpacing`       | `ensureTableBlankLines`         | Ensure tables have one blank line before and after them                  |
 | `blockquoteSpacing`  | `ensureBlockquoteBlankLines`    | Ensure blockquotes have one blank line before and after them; quote interiors are never touched |
 | `frontmatterSpacing` | `ensureFrontmatterBlankLine`    | Ensure YAML front matter has one blank line before following content     |
@@ -76,14 +77,14 @@ order (content normalization → list structure → layout → whitespace cleanu
 | `finalNewline`       | `ensureFinalNewline`            | Exactly one trailing newline at EOF                                      |
 
 "Protected ranges" (`protectedRanges.ts`) are the source spans of literal-content nodes — code blocks,
-inline code, YAML front matter, HTML blocks. Whitespace-level rules skip anything overlapping them.
+inline code, YAML front matter, HTML blocks, and math. Whitespace-level rules skip anything overlapping them.
 
 ### Documented limitations
 
 - Lists inside blockquotes are exempt from `listIndentation` and `listSpacing` (the `>` prefix makes
   leading-whitespace rewriting ambiguous); marker and numbering normalization still apply there. Tables
-  inside blockquotes are exempt from `alignTables`. Heading, code-block, table, and blockquote spacing are
-  also skipped inside blockquotes, where ordinary blank lines would split the quote. `blockquoteSpacing`
+  inside blockquotes are exempt from `alignTables`. Heading, code-block, math-block, table, and blockquote
+  spacing are also skipped inside blockquotes, where ordinary blank lines would split the quote. `blockquoteSpacing`
   only spaces a quote's outer boundaries: nesting changes inside a quote (e.g. `>` jumping to `>>>`) and
   lazy continuation lines belong to the same blockquote node, and rewriting them would change rendering.
   Lists inside footnote definitions are not reindented.
