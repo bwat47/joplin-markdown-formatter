@@ -8,6 +8,7 @@ import { listIndentation } from './listIndentation';
 import { alignTables } from './alignTables';
 import { headingLevels } from './headingLevels';
 import { headingSpacing } from './headingSpacing';
+import { codeBlockSpacing } from './codeBlockSpacing';
 import { collapseBlankLines } from './collapseBlankLines';
 import { trimTrailingWhitespace } from './trimTrailingWhitespace';
 import { finalNewline } from './finalNewline';
@@ -29,6 +30,7 @@ export const rules: Rule[] = [
     alignTables,
     headingLevels,
     headingSpacing,
+    codeBlockSpacing,
     collapseBlankLines,
     trimTrailingWhitespace,
     finalNewline,

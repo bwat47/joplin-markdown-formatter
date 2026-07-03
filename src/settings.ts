@@ -17,6 +17,7 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'collapseBlankLines',
     'trimTrailingWhitespace',
     'ensureHeadingBlankLines',
+    'ensureCodeBlockBlankLines',
     'normalizeHeadingLevels',
     'listSpacing',
     'indentation',
@@ -128,6 +129,14 @@ export async function registerSettings(): Promise<void> {
             public: true,
             label: 'Ensure blank lines around headings',
             description: 'Add one blank line before and after headings when neighboring content exists.',
+        },
+        ensureCodeBlockBlankLines: {
+            value: DEFAULT_OPTIONS.ensureCodeBlockBlankLines,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Ensure blank lines around code blocks',
+            description: 'Add one blank line before and after code blocks when neighboring content exists.',
         },
         normalizeHeadingLevels: {
             value: DEFAULT_OPTIONS.normalizeHeadingLevels,
