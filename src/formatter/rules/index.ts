@@ -10,6 +10,7 @@ import { headingLevels } from './headingLevels';
 import { headingSpacing } from './headingSpacing';
 import { codeBlockSpacing } from './codeBlockSpacing';
 import { tableSpacing } from './tableSpacing';
+import { blockquoteSpacing } from './blockquoteSpacing';
 import { collapseBlankLines } from './collapseBlankLines';
 import { trimTrailingWhitespace } from './trimTrailingWhitespace';
 import { finalNewline } from './finalNewline';
@@ -33,6 +34,7 @@ export const rules: Rule[] = [
     headingSpacing,
     codeBlockSpacing,
     tableSpacing,
+    blockquoteSpacing,
     collapseBlankLines,
     trimTrailingWhitespace,
     finalNewline,

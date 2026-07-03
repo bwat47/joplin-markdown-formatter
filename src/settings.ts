@@ -19,6 +19,7 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'ensureHeadingBlankLines',
     'ensureCodeBlockBlankLines',
     'ensureTableBlankLines',
+    'ensureBlockquoteBlankLines',
     'normalizeHeadingLevels',
     'listSpacing',
     'indentation',
@@ -146,6 +147,14 @@ export async function registerSettings(): Promise<void> {
             public: true,
             label: 'Ensure blank lines around tables',
             description: 'Add one blank line before and after tables when neighboring content exists.',
+        },
+        ensureBlockquoteBlankLines: {
+            value: DEFAULT_OPTIONS.ensureBlockquoteBlankLines,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Ensure blank lines around blockquotes',
+            description: 'Add one blank line before and after blockquotes when neighboring content exists.',
         },
         normalizeHeadingLevels: {
             value: DEFAULT_OPTIONS.normalizeHeadingLevels,

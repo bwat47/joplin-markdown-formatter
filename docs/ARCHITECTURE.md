@@ -69,6 +69,7 @@ order (content normalization → list structure → layout → whitespace cleanu
 | `headingSpacing`     | `ensureHeadingBlankLines`       | Ensure headings have one blank line before and after them                |
 | `codeBlockSpacing`   | `ensureCodeBlockBlankLines`     | Ensure code blocks have one blank line before and after them             |
 | `tableSpacing`       | `ensureTableBlankLines`         | Ensure tables have one blank line before and after them                  |
+| `blockquoteSpacing`  | `ensureBlockquoteBlankLines`    | Ensure blockquotes have one blank line before and after them; quote interiors are never touched |
 | `collapseBlankLines` | `collapseBlankLines`            | Collapse 2+ blank lines to one, outside protected ranges                 |
 | `trimTrailingWhitespace` | `trimTrailingWhitespace`    | Trim trailing spaces/tabs outside protected ranges, preserving two-space hard breaks |
 | `finalNewline`       | `ensureFinalNewline`            | Exactly one trailing newline at EOF                                      |
@@ -80,9 +81,11 @@ inline code, YAML front matter, HTML blocks. Whitespace-level rules skip anythin
 
 - Lists inside blockquotes are exempt from `listIndentation` and `listSpacing` (the `>` prefix makes
   leading-whitespace rewriting ambiguous); marker and numbering normalization still apply there. Tables
-  inside blockquotes are exempt from `alignTables`. Heading, code-block, and table spacing are also skipped
-  inside blockquotes, where ordinary blank lines would split the quote. Lists inside footnote definitions are not
-  reindented.
+  inside blockquotes are exempt from `alignTables`. Heading, code-block, table, and blockquote spacing are
+  also skipped inside blockquotes, where ordinary blank lines would split the quote. `blockquoteSpacing`
+  only spaces a quote's outer boundaries: nesting changes inside a quote (e.g. `>` jumping to `>>>`) and
+  lazy continuation lines belong to the same blockquote node, and rewriting them would change rendering.
+  Lists inside footnote definitions are not reindented.
 - Table column widths count UTF-16 code units, so CJK/emoji cell content won't align visually.
 - Emphasis conversion toward `_` skips intraword delimiters and delimiters that would merge with adjacent
   runs — CommonMark forbids or reinterprets those; the nodes are left as written.
