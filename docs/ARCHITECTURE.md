@@ -70,6 +70,7 @@ order (content normalization → list structure → layout → whitespace cleanu
 | `codeBlockSpacing`   | `ensureCodeBlockBlankLines`     | Ensure code blocks have one blank line before and after them             |
 | `tableSpacing`       | `ensureTableBlankLines`         | Ensure tables have one blank line before and after them                  |
 | `blockquoteSpacing`  | `ensureBlockquoteBlankLines`    | Ensure blockquotes have one blank line before and after them; quote interiors are never touched |
+| `frontmatterSpacing` | `ensureFrontmatterBlankLine`    | Ensure YAML front matter has one blank line before following content     |
 | `collapseBlankLines` | `collapseBlankLines`            | Collapse 2+ blank lines to one, outside protected ranges                 |
 | `trimTrailingWhitespace` | `trimTrailingWhitespace`    | Trim trailing spaces/tabs outside protected ranges, preserving two-space hard breaks |
 | `finalNewline`       | `ensureFinalNewline`            | Exactly one trailing newline at EOF                                      |

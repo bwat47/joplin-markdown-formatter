@@ -20,6 +20,7 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'ensureCodeBlockBlankLines',
     'ensureTableBlankLines',
     'ensureBlockquoteBlankLines',
+    'ensureFrontmatterBlankLine',
     'normalizeHeadingLevels',
     'listSpacing',
     'indentation',
@@ -155,6 +156,14 @@ export async function registerSettings(): Promise<void> {
             public: true,
             label: 'Ensure blank lines around blockquotes',
             description: 'Add one blank line before and after blockquotes when neighboring content exists.',
+        },
+        ensureFrontmatterBlankLine: {
+            value: DEFAULT_OPTIONS.ensureFrontmatterBlankLine,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Ensure blank line after front matter',
+            description: 'Add one blank line between YAML front matter and following content.',
         },
         normalizeHeadingLevels: {
             value: DEFAULT_OPTIONS.normalizeHeadingLevels,
