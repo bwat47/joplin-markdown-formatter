@@ -9,7 +9,7 @@ The formatter never re-prints the document from an AST (the Prettier / remark-st
 follows the ESLint-fixer model:
 
 1. Parse the markdown to an mdast tree **with source positions** (`mdast-util-from-markdown` + GFM +
-   front matter + math extensions — matching Joplin's dialect).
+   front matter + math extensions, with ambiguous single-dollar inline math disabled).
 2. Each rule uses the tree only to *locate* things, then emits targeted string edits
    (`{ start, end, replacement }`) against the original source text.
 3. Edits are validated (in-bounds, non-overlapping) and applied.

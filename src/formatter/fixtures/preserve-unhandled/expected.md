@@ -16,8 +16,4 @@ A footnote reference[^1] and a table:
 |---|---|
 | 1 | 2 |
 
-$$
-E = mc^2
-$$
-
 [^1]: Footnote definition.
