@@ -119,5 +119,5 @@ script registers `markdownFormatter__getNoteText` and `markdownFormatter__setNot
 (invoked from the main plugin via `editor.execCommand`). The setter receives the text that was formatted
 plus the replacement text and dispatches only if the editor still matches that source text, avoiding stale
 buffer overwrites if the user types while formatting is in flight. The replacement is a normal CodeMirror
-transaction — undoable with Ctrl+Z — and replaces only the changed span (common prefix/suffix trimmed),
-which also keeps the cursor and scroll position stable when the edit is elsewhere in the document.
+transaction — undoable with Ctrl+Z — and uses `diff-match-patch-es` to replace only the changed spans in a
+single dispatch, which also keeps the cursor and scroll position anchored to unchanged text.
