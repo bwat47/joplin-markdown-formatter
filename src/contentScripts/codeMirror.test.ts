@@ -92,8 +92,9 @@ describe('CodeMirror content script commands', () => {
     test('SET_NOTE_TEXT_COMMAND replaces text when the expected text still matches', () => {
         const { commands, dispatch, getText } = registerCommands('* item\ntail');
 
-        commands.get(SET_NOTE_TEXT_COMMAND)?.('* item\ntail', '- item\ntail');
+        const result = commands.get(SET_NOTE_TEXT_COMMAND)?.('* item\ntail', '- item\ntail');
 
+        expect(result).toBe(true);
         expect(getText()).toBe('- item\ntail');
         expect(dispatch).toHaveBeenCalledTimes(1);
     });
@@ -101,8 +102,9 @@ describe('CodeMirror content script commands', () => {
     test('SET_NOTE_TEXT_COMMAND does not dispatch when the editor changed after formatting started', () => {
         const { commands, dispatch, getText } = registerCommands('user changed text');
 
-        commands.get(SET_NOTE_TEXT_COMMAND)?.('stale text', 'formatted stale text');
+        const result = commands.get(SET_NOTE_TEXT_COMMAND)?.('stale text', 'formatted stale text');
 
+        expect(result).toBe(false);
         expect(getText()).toBe('user changed text');
         expect(dispatch).not.toHaveBeenCalled();
     });

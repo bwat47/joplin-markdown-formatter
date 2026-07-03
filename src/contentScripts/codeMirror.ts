@@ -79,12 +79,13 @@ export default () => {
             });
 
             codeMirror.registerCommand(SET_NOTE_TEXT_COMMAND, (expectedText: unknown, newText: unknown) => {
-                if (typeof expectedText !== 'string' || typeof newText !== 'string') return;
+                if (typeof expectedText !== 'string' || typeof newText !== 'string') return false;
                 const view = codeMirror.editor as EditorViewLike;
                 const currentText = view.state.doc.toString();
-                if (currentText !== expectedText) return;
-                if (newText === currentText) return;
+                if (currentText !== expectedText) return false;
+                if (newText === currentText) return false;
                 view.dispatch({ changes: computeChanges(currentText, newText) });
+                return true;
             });
         },
     };

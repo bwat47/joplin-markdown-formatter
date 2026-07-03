@@ -1,8 +1,8 @@
 /**
  * Joplin settings registration and typed access.
  *
- * Setting keys are identical to the FormatterOptions property names so
- * loading is a straight copy with no mapping table to keep in sync.
+ * Formatter setting keys are identical to the FormatterOptions property names
+ * so loading is a straight copy with no mapping table to keep in sync.
  */
 
 import joplin from 'api';
@@ -11,6 +11,7 @@ import type { FormatterOptions } from './formatter';
 import { DEFAULT_OPTIONS } from './formatter';
 
 const SECTION = 'markdownFormatter';
+const DISPLAY_TOAST_MESSAGES_KEY = 'displayToastMessages';
 
 const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'collapseBlankLines',
@@ -161,10 +162,22 @@ export async function registerSettings(): Promise<void> {
             label: 'Ensure trailing newline',
             description: 'End the note with exactly one newline.',
         },
+        [DISPLAY_TOAST_MESSAGES_KEY]: {
+            value: true,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Display toast messages',
+            description: 'Show a toast after formatting with the number of characters added and removed.',
+        },
     });
 }
 
 export async function loadFormatterOptions(): Promise<FormatterOptions> {
     const values = await joplin.settings.values(OPTION_KEYS);
     return { ...DEFAULT_OPTIONS, ...(values as Partial<FormatterOptions>) };
+}
+
+export async function loadDisplayToastMessages(): Promise<boolean> {
+    return Boolean(await joplin.settings.value(DISPLAY_TOAST_MESSAGES_KEY));
 }
