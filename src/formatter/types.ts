@@ -25,6 +25,8 @@ export interface FormatterOptions {
     ensureHeadingBlankLines: boolean;
     /** Ensure code blocks have one blank line before and after neighboring content. */
     ensureCodeBlockBlankLines: boolean;
+    /** Ensure math blocks have one blank line before and after neighboring content. */
+    ensureMathBlockBlankLines: boolean;
     /** Ensure tables have one blank line before and after neighboring content. */
     ensureTableBlankLines: boolean;
     /** Ensure blockquotes have one blank line before and after neighboring content. */
@@ -61,6 +63,7 @@ export const DEFAULT_OPTIONS: FormatterOptions = {
     trimTrailingWhitespace: true,
     ensureHeadingBlankLines: true,
     ensureCodeBlockBlankLines: true,
+    ensureMathBlockBlankLines: true,
     ensureTableBlankLines: true,
     ensureBlockquoteBlankLines: true,
     ensureFrontmatterBlankLine: true,

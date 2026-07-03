@@ -9,6 +9,7 @@ import { alignTables } from './alignTables';
 import { headingLevels } from './headingLevels';
 import { headingSpacing } from './headingSpacing';
 import { codeBlockSpacing } from './codeBlockSpacing';
+import { mathBlockSpacing } from './mathBlockSpacing';
 import { tableSpacing } from './tableSpacing';
 import { blockquoteSpacing } from './blockquoteSpacing';
 import { frontmatterSpacing } from './frontmatterSpacing';
@@ -34,6 +35,7 @@ export const rules: Rule[] = [
     headingLevels,
     headingSpacing,
     codeBlockSpacing,
+    mathBlockSpacing,
     tableSpacing,
     blockquoteSpacing,
     frontmatterSpacing,

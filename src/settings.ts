@@ -18,6 +18,7 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'trimTrailingWhitespace',
     'ensureHeadingBlankLines',
     'ensureCodeBlockBlankLines',
+    'ensureMathBlockBlankLines',
     'ensureTableBlankLines',
     'ensureBlockquoteBlankLines',
     'ensureFrontmatterBlankLine',
@@ -140,6 +141,14 @@ export async function registerSettings(): Promise<void> {
             public: true,
             label: 'Ensure blank lines around code blocks',
             description: 'Add one blank line before and after code blocks when neighboring content exists.',
+        },
+        ensureMathBlockBlankLines: {
+            value: DEFAULT_OPTIONS.ensureMathBlockBlankLines,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Ensure blank lines around math blocks',
+            description: 'Add one blank line before and after math blocks when neighboring content exists.',
         },
         ensureTableBlankLines: {
             value: DEFAULT_OPTIONS.ensureTableBlankLines,
