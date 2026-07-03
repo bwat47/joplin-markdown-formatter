@@ -25,6 +25,8 @@ export interface FormatterOptions {
     ensureHeadingBlankLines: boolean;
     /** Ensure code blocks have one blank line before and after neighboring content. */
     ensureCodeBlockBlankLines: boolean;
+    /** Ensure tables have one blank line before and after neighboring content. */
+    ensureTableBlankLines: boolean;
     /** Lower skipped heading levels so headings increase by at most one level at a time. */
     normalizeHeadingLevels: boolean;
     /**
@@ -55,6 +57,7 @@ export const DEFAULT_OPTIONS: FormatterOptions = {
     trimTrailingWhitespace: true,
     ensureHeadingBlankLines: true,
     ensureCodeBlockBlankLines: true,
+    ensureTableBlankLines: true,
     normalizeHeadingLevels: true,
     listSpacing: 'semantic',
     indentation: 'tabs',
