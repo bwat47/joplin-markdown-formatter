@@ -67,19 +67,21 @@ order (content normalization → list structure → layout → whitespace cleanu
 | `alignTables`        | `alignTables`                   | Pad table cells so pipes line up, respecting column alignment            |
 | `headingLevels`      | `normalizeHeadingLevels`        | Lower skipped heading levels so headings increase by at most one level   |
 | `headingSpacing`     | `ensureHeadingBlankLines`       | Ensure headings have one blank line before and after them                |
+| `codeBlockSpacing`   | `ensureCodeBlockBlankLines`     | Ensure code blocks have one blank line before and after them             |
 | `collapseBlankLines` | `collapseBlankLines`            | Collapse 2+ blank lines to one, outside protected ranges                 |
 | `trimTrailingWhitespace` | `trimTrailingWhitespace`    | Trim trailing spaces/tabs outside protected ranges, preserving two-space hard breaks |
 | `finalNewline`       | `ensureFinalNewline`            | Exactly one trailing newline at EOF                                      |
 
-"Protected ranges" (`protectedRanges.ts`) are the source spans of literal-content nodes — fenced/indented
-code, inline code, YAML front matter, HTML blocks. Whitespace-level rules skip anything overlapping them.
+"Protected ranges" (`protectedRanges.ts`) are the source spans of literal-content nodes — code blocks,
+inline code, YAML front matter, HTML blocks. Whitespace-level rules skip anything overlapping them.
 
 ### Documented limitations
 
 - Lists inside blockquotes are exempt from `listIndentation` and `listSpacing` (the `>` prefix makes
   leading-whitespace rewriting ambiguous); marker and numbering normalization still apply there. Tables
-  inside blockquotes are exempt from `alignTables`. Heading spacing is also skipped inside blockquotes,
-  where ordinary blank lines would split the quote. Lists inside footnote definitions are not reindented.
+  inside blockquotes are exempt from `alignTables`. Heading and code-block spacing are also skipped inside
+  blockquotes, where ordinary blank lines would split the quote. Lists inside footnote definitions are not
+  reindented.
 - Table column widths count UTF-16 code units, so CJK/emoji cell content won't align visually.
 - Emphasis conversion toward `_` skips intraword delimiters and delimiters that would merge with adjacent
   runs — CommonMark forbids or reinterprets those; the nodes are left as written.
