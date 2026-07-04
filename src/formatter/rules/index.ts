@@ -5,6 +5,7 @@ import { thematicBreaks } from './thematicBreaks';
 import { emphasisStyle } from './emphasisStyle';
 import { listSpacing } from './listSpacing';
 import { listIndentation } from './listIndentation';
+import { listBoundarySpacing } from './listBoundarySpacing';
 import { alignTables } from './alignTables';
 import { headingLevels } from './headingLevels';
 import { headingSpacing } from './headingSpacing';
@@ -31,6 +32,7 @@ export const rules: Rule[] = [
     emphasisStyle,
     listSpacing,
     listIndentation,
+    listBoundarySpacing,
     alignTables,
     headingLevels,
     headingSpacing,

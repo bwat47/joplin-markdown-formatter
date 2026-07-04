@@ -31,6 +31,8 @@ export interface FormatterOptions {
     ensureTableBlankLines: boolean;
     /** Ensure blockquotes have one blank line before and after neighboring content. */
     ensureBlockquoteBlankLines: boolean;
+    /** Ensure root-level lists have one blank line before and after neighboring content. */
+    ensureListBlankLines: boolean;
     /** Ensure YAML front matter has one blank line before following content. */
     ensureFrontmatterBlankLine: boolean;
     /** Lower skipped heading levels so headings increase by at most one level at a time. */
@@ -66,6 +68,7 @@ export const DEFAULT_OPTIONS: FormatterOptions = {
     ensureMathBlockBlankLines: true,
     ensureTableBlankLines: true,
     ensureBlockquoteBlankLines: true,
+    ensureListBlankLines: true,
     ensureFrontmatterBlankLine: true,
     normalizeHeadingLevels: true,
     listSpacing: 'semantic',
