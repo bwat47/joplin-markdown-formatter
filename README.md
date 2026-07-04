@@ -102,6 +102,7 @@ and HTML blocks is preserved by whitespace-oriented rules.
 - Smart quote conversion decides opening vs. closing from surrounding characters, so unusual constructs
   can get the wrong direction. Backslash-escaped quotes and quotes in image alt text and link titles are
   left as written.
+- Might be slow to format massive notes
 
 ## Development
 
