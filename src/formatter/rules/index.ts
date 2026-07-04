@@ -3,6 +3,7 @@ import { listMarkers } from './listMarkers';
 import { orderedListNumbers } from './orderedListNumbers';
 import { thematicBreaks } from './thematicBreaks';
 import { emphasisStyle } from './emphasisStyle';
+import { quoteStyle } from './quoteStyle';
 import { listSpacing } from './listSpacing';
 import { listIndentation } from './listIndentation';
 import { listBoundarySpacing } from './listBoundarySpacing';
@@ -30,6 +31,7 @@ export const rules: Rule[] = [
     orderedListNumbers,
     thematicBreaks,
     emphasisStyle,
+    quoteStyle,
     listSpacing,
     listIndentation,
     listBoundarySpacing,
