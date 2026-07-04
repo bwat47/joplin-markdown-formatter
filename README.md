@@ -19,17 +19,18 @@ understand is left alone.
 - Normalize unordered list markers to `-` or `*`.
 - Renumber ordered lists sequentially while preserving the first item's number.
 - Normalize emphasis and bold delimiters.
+- Optionally convert double and single quotes in prose between straight and smart (curly) styles.
 - Normalize heading levels so they increase by at most one level at a time.
 - Normalize list spacing: semantic (keep each list tight or loose as authored, fixing mixed spacing), preserve, tight, or loose.
 - Normalize nested list indentation with tabs, 2 spaces, or 4 spaces.
 - Normalize Horizontal rule format and spacing above/below.
 - Optionally align GitHub Flavored Markdown tables.
-- Ensure headings, code blocks, math blocks, tables, and blockquotes have a blank line before and after neighboring content.
+- Ensure headings, code blocks, math blocks, tables, root-level lists, and blockquotes have a blank line before and after neighboring content.
 - Ensure YAML front matter has a blank line before following content.
 - Collapse repeated blank lines outside protected content.
 - Trim trailing whitespace outside protected content, preserving two-space hard line breaks.
 - Ensure the note ends with exactly one trailing newline.
-- Apply changes through CodeMirror so formatting is undoable with Joplin's normal undo command.
+- Diff changes and apply them through CodeMirror so formatting is undoable with Joplin's normal undo command, and cursor can stay anchored to unchanged text.
 
 ## Usage
 
@@ -54,6 +55,8 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Normalize heading level increments    | On           | Lower skipped heading levels so headings increase one level at a time.                                                                                       |
 | Emphasis (italic) marker              | `*emphasis*` | Prefer `*` or `_` for emphasis delimiters.                                                                                                                   |
 | Bold marker                           | `**bold**`   | Prefer `**` or `__` for strong delimiters.                                                                                                                   |
+| Double quote style                    | Preserve     | Convert double quotes in prose to straight or smart (curly) quotes. Code, math, HTML, front matter, and link titles are never changed.                       |
+| Single quote style                    | Preserve     | Convert single quotes and apostrophes in prose to straight or smart (curly) quotes. Same exclusions as double quotes.                                        |
 | List spacing                          | Semantic     | Semantic keeps each list tight or loose as authored and only fixes mixed spacing, so rendering never changes. Preserve, tight, and loose are also available. |
 | List indentation                      | Tabs         | Indentation used before nested list markers.                                                                                                                 |
 | Align table columns                   | Off          | Pad table cells so pipes line up.                                                                                                                            |
@@ -62,6 +65,7 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Ensure blank lines around math blocks | On           | Add one blank line before and after math blocks with neighboring content.                                                                                    |
 | Ensure blank lines around tables      | On           | Add one blank line before and after tables with neighboring content.                                                                                         |
 | Ensure blank lines around blockquotes | On           | Add one blank line before and after blockquotes with neighboring content. Quote interiors are never rewritten.                                               |
+| Ensure blank lines around lists       | On           | Add one blank line before and after root-level lists when neighboring content exists.                                                                        |
 | Ensure blank line after front matter  | On           | Add one blank line between YAML front matter and following content.                                                                                          |
 | Collapse consecutive blank lines      | On           | Reduce runs of blank lines to one blank line outside protected content.                                                                                      |
 | Trim trailing whitespace              | On           | Remove trailing spaces and tabs outside protected content, preserving two-space hard line breaks.                                                            |
@@ -95,6 +99,9 @@ and HTML blocks is preserved by whitespace-oriented rules.
   editor font.
 - Emphasis conversion to `_` skips cases where CommonMark would reinterpret intraword underscores or
   merge adjacent delimiter runs.
+- Smart quote conversion decides opening vs. closing from surrounding characters, so unusual constructs
+  can get the wrong direction. Backslash-escaped quotes and quotes in image alt text and link titles are
+  left as written.
 
 ## Development
 
