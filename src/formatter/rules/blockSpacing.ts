@@ -1,6 +1,7 @@
 import type { Edit, FormatterOptions, Rule, RuleContext } from '../types';
 import { computeLineStarts, isBlankLine, lineIndexOfOffset } from '../lines';
 import { walkWithAncestors } from '../walk';
+import type { Node } from 'unist';
 
 interface BlockSpacingConfig {
     /** Rule name, e.g. `'headingSpacing'`. */
@@ -9,6 +10,8 @@ interface BlockSpacingConfig {
     option: keyof FormatterOptions;
     /** mdast node type to space, e.g. `'heading'` or `'code'`. */
     nodeType: string;
+    /** Optional guard for node kinds that need tighter scoping. */
+    shouldSpace?: (node: Node, ancestors: Node[]) => boolean;
 }
 
 /**
@@ -17,7 +20,7 @@ interface BlockSpacingConfig {
  * alone because inserting ordinary blank lines there splits the quote into
  * separate blockquotes.
  */
-export function createBlockSpacingRule({ name, option, nodeType }: BlockSpacingConfig): Rule {
+export function createBlockSpacingRule({ name, option, nodeType, shouldSpace }: BlockSpacingConfig): Rule {
     return {
         name,
 
@@ -41,6 +44,7 @@ export function createBlockSpacingRule({ name, option, nodeType }: BlockSpacingC
             walkWithAncestors(tree, (node, ancestors) => {
                 if (node.type !== nodeType) return;
                 if (ancestors.some((ancestor) => ancestor.type === 'blockquote')) return;
+                if (shouldSpace && !shouldSpace(node, ancestors)) return;
                 const start = node.position?.start?.offset;
                 const end = node.position?.end?.offset;
                 if (start === undefined || end === undefined) return;

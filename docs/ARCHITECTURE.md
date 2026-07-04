@@ -64,6 +64,7 @@ order (content normalization → list structure → layout → whitespace cleanu
 | `emphasisStyle`      | `emphasisMarker`/`strongMarker` | Normalize `*`/`_` and `**`/`__` delimiters (intraword-safe)              |
 | `listSpacing`        | `listSpacing`                   | Force lists tight or loose; `semantic` (default) keeps each list's authored tight/loose meaning, only fixing mixed spacing; `preserve` leaves lists as written |
 | `listIndentation`    | `indentation`                   | Tab/2/4-space indent per level before the marker, one space after it     |
+| `listBoundarySpacing` | `ensureListBlankLines`         | Ensure root-level lists have one blank line before and after them         |
 | `alignTables`        | `alignTables`                   | Pad table cells so pipes line up, respecting column alignment            |
 | `headingLevels`      | `normalizeHeadingLevels`        | Lower skipped heading levels so headings increase by at most one level   |
 | `headingSpacing`     | `ensureHeadingBlankLines`       | Ensure headings have one blank line before and after them                |
@@ -81,13 +82,14 @@ inline code, YAML front matter, HTML blocks, and math. Whitespace-level rules sk
 
 ### Documented limitations
 
-- Lists inside blockquotes are exempt from `listIndentation` and `listSpacing` (the `>` prefix makes
-  leading-whitespace rewriting ambiguous); marker and numbering normalization still apply there. Tables
+- Lists inside blockquotes are exempt from `listIndentation`, `listSpacing`, and `listBoundarySpacing`
+  (the `>` prefix makes leading-whitespace rewriting ambiguous); marker and numbering normalization still apply there. Tables
   inside blockquotes are exempt from `alignTables`. Heading, code-block, math-block, table, and blockquote
   spacing are also skipped inside blockquotes, where ordinary blank lines would split the quote. `blockquoteSpacing`
   only spaces a quote's outer boundaries: nesting changes inside a quote (e.g. `>` jumping to `>>>`) and
   lazy continuation lines belong to the same blockquote node, and rewriting them would change rendering.
-  Lists inside footnote definitions are not reindented.
+  Lists inside footnote definitions are not reindented or spaced around. Nested lists are not spaced
+  around separately because those blank lines can change tight/loose rendering inside the parent list.
 - Table column widths count UTF-16 code units, so CJK/emoji cell content won't align visually.
 - Emphasis conversion toward `_` skips intraword delimiters and delimiters that would merge with adjacent
   runs — CommonMark forbids or reinterprets those; the nodes are left as written.

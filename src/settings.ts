@@ -21,6 +21,7 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'ensureMathBlockBlankLines',
     'ensureTableBlankLines',
     'ensureBlockquoteBlankLines',
+    'ensureListBlankLines',
     'ensureFrontmatterBlankLine',
     'normalizeHeadingLevels',
     'listSpacing',
@@ -165,6 +166,14 @@ export async function registerSettings(): Promise<void> {
             public: true,
             label: 'Ensure blank lines around blockquotes',
             description: 'Add one blank line before and after blockquotes when neighboring content exists.',
+        },
+        ensureListBlankLines: {
+            value: DEFAULT_OPTIONS.ensureListBlankLines,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Ensure blank lines around lists',
+            description: 'Add one blank line before and after root-level lists when neighboring content exists.',
         },
         ensureFrontmatterBlankLine: {
             value: DEFAULT_OPTIONS.ensureFrontmatterBlankLine,
