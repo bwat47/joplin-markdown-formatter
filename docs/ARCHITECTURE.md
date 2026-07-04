@@ -10,7 +10,7 @@ follows the ESLint-fixer model:
 
 1. Parse the markdown to an mdast tree **with source positions** (`mdast-util-from-markdown` + GFM +
    front matter + math extensions, with ambiguous single-dollar inline math disabled).
-2. Each rule uses the tree only to *locate* things, then emits targeted string edits
+2. Each rule uses the tree only to _locate_ things, then emits targeted string edits
    (`{ start, end, replacement }`) against the original source text.
 3. Edits are validated (in-bounds, non-overlapping) and applied.
 
@@ -28,7 +28,7 @@ edits by throwing — the plugin shell catches and keeps the original note untou
 
 **Structural safety check** ([src/formatter/verify.ts](../src/formatter/verify.ts)): every rule's output
 is re-parsed and compared to the tree it started from, after normalizing away the differences rules are
-*allowed* to make (positions, tight/loose `spread`, adjacent bullet lists merged by marker
+_allowed_ to make (positions, tight/loose `spread`, adjacent bullet lists merged by marker
 normalization). If a rule changed what the document means, its edits are dropped and the rule name is
 reported in `FormatResult.skippedRules` — a rule bug degrades to a logged no-op, never a corrupted note.
 
@@ -56,26 +56,26 @@ src/
 Each rule implements `{ name, isEnabled(options), apply(context): Edit[] }`. Current rules, in execution
 order (content normalization → list structure → layout → whitespace cleanup → final newline):
 
-| Rule                 | Option                          | Behavior                                                                 |
-| -------------------- | ------------------------------- | ------------------------------------------------------------------------ |
-| `listMarkers`        | `unorderedListMarker`           | Rewrite unordered bullets (`-`/`*`/`+`) to the configured one            |
-| `orderedListNumbers` | `normalizeOrderedListNumbering` | Renumber ordered lists sequentially from the first item's number         |
-| `thematicBreaks`     | `thematicBreakMarker`           | Rewrite horizontal rules to the configured marker with one blank line around them |
-| `emphasisStyle`      | `emphasisMarker`/`strongMarker` | Normalize `*`/`_` and `**`/`__` delimiters (intraword-safe)              |
-| `listSpacing`        | `listSpacing`                   | Force lists tight or loose; `semantic` (default) keeps each list's authored tight/loose meaning, only fixing mixed spacing; `preserve` leaves lists as written |
-| `listIndentation`    | `indentation`                   | Tab/2/4-space indent per level before the marker, one space after it     |
-| `listBoundarySpacing` | `ensureListBlankLines`         | Ensure root-level lists have one blank line before and after them         |
-| `alignTables`        | `alignTables`                   | Pad table cells so pipes line up, respecting column alignment            |
-| `headingLevels`      | `normalizeHeadingLevels`        | Lower skipped heading levels so headings increase by at most one level   |
-| `headingSpacing`     | `ensureHeadingBlankLines`       | Ensure headings have one blank line before and after them                |
-| `codeBlockSpacing`   | `ensureCodeBlockBlankLines`     | Ensure code blocks have one blank line before and after them             |
-| `mathBlockSpacing`   | `ensureMathBlockBlankLines`     | Ensure math blocks have one blank line before and after them             |
-| `tableSpacing`       | `ensureTableBlankLines`         | Ensure tables have one blank line before and after them                  |
-| `blockquoteSpacing`  | `ensureBlockquoteBlankLines`    | Ensure blockquotes have one blank line before and after them; quote interiors are never touched |
-| `frontmatterSpacing` | `ensureFrontmatterBlankLine`    | Ensure YAML front matter has one blank line before following content     |
-| `collapseBlankLines` | `collapseBlankLines`            | Collapse 2+ blank lines to one, outside protected ranges                 |
-| `trimTrailingWhitespace` | `trimTrailingWhitespace`    | Trim trailing spaces/tabs outside protected ranges, preserving two-space hard breaks |
-| `finalNewline`       | `ensureFinalNewline`            | Exactly one trailing newline at EOF                                      |
+| Rule                     | Option                          | Behavior                                                                                                                                                       |
+| ------------------------ | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listMarkers`            | `unorderedListMarker`           | Rewrite unordered bullets (`-`/`*`/`+`) to the configured one                                                                                                  |
+| `orderedListNumbers`     | `normalizeOrderedListNumbering` | Renumber ordered lists sequentially from the first item's number                                                                                               |
+| `thematicBreaks`         | `thematicBreakMarker`           | Rewrite horizontal rules to the configured marker with one blank line around them                                                                              |
+| `emphasisStyle`          | `emphasisMarker`/`strongMarker` | Normalize `*`/`_` and `**`/`__` delimiters (intraword-safe)                                                                                                    |
+| `listSpacing`            | `listSpacing`                   | Force lists tight or loose; `semantic` (default) keeps each list's authored tight/loose meaning, only fixing mixed spacing; `preserve` leaves lists as written |
+| `listIndentation`        | `indentation`                   | Tab/2/4-space indent per level before the marker, one space after it                                                                                           |
+| `listBoundarySpacing`    | `ensureListBlankLines`          | Ensure root-level lists have one blank line before and after them                                                                                              |
+| `alignTables`            | `alignTables`                   | Pad table cells so pipes line up, respecting column alignment                                                                                                  |
+| `headingLevels`          | `normalizeHeadingLevels`        | Lower skipped heading levels so headings increase by at most one level                                                                                         |
+| `headingSpacing`         | `ensureHeadingBlankLines`       | Ensure headings have one blank line before and after them                                                                                                      |
+| `codeBlockSpacing`       | `ensureCodeBlockBlankLines`     | Ensure code blocks have one blank line before and after them                                                                                                   |
+| `mathBlockSpacing`       | `ensureMathBlockBlankLines`     | Ensure math blocks have one blank line before and after them                                                                                                   |
+| `tableSpacing`           | `ensureTableBlankLines`         | Ensure tables have one blank line before and after them                                                                                                        |
+| `blockquoteSpacing`      | `ensureBlockquoteBlankLines`    | Ensure blockquotes have one blank line before and after them; quote interiors are never touched                                                                |
+| `frontmatterSpacing`     | `ensureFrontmatterBlankLine`    | Ensure YAML front matter has one blank line before following content                                                                                           |
+| `collapseBlankLines`     | `collapseBlankLines`            | Collapse 2+ blank lines to one, outside protected ranges                                                                                                       |
+| `trimTrailingWhitespace` | `trimTrailingWhitespace`        | Trim trailing spaces/tabs outside protected ranges, preserving two-space hard breaks                                                                           |
+| `finalNewline`           | `ensureFinalNewline`            | Exactly one trailing newline at EOF                                                                                                                            |
 
 "Protected ranges" (`protectedRanges.ts`) are the source spans of literal-content nodes — code blocks,
 inline code, YAML front matter, HTML blocks, and math. Whitespace-level rules skip anything overlapping them.
