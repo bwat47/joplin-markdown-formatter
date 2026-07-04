@@ -27,6 +27,10 @@ function normalizeNode(node: AnyNode): AnyNode {
     if (copy.type === 'list' || copy.type === 'listItem') delete copy.spread;
     // headingLevels legitimately changes heading depth without changing heading text.
     if (copy.type === 'heading') delete copy.depth;
+    // quoteStyle legitimately converts quote characters in prose text.
+    if (copy.type === 'text' && typeof copy.value === 'string') {
+        copy.value = copy.value.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+    }
     if (Array.isArray(copy.children)) {
         copy.children = mergeAdjacentBulletLists(copy.children.map((child) => normalizeNode(child)));
     }

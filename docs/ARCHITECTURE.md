@@ -56,26 +56,27 @@ src/
 Each rule implements `{ name, isEnabled(options), apply(context): Edit[] }`. Current rules, in execution
 order (content normalization → list structure → layout → whitespace cleanup → final newline):
 
-| Rule                     | Option                          | Behavior                                                                                                                                                       |
-| ------------------------ | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listMarkers`            | `unorderedListMarker`           | Rewrite unordered bullets (`-`/`*`/`+`) to the configured one                                                                                                  |
-| `orderedListNumbers`     | `normalizeOrderedListNumbering` | Renumber ordered lists sequentially from the first item's number                                                                                               |
-| `thematicBreaks`         | `thematicBreakMarker`           | Rewrite horizontal rules to the configured marker with one blank line around them                                                                              |
-| `emphasisStyle`          | `emphasisMarker`/`strongMarker` | Normalize `*`/`_` and `**`/`__` delimiters (intraword-safe)                                                                                                    |
-| `listSpacing`            | `listSpacing`                   | Force lists tight or loose; `semantic` (default) keeps each list's authored tight/loose meaning, only fixing mixed spacing; `preserve` leaves lists as written |
-| `listIndentation`        | `indentation`                   | Tab/2/4-space indent per level before the marker, one space after it                                                                                           |
-| `listBoundarySpacing`    | `ensureListBlankLines`          | Ensure root-level lists have one blank line before and after them                                                                                              |
-| `alignTables`            | `alignTables`                   | Pad table cells so pipes line up, respecting column alignment                                                                                                  |
-| `headingLevels`          | `normalizeHeadingLevels`        | Lower skipped heading levels so headings increase by at most one level                                                                                         |
-| `headingSpacing`         | `ensureHeadingBlankLines`       | Ensure headings have one blank line before and after them                                                                                                      |
-| `codeBlockSpacing`       | `ensureCodeBlockBlankLines`     | Ensure code blocks have one blank line before and after them                                                                                                   |
-| `mathBlockSpacing`       | `ensureMathBlockBlankLines`     | Ensure math blocks have one blank line before and after them                                                                                                   |
-| `tableSpacing`           | `ensureTableBlankLines`         | Ensure tables have one blank line before and after them                                                                                                        |
-| `blockquoteSpacing`      | `ensureBlockquoteBlankLines`    | Ensure blockquotes have one blank line before and after them; quote interiors are never touched                                                                |
-| `frontmatterSpacing`     | `ensureFrontmatterBlankLine`    | Ensure YAML front matter has one blank line before following content                                                                                           |
-| `collapseBlankLines`     | `collapseBlankLines`            | Collapse 2+ blank lines to one, outside protected ranges                                                                                                       |
-| `trimTrailingWhitespace` | `trimTrailingWhitespace`        | Trim trailing spaces/tabs outside protected ranges, preserving two-space hard breaks                                                                           |
-| `finalNewline`           | `ensureFinalNewline`            | Exactly one trailing newline at EOF                                                                                                                            |
+| Rule                     | Option                                | Behavior                                                                                                                                                       |
+| ------------------------ | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listMarkers`            | `unorderedListMarker`                 | Rewrite unordered bullets (`-`/`*`/`+`) to the configured one                                                                                                  |
+| `orderedListNumbers`     | `normalizeOrderedListNumbering`       | Renumber ordered lists sequentially from the first item's number                                                                                               |
+| `thematicBreaks`         | `thematicBreakMarker`                 | Rewrite horizontal rules to the configured marker with one blank line around them                                                                              |
+| `emphasisStyle`          | `emphasisMarker`/`strongMarker`       | Normalize `*`/`_` and `**`/`__` delimiters (intraword-safe)                                                                                                    |
+| `quoteStyle`             | `doubleQuoteStyle`/`singleQuoteStyle` | Convert quotes in prose text between straight and smart styles; `preserve` (default) leaves quotes as written                                                  |
+| `listSpacing`            | `listSpacing`                         | Force lists tight or loose; `semantic` (default) keeps each list's authored tight/loose meaning, only fixing mixed spacing; `preserve` leaves lists as written |
+| `listIndentation`        | `indentation`                         | Tab/2/4-space indent per level before the marker, one space after it                                                                                           |
+| `listBoundarySpacing`    | `ensureListBlankLines`                | Ensure root-level lists have one blank line before and after them                                                                                              |
+| `alignTables`            | `alignTables`                         | Pad table cells so pipes line up, respecting column alignment                                                                                                  |
+| `headingLevels`          | `normalizeHeadingLevels`              | Lower skipped heading levels so headings increase by at most one level                                                                                         |
+| `headingSpacing`         | `ensureHeadingBlankLines`             | Ensure headings have one blank line before and after them                                                                                                      |
+| `codeBlockSpacing`       | `ensureCodeBlockBlankLines`           | Ensure code blocks have one blank line before and after them                                                                                                   |
+| `mathBlockSpacing`       | `ensureMathBlockBlankLines`           | Ensure math blocks have one blank line before and after them                                                                                                   |
+| `tableSpacing`           | `ensureTableBlankLines`               | Ensure tables have one blank line before and after them                                                                                                        |
+| `blockquoteSpacing`      | `ensureBlockquoteBlankLines`          | Ensure blockquotes have one blank line before and after them; quote interiors are never touched                                                                |
+| `frontmatterSpacing`     | `ensureFrontmatterBlankLine`          | Ensure YAML front matter has one blank line before following content                                                                                           |
+| `collapseBlankLines`     | `collapseBlankLines`                  | Collapse 2+ blank lines to one, outside protected ranges                                                                                                       |
+| `trimTrailingWhitespace` | `trimTrailingWhitespace`              | Trim trailing spaces/tabs outside protected ranges, preserving two-space hard breaks                                                                           |
+| `finalNewline`           | `ensureFinalNewline`                  | Exactly one trailing newline at EOF                                                                                                                            |
 
 "Protected ranges" (`protectedRanges.ts`) are the source spans of literal-content nodes — code blocks,
 inline code, YAML front matter, HTML blocks, and math. Whitespace-level rules skip anything overlapping them.
@@ -93,6 +94,11 @@ inline code, YAML front matter, HTML blocks, and math. Whitespace-level rules sk
 - Table column widths count UTF-16 code units, so CJK/emoji cell content won't align visually.
 - Emphasis conversion toward `_` skips intraword delimiters and delimiters that would merge with adjacent
   runs — CommonMark forbids or reinterprets those; the nodes are left as written.
+- Smart quote conversion decides opening vs. closing from adjacent characters (SmartyPants-style
+  heuristics), which can pick the wrong direction in unusual constructs (e.g. a quotation opening with
+  punctuation). Backslash-escaped quotes are left as written because rewriting the quote character would
+  turn the escape into a literal backslash. Quotes in image alt text and link titles are not converted
+  (they are node properties, not `text` nodes).
 
 ## Settings
 

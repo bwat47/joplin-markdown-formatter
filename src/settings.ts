@@ -29,6 +29,8 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'alignTables',
     'emphasisMarker',
     'strongMarker',
+    'doubleQuoteStyle',
+    'singleQuoteStyle',
     'unorderedListMarker',
     'thematicBreakMarker',
     'normalizeOrderedListNumbering',
@@ -92,6 +94,36 @@ export async function registerSettings(): Promise<void> {
             isEnum: true,
             options: { '**': '**bold**', __: '__bold__' },
             label: 'Bold marker',
+        },
+        doubleQuoteStyle: {
+            value: DEFAULT_OPTIONS.doubleQuoteStyle,
+            type: SettingItemType.String,
+            section: SECTION,
+            public: true,
+            isEnum: true,
+            options: {
+                preserve: 'Preserve (leave quotes unchanged)',
+                straight: 'Straight ("quote")',
+                smart: 'Smart (“quote”)',
+            },
+            label: 'Double quote style',
+            description:
+                'Convert double quotes in prose text. Code, math, HTML, front matter, and link titles are never changed.',
+        },
+        singleQuoteStyle: {
+            value: DEFAULT_OPTIONS.singleQuoteStyle,
+            type: SettingItemType.String,
+            section: SECTION,
+            public: true,
+            isEnum: true,
+            options: {
+                preserve: 'Preserve (leave quotes unchanged)',
+                straight: "Straight ('quote', don't)",
+                smart: 'Smart (‘quote’, don’t)',
+            },
+            label: 'Single quote style',
+            description:
+                'Convert single quotes and apostrophes in prose text. Code, math, HTML, front matter, and link titles are never changed.',
         },
         listSpacing: {
             value: DEFAULT_OPTIONS.listSpacing,
