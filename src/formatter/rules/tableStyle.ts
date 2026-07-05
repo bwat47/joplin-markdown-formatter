@@ -6,11 +6,13 @@ import { walkWithAncestors } from '../walk';
 import { computeLineStarts, lineIndexOfOffset } from '../lines';
 
 /**
- * Pad table cells so the pipes line up, and rebuild the delimiter row to
+ * Rebuild table rows in canonical `| a | b |` form, and the delimiter row to
  * match. Cell text is taken verbatim from the source (so inline code,
- * escaped pipes etc. survive); rows are rebuilt in canonical
- * `| a | b |` form. Content is padded per column alignment (right/center
- * columns pad on the left/both sides).
+ * escaped pipes etc. survive). In `aligned` style cells are padded per
+ * column alignment (right/center columns pad on the left/both sides) so the
+ * pipes line up; in `compact` style cells keep a single space of padding and
+ * delimiter cells always use three dashes. Alignment colons are preserved
+ * in both styles.
  *
  * Rows are replaced from their own start offset, so tables indented inside
  * list items keep their indentation. Tables inside blockquotes are skipped
@@ -18,14 +20,14 @@ import { computeLineStarts, lineIndexOfOffset } from '../lines';
  * not worth the risk). Column widths count UTF-16 code units; CJK/emoji
  * display widths are a documented limitation.
  */
-export const alignTables: Rule = {
-    name: 'alignTables',
+export const tableStyle: Rule = {
+    name: 'tableStyle',
 
     isEnabled(options) {
-        return options.alignTables;
+        return options.tableStyle !== 'preserve';
     },
 
-    apply({ text, tree }: RuleContext): Edit[] {
+    apply({ text, tree, options }: RuleContext): Edit[] {
         const edits: Edit[] = [];
         const lineStarts = computeLineStarts(text);
         const lineEnd = (i: number): number => lineStarts[i + 1] ?? text.length;
@@ -42,7 +44,12 @@ export const alignTables: Rule = {
             const columnCount = Math.max(table.align?.length ?? 0, ...cellTexts.map((cells) => cells.length));
             const align: AlignType[] = Array.from({ length: columnCount }, (_, i) => table.align?.[i] ?? null);
 
-            const widths = align.map((_, col) => Math.max(3, ...cellTexts.map((cells) => (cells[col] ?? '').length)));
+            // Compact style never pads cells (width 0 is a no-op for pad())
+            // and always uses three dashes plus alignment colons.
+            const compact = options.tableStyle === 'compact';
+            const widths = align.map((_, col) =>
+                compact ? 0 : Math.max(3, ...cellTexts.map((cells) => (cells[col] ?? '').length))
+            );
 
             const renderRow = (cells: string[]): string =>
                 '| ' + align.map((a, col) => pad(cells[col] ?? '', widths[col], a)).join(' | ') + ' |';
@@ -66,7 +73,10 @@ export const alignTables: Rule = {
                 }
             }
 
-            const delimiterRow = '| ' + align.map((a, col) => delimiterCell(widths[col], a)).join(' | ') + ' |';
+            const delimiterRow =
+                '| ' +
+                align.map((a, col) => (compact ? compactDelimiterCell(a) : delimiterCell(widths[col], a))).join(' | ') +
+                ' |';
             const start = delimiterStart + delimiterMatch[1].length;
             const end = start + delimiterMatch[2].length;
             if (text.slice(start, end) !== delimiterRow) {
@@ -104,4 +114,12 @@ function delimiterCell(width: number, align: AlignType): string {
     if (align === 'right') return '-'.repeat(width - 1) + ':';
     if (align === 'center') return ':' + '-'.repeat(width - 2) + ':';
     return '-'.repeat(width);
+}
+
+/** Compact delimiter cells always use three dashes, with alignment colons outside them. */
+function compactDelimiterCell(align: AlignType): string {
+    if (align === 'left') return ':---';
+    if (align === 'right') return '---:';
+    if (align === 'center') return ':---:';
+    return '---';
 }

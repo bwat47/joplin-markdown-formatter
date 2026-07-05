@@ -7,7 +7,7 @@ import { quoteStyle } from './quoteStyle';
 import { listSpacing } from './listSpacing';
 import { listIndentation } from './listIndentation';
 import { listBoundarySpacing } from './listBoundarySpacing';
-import { alignTables } from './alignTables';
+import { tableStyle } from './tableStyle';
 import { headingLevels } from './headingLevels';
 import { headingSpacing } from './headingSpacing';
 import { codeBlockSpacing } from './codeBlockSpacing';
@@ -35,7 +35,7 @@ export const rules: Rule[] = [
     listSpacing,
     listIndentation,
     listBoundarySpacing,
-    alignTables,
+    tableStyle,
     headingLevels,
     headingSpacing,
     codeBlockSpacing,
