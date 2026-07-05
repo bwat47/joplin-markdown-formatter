@@ -24,7 +24,7 @@ understand is left alone.
 - Normalize list spacing: semantic (keep each list tight or loose as authored, fixing mixed spacing), preserve, tight, or loose.
 - Normalize nested list indentation with tabs, 2 spaces, or 4 spaces.
 - Normalize Horizontal rule format and spacing above/below.
-- Optionally align GitHub Flavored Markdown tables.
+- Optionally reformat GitHub Flavored Markdown tables in a compact or aligned style.
 - Ensure headings, code blocks, math blocks, tables, root-level lists, and blockquotes have a blank line before and after neighboring content.
 - Ensure YAML front matter has a blank line before following content.
 - Collapse repeated blank lines outside protected content.
@@ -59,7 +59,7 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Single quote style                    | Preserve     | Convert single quotes and apostrophes in prose to straight or smart (curly) quotes. Same exclusions as double quotes.                                        |
 | List spacing                          | Semantic     | Semantic keeps each list tight or loose as authored and only fixes mixed spacing, so rendering never changes. Preserve, tight, and loose are also available. |
 | List indentation                      | Tabs         | Indentation used before nested list markers.                                                                                                                 |
-| Align table columns                   | Off          | Pad table cells so pipes line up.                                                                                                                            |
+| Table style                           | Preserve     | Compact rebuilds cells with one space of padding; aligned pads cells so pipes line up. Preserve leaves tables unchanged.                                     |
 | Ensure blank lines around headings    | On           | Add one blank line before and after headings with neighboring content.                                                                                       |
 | Ensure blank lines around code blocks | On           | Add one blank line before and after code blocks with neighboring content.                                                                                    |
 | Ensure blank lines around math blocks | On           | Add one blank line before and after math blocks with neighboring content.                                                                                    |
@@ -93,7 +93,7 @@ and HTML blocks is preserved by whitespace-oriented rules.
 
 - Lists inside blockquotes are not reindented and their tight/loose spacing is not changed. Their list
   markers and ordered numbering can still be normalized.
-- Tables inside blockquotes are not aligned.
+- Tables inside blockquotes are not reformatted.
 - Lists inside footnote definitions are not reindented.
 - Table alignment counts UTF-16 code units, so CJK and emoji content may not line up visually in every
   editor font.
