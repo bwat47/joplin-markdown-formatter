@@ -8,9 +8,7 @@
 
 A Joplin plugin that formats the current note's Markdown with some configurable rules.
 
-The plugin parses Markdown to find
-known structures, then applies targeted edits to the original text. Syntax it does not explicitly
-understand is left alone.
+The plugin parses Markdown to find known structures, then applies targeted edits to the original text. Syntax it does not explicitly understand is left alone.
 
 ![formatting example](./images/format_example.gif)
 
@@ -41,8 +39,7 @@ Install the plugin, open a Markdown note, then:
 - `Cmd+Alt+F` on macOS
 - Click `Format Markdown` button in the formatting toolbar
 
-The command formats the currently open note. If the note is already formatted, it does not write the note
-back.
+The command formats the currently open note. If the note is already formatted, it does not write the note back.
 
 ## Settings
 
@@ -74,34 +71,25 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 
 ## Safety Model
 
-The formatter follows a "parse for analysis, edit the original text" model. Each rule runs as a separate
-pass against a parsed tree that matches the current Markdown:
+The formatter follows a "parse for analysis, edit the original text" model. Each rule runs as a separate pass against a parsed tree that matches the current Markdown:
 
 1. Locate structures the rule understands.
 2. Apply small string edits to the current source text.
 3. Parse the edited result and verify that the document structure still matches.
 4. Reuse that verified parse for the next rule.
 
-If a rule's edits would change the parsed document structure in an unexpected way, that rule is skipped
-and the note is left with the last safe output. If formatting fails, the plugin leaves the original note
-unchanged.
+If a rule's edits would change the parsed document structure in an unexpected way, that rule is skipped and the note is left with the last safe output. If formatting fails, the plugin leaves the original note unchanged.
 
-Protected content such as fenced code blocks, indented code blocks, inline code, YAML front matter, math,
-and HTML blocks is preserved by whitespace-oriented rules.
+Protected content such as fenced code blocks, indented code blocks, inline code, YAML front matter, math, and HTML blocks is preserved by whitespace-oriented rules.
 
 ## Known Limitations
 
-- Lists inside blockquotes are not reindented and their tight/loose spacing is not changed. Their list
-  markers and ordered numbering can still be normalized.
+- Lists inside blockquotes are not reindented and their tight/loose spacing is not changed. Their list markers and ordered numbering can still be normalized.
 - Tables inside blockquotes are not reformatted.
 - Lists inside footnote definitions are not reindented.
-- Table alignment measures display width (CJK and emoji count as two columns), so cells line up in
-  monospace fonts; proportional fonts may still drift.
-- Emphasis conversion to `_` skips cases where CommonMark would reinterpret intraword underscores or
-  merge adjacent delimiter runs.
-- Smart quote conversion decides opening vs. closing from surrounding characters, so unusual constructs
-  can get the wrong direction. Backslash-escaped quotes and quotes in image alt text and link titles are
-  left as written.
+- Table alignment measures display width (CJK and emoji count as two columns), so cells line up in monospace fonts; proportional fonts may still drift.
+- Emphasis conversion to `_` skips cases where CommonMark would reinterpret intraword underscores or merge adjacent delimiter runs.
+- Smart quote conversion decides opening vs. closing from surrounding characters, so unusual constructs can get the wrong direction. Backslash-escaped quotes and quotes in image alt text and link titles are left as written.
 - Might be slow to format massive notes.
 
 ## Development
