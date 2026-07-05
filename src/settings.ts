@@ -54,6 +54,8 @@ export async function registerSettings(): Promise<void> {
             isEnum: true,
             options: { '-': '- (dash)', '*': '* (asterisk)', preserve: 'Preserve (leave markers unchanged)' },
             label: 'Unordered list marker',
+            description:
+                'Note: CommonMark treats adjacent lists with different bullets as separate lists; normalizing their markers merges them.',
         },
         normalizeOrderedListNumbering: {
             value: DEFAULT_OPTIONS.normalizeOrderedListNumbering,
