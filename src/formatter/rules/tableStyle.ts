@@ -98,10 +98,20 @@ function extractCellText(text: string, cell: TableRow['children'][number]): stri
     let raw = text.slice(start, end);
     if (raw.startsWith('|')) raw = raw.slice(1);
     // A last cell's range extends over trailing whitespace after the closing
-    // pipe; drop it so the pipe is still recognized as a boundary.
+    // pipe; drop it so an unescaped pipe is still recognized as a boundary.
     raw = raw.replace(/[ \t]+$/, '');
-    if (raw.endsWith('|')) raw = raw.slice(0, -1);
+    if (raw.endsWith('|') && !isEscapedPipe(raw, raw.length - 1)) {
+        raw = raw.slice(0, -1);
+    }
     return raw.trim();
+}
+
+function isEscapedPipe(text: string, pipeIndex: number): boolean {
+    let slashCount = 0;
+    for (let i = pipeIndex - 1; i >= 0 && text[i] === '\\'; i--) {
+        slashCount++;
+    }
+    return slashCount % 2 === 1;
 }
 
 function pad(value: string, width: number, align: AlignType): string {
