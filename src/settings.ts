@@ -78,7 +78,6 @@ export async function registerSettings(): Promise<void> {
                 '* * *': '* * *',
             },
             label: 'Horizontal rule marker',
-            description: 'Marker used for horizontal rules.',
         },
         emphasisMarker: {
             value: DEFAULT_OPTIONS.emphasisMarker,
