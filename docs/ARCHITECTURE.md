@@ -91,7 +91,8 @@ inline code, YAML front matter, HTML blocks, and math. Whitespace-level rules sk
   lazy continuation lines belong to the same blockquote node, and rewriting them would change rendering.
   Lists inside footnote definitions are not reindented or spaced around. Nested lists are not spaced
   around separately because those blank lines can change tight/loose rendering inside the parent list.
-- Table column widths count UTF-16 code units, so CJK/emoji cell content won't align visually.
+- Table column widths count display columns via `string-width` (CJK/emoji count as two), so aligned
+  tables line up in monospace fonts; proportional fonts can still drift.
 - Emphasis conversion toward `_` skips intraword delimiters and delimiters that would merge with adjacent
   runs — CommonMark forbids or reinterprets those; the nodes are left as written.
 - Smart quote conversion decides opening vs. closing from adjacent characters (SmartyPants-style

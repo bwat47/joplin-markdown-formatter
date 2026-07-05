@@ -15,3 +15,10 @@ In a list:
     | h | k |
     |---|---|
     | 1 | 2 |
+
+Wide characters:
+
+| Item | Note |
+| --- | --- |
+| 日本語 | ok |
+| 🚀 launch | wide |

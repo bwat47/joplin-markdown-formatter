@@ -95,8 +95,8 @@ and HTML blocks is preserved by whitespace-oriented rules.
   markers and ordered numbering can still be normalized.
 - Tables inside blockquotes are not reformatted.
 - Lists inside footnote definitions are not reindented.
-- Table alignment counts UTF-16 code units, so CJK and emoji content may not line up visually in every
-  editor font.
+- Table alignment measures display width (CJK and emoji count as two columns), so cells line up in
+  monospace fonts; proportional fonts may still drift.
 - Emphasis conversion to `_` skips cases where CommonMark would reinterpret intraword underscores or
   merge adjacent delimiter runs.
 - Smart quote conversion decides opening vs. closing from surrounding characters, so unusual constructs
