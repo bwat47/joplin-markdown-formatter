@@ -22,9 +22,9 @@ import { finalNewline } from './finalNewline';
 /**
  * Rules in execution order: content normalization first, then list
  * structure, then layout, whitespace cleanup after, final newline last so
- * it sees the finished document. Each rule re-parses the text, so order
- * only matters semantically (e.g. indentation runs after renumbering may
- * have changed marker widths).
+ * it sees the finished document. Each rule sees a tree parsed from the
+ * current text, so order only matters semantically (e.g. indentation runs
+ * after renumbering may have changed marker widths).
  */
 export const rules: Rule[] = [
     listMarkers,

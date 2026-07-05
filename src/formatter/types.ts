@@ -97,7 +97,11 @@ export interface Edit {
     replacement: string;
 }
 
-/** Everything a rule gets to work with. `tree` is freshly parsed from `text`. */
+/**
+ * Everything a rule gets to work with. `tree` is parsed from `text` and is
+ * shared across rules while the text is unchanged — rules must treat it as
+ * read-only.
+ */
 export interface RuleContext {
     text: string;
     tree: Root;

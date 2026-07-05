@@ -21,9 +21,10 @@ degradation falls out of the architecture rather than needing per-syntax handlin
 ## Pipeline
 
 `formatMarkdown(text, options)` in [src/formatter/pipeline.ts](../src/formatter/pipeline.ts) runs each
-enabled rule as its own **parse → analyze → edit → apply → verify** pass. The text is re-parsed after
-every rule so byte offsets are always valid; notes are small, so repeated parsing is cheap and eliminates
-cross-rule offset-invalidation bugs. Within a rule, `applyEdits` rejects overlapping or out-of-bounds
+enabled rule as its own **analyze → edit → apply → verify** pass. The text is re-parsed whenever a rule
+changes it, so byte offsets are always valid (the verification parse is reused as the next rule's tree,
+so each version of the text is parsed exactly once); notes are small, so repeated parsing is cheap and
+eliminates cross-rule offset-invalidation bugs. Within a rule, `applyEdits` rejects overlapping or out-of-bounds
 edits by throwing — the plugin shell catches and keeps the original note untouched.
 
 **Structural safety check** ([src/formatter/verify.ts](../src/formatter/verify.ts)): every rule's output
