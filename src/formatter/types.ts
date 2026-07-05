@@ -13,7 +13,7 @@ export type ListSpacing = 'semantic' | 'tight' | 'loose' | 'preserve';
 export type Indentation = 'tabs' | 'spaces2' | 'spaces4';
 export type EmphasisMarker = '*' | '_';
 export type StrongMarker = '**' | '__';
-export type UnorderedListMarker = '-' | '*';
+export type UnorderedListMarker = '-' | '*' | 'preserve';
 export type ThematicBreakMarker = '---' | '- - -' | '***' | '* * *';
 export type QuoteStyle = 'preserve' | 'straight' | 'smart';
 export type TableStyle = 'preserve' | 'compact' | 'aligned';
@@ -56,7 +56,7 @@ export interface FormatterOptions {
     doubleQuoteStyle: QuoteStyle;
     /** Single quote/apostrophe style in prose text: leave as written, straight ('), or smart (‘ ’). */
     singleQuoteStyle: QuoteStyle;
-    /** Marker used for unordered list items. */
+    /** Marker used for unordered list items, or preserve to leave markers as written. */
     unorderedListMarker: UnorderedListMarker;
     /** Marker used for horizontal rules / thematic breaks. */
     thematicBreakMarker: ThematicBreakMarker;

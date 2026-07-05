@@ -59,7 +59,7 @@ order (content normalization → list structure → layout → whitespace cleanu
 
 | Rule                     | Option                                | Behavior                                                                                                                                                       |
 | ------------------------ | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listMarkers`            | `unorderedListMarker`                 | Rewrite unordered bullets (`-`/`*`/`+`) to the configured one                                                                                                  |
+| `listMarkers`            | `unorderedListMarker`                 | Rewrite unordered bullets (`-`/`*`/`+`) to the configured one; `preserve` leaves them as written                                                               |
 | `orderedListNumbers`     | `normalizeOrderedListNumbering`       | Renumber ordered lists sequentially from the first item's number                                                                                               |
 | `thematicBreaks`         | `thematicBreakMarker`                 | Rewrite horizontal rules to the configured marker with one blank line around them                                                                              |
 | `emphasisStyle`          | `emphasisMarker`/`strongMarker`       | Normalize `*`/`_` and `**`/`__` delimiters (intraword-safe)                                                                                                    |

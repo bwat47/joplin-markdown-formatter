@@ -52,7 +52,7 @@ export async function registerSettings(): Promise<void> {
             section: SECTION,
             public: true,
             isEnum: true,
-            options: { '-': '- (dash)', '*': '* (asterisk)' },
+            options: { '-': '- (dash)', '*': '* (asterisk)', preserve: 'Preserve (leave markers unchanged)' },
             label: 'Unordered list marker',
         },
         normalizeOrderedListNumbering: {
