@@ -97,6 +97,9 @@ function extractCellText(text: string, cell: TableRow['children'][number]): stri
     if (start === undefined || end === undefined) return '';
     let raw = text.slice(start, end);
     if (raw.startsWith('|')) raw = raw.slice(1);
+    // A last cell's range extends over trailing whitespace after the closing
+    // pipe; drop it so the pipe is still recognized as a boundary.
+    raw = raw.replace(/[ \t]+$/, '');
     if (raw.endsWith('|')) raw = raw.slice(0, -1);
     return raw.trim();
 }
