@@ -75,12 +75,12 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 ## Safety Model
 
 The formatter follows a "parse for analysis, edit the original text" model. Each rule runs as a separate
-pass:
+pass against a parsed tree that matches the current Markdown:
 
-1. Parse the current Markdown.
-2. Locate structures the rule understands.
-3. Apply small string edits to the original source.
-4. Parse again and verify that the document structure still matches.
+1. Locate structures the rule understands.
+2. Apply small string edits to the current source text.
+3. Parse the edited result and verify that the document structure still matches.
+4. Reuse that verified parse for the next rule.
 
 If a rule's edits would change the parsed document structure in an unexpected way, that rule is skipped
 and the note is left with the last safe output. If formatting fails, the plugin leaves the original note
@@ -102,7 +102,7 @@ and HTML blocks is preserved by whitespace-oriented rules.
 - Smart quote conversion decides opening vs. closing from surrounding characters, so unusual constructs
   can get the wrong direction. Backslash-escaped quotes and quotes in image alt text and link titles are
   left as written.
-- Might be slow to format massive notes
+- Might be slow to format massive notes.
 
 ## Development
 
