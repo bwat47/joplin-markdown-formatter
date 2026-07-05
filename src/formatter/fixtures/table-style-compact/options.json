@@ -1,4 +1,4 @@
 {
-    "alignTables": true,
+    "tableStyle": "compact",
     "ensureTableBlankLines": false
 }

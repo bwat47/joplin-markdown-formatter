@@ -16,6 +16,7 @@ export type StrongMarker = '**' | '__';
 export type UnorderedListMarker = '-' | '*';
 export type ThematicBreakMarker = '---' | '- - -' | '***' | '* * *';
 export type QuoteStyle = 'preserve' | 'straight' | 'smart';
+export type TableStyle = 'preserve' | 'compact' | 'aligned';
 
 export interface FormatterOptions {
     /** Collapse runs of 2+ blank lines (outside code/front matter/HTML) to a single blank line. */
@@ -45,8 +46,8 @@ export interface FormatterOptions {
     listSpacing: ListSpacing;
     /** Indentation unit for nested list content. */
     indentation: Indentation;
-    /** Pad table cells so pipes line up. */
-    alignTables: boolean;
+    /** Table layout: leave as written, single-space cell padding (compact), or pad cells so pipes line up (aligned). */
+    tableStyle: TableStyle;
     /** Marker used for emphasis (italics). */
     emphasisMarker: EmphasisMarker;
     /** Marker used for strong (bold). */
@@ -78,7 +79,7 @@ export const DEFAULT_OPTIONS: FormatterOptions = {
     normalizeHeadingLevels: true,
     listSpacing: 'semantic',
     indentation: 'tabs',
-    alignTables: false,
+    tableStyle: 'preserve',
     emphasisMarker: '*',
     strongMarker: '**',
     doubleQuoteStyle: 'preserve',

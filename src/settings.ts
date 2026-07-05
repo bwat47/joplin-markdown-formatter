@@ -12,6 +12,7 @@ import { DEFAULT_OPTIONS } from './formatter';
 
 const SECTION = 'markdownFormatter';
 const DISPLAY_TOAST_MESSAGES_KEY = 'displayToastMessages';
+const LEGACY_ALIGN_TABLES_KEY = 'alignTables';
 
 const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'collapseBlankLines',
@@ -26,7 +27,7 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'normalizeHeadingLevels',
     'listSpacing',
     'indentation',
-    'alignTables',
+    'tableStyle',
     'emphasisMarker',
     'strongMarker',
     'doubleQuoteStyle',
@@ -151,13 +152,28 @@ export async function registerSettings(): Promise<void> {
             label: 'List indentation',
             description: 'Indentation used for nested list content, applied before the list marker.',
         },
-        alignTables: {
-            value: DEFAULT_OPTIONS.alignTables,
-            type: SettingItemType.Bool,
+        tableStyle: {
+            value: DEFAULT_OPTIONS.tableStyle,
+            type: SettingItemType.String,
             section: SECTION,
             public: true,
-            label: 'Align table columns',
-            description: 'Pad table cells so the pipes line up.',
+            isEnum: true,
+            options: {
+                preserve: 'Preserve (leave tables unchanged)',
+                compact: 'Compact (one space of cell padding)',
+                aligned: 'Aligned (pad cells so pipes line up)',
+            },
+            label: 'Table style',
+            description: 'How to lay out table cells and delimiter rows.',
+        },
+        // Deprecated: replaced by tableStyle. Kept hidden so an existing
+        // "align tables" choice can be migrated once, then reset.
+        [LEGACY_ALIGN_TABLES_KEY]: {
+            value: false,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: false,
+            label: 'Align table columns (deprecated)',
         },
         ensureHeadingBlankLines: {
             value: DEFAULT_OPTIONS.ensureHeadingBlankLines,
@@ -257,6 +273,16 @@ export async function registerSettings(): Promise<void> {
             description: 'Show a toast after formatting with the number of characters added and removed.',
         },
     });
+
+    await migrateLegacyAlignTables();
+}
+
+/** One-time migration: alignTables=true becomes tableStyle='aligned'. */
+async function migrateLegacyAlignTables(): Promise<void> {
+    if (await joplin.settings.value(LEGACY_ALIGN_TABLES_KEY)) {
+        await joplin.settings.setValue('tableStyle', 'aligned');
+        await joplin.settings.setValue(LEGACY_ALIGN_TABLES_KEY, false);
+    }
 }
 
 export async function loadFormatterOptions(): Promise<FormatterOptions> {
