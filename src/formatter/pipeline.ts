@@ -14,10 +14,11 @@ export interface FormatResult {
 /**
  * Format a markdown document.
  *
- * Each enabled rule runs as its own parse -> analyze -> edit pass: the text
- * is re-parsed after every rule so byte offsets are always valid against the
- * current document. Notes are small, so the repeated parses are cheap and
- * buy us freedom from cross-rule offset bookkeeping.
+ * Each enabled rule runs as its own analyze -> edit pass against a tree that
+ * always matches the current text: the text is re-parsed whenever a rule
+ * changes it, so byte offsets are always valid against the current document.
+ * Notes are small, so the repeated parses are cheap and buy us freedom from
+ * cross-rule offset bookkeeping.
  *
  * Every rule's output is structurally verified before being accepted: if a
  * rule changed what the document *means* (beyond the normalizations rules
@@ -31,19 +32,24 @@ export function formatMarkdown(text: string, options: Partial<FormatterOptions> 
     const resolved: FormatterOptions = { ...DEFAULT_OPTIONS, ...options };
 
     let current = text;
+    // The tree is reused across rules while the text is unchanged, and the
+    // verification parse becomes the next rule's tree when an edit is
+    // accepted, so each version of the text is parsed exactly once.
+    let tree = parseMarkdown(current);
     const skippedRules: string[] = [];
     for (const rule of rules) {
         if (!rule.isEnabled(resolved)) continue;
-        const tree = parseMarkdown(current);
         const edits = rule.apply({ text: current, tree, options: resolved });
         if (edits.length === 0) continue;
         const next = applyEdits(current, edits);
         if (next === current) continue;
-        if (!isStructurallyEqual(tree, parseMarkdown(next))) {
+        const nextTree = parseMarkdown(next);
+        if (!isStructurallyEqual(tree, nextTree)) {
             skippedRules.push(rule.name);
             continue;
         }
         current = next;
+        tree = nextTree;
     }
     return { text: current, skippedRules };
 }
