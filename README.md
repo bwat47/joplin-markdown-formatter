@@ -16,7 +16,7 @@ understand is left alone.
 
 ## Features
 
-- Normalize unordered list markers to `-` or `*`.
+- Normalize unordered list markers to `-` or `*`, or preserve them as written.
 - Renumber ordered lists sequentially while preserving the first item's number.
 - Normalize emphasis and bold delimiters.
 - Optionally convert double and single quotes in prose between straight and smart (curly) styles.
@@ -50,7 +50,7 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 
 | Setting                               | Default      | Description                                                                                                                                                  |
 | ------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Unordered list marker                 | `-`          | Rewrite unordered bullets to dash or asterisk.                                                                                                               |
+| Unordered list marker                 | `-`          | Rewrite unordered bullets to dash or asterisk, or preserve them as written.                                                                                  |
 | Normalize ordered list numbering      | On           | Renumber ordered lists sequentially, keeping the first item number.                                                                                          |
 | Normalize heading level increments    | On           | Lower skipped heading levels so headings increase one level at a time.                                                                                       |
 | Emphasis (italic) marker              | `*emphasis*` | Prefer `*` or `_` for emphasis delimiters.                                                                                                                   |

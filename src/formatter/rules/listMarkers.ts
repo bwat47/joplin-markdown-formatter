@@ -16,8 +16,8 @@ import { walk } from '../walk';
 export const listMarkers: Rule = {
     name: 'listMarkers',
 
-    isEnabled() {
-        return true;
+    isEnabled(options) {
+        return options.unorderedListMarker !== 'preserve';
     },
 
     apply({ text, tree, options }: RuleContext): Edit[] {
