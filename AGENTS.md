@@ -5,6 +5,7 @@ docs/ARCHITECTURE.md
 ## Build, Test, and Development Commands
 
 - `npm run dist` Build plugin and create archive at `publish/*.jpl`.
+- `npm test` Run tests.
 - `npm run lint` Lint TypeScript with ESLint.
 - `npm run lint:fix` Auto-fix lint issues.
 - `npm run format` Format code with Prettier.
