@@ -113,8 +113,7 @@ the `FormatterOptions` property names; `loadFormatterOptions()` merges saved val
 Fixture-based: each directory under `src/formatter/fixtures/` holds `input.md`, `expected.md`, and an
 optional `options.json` (partial `FormatterOptions`). The harness (`fixtures.test.ts`) asserts
 `format(input) === expected` and **idempotency** (`format(expected) === expected`) for every case.
-`edits.test.ts` unit-tests edit application. Jest runs in ESM mode (`NODE_OPTIONS=--experimental-vm-modules`)
-because the mdast/micromark ecosystem is ESM-only.
+`edits.test.ts` unit-tests edit application. Vitest runs the TypeScript/ESM test suite directly.
 
 ## Packaging
 

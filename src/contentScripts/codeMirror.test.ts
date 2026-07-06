@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import { GET_NOTE_TEXT_COMMAND, SET_NOTE_TEXT_COMMAND } from '../constants';
 import createCodeMirrorPlugin, { computeChanges } from './codeMirror';
 
@@ -58,7 +58,7 @@ describe('CodeMirror content script commands', () => {
     function registerCommands(initialText: string) {
         let text = initialText;
         const commands = new Map<string, (...args: unknown[]) => unknown>();
-        const dispatch = jest.fn((spec: { changes: Array<{ from: number; to: number; insert: string }> }) => {
+        const dispatch = vi.fn((spec: { changes: Array<{ from: number; to: number; insert: string }> }) => {
             text = applyChanges(text, spec.changes);
         });
 

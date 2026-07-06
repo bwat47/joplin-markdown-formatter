@@ -9,8 +9,8 @@
         "lint": "eslint --ext .ts src/",
         "lint:fix": "eslint --ext .ts src/ --fix",
         "format": "prettier --write \"src/**/*.ts\"",
-        "test": "NODE_OPTIONS=--experimental-vm-modules jest",
-        "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch"
+        "test": "vitest run",
+        "test:watch": "vitest"
     },
     "license": "MIT",
     "keywords": [
@@ -21,7 +21,6 @@
     ],
     "devDependencies": {
         "@eslint/js": "^10.0.1",
-        "@types/jest": "^30.0.0",
         "@types/mdast": "^4.0.4",
         "@types/node": "^25.6.2",
         "@types/unist": "^3.0.3",
@@ -35,12 +34,11 @@
         "fs-extra": "^10.1.0",
         "glob": "^8.0.3",
         "globals": "^17.6.0",
-        "jest": "^30.4.2",
         "prettier": "^3.8.4",
         "tar": "^7.5.9",
-        "ts-jest": "^29.4.11",
         "ts-loader": "^9.6.2",
         "typescript": "^6.0.3",
+        "vitest": "^4.1.9",
         "webpack": "^5.108.3",
         "webpack-cli": "^7.1.0"
     },
