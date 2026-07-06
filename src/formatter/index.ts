@@ -5,6 +5,5 @@
  */
 
 export { formatMarkdown } from './pipeline';
-export type { FormatResult } from './pipeline';
 export { DEFAULT_OPTIONS } from './types';
-export type { FormatterOptions, ListSpacing, Indentation, QuoteStyle } from './types';
+export type { FormatterOptions } from './types';

@@ -9,14 +9,14 @@
 
 import type { Root } from 'mdast';
 
-export type ListSpacing = 'semantic' | 'tight' | 'loose' | 'preserve';
+type ListSpacing = 'semantic' | 'tight' | 'loose' | 'preserve';
 export type Indentation = 'tabs' | 'spaces2' | 'spaces4';
-export type EmphasisMarker = '*' | '_';
-export type StrongMarker = '**' | '__';
-export type UnorderedListMarker = '-' | '*' | 'preserve';
-export type ThematicBreakMarker = '---' | '- - -' | '***' | '* * *';
+type EmphasisMarker = '*' | '_';
+type StrongMarker = '**' | '__';
+type UnorderedListMarker = '-' | '*' | 'preserve';
+type ThematicBreakMarker = '---' | '- - -' | '***' | '* * *';
 export type QuoteStyle = 'preserve' | 'straight' | 'smart';
-export type TableStyle = 'preserve' | 'compact' | 'aligned';
+type TableStyle = 'preserve' | 'compact' | 'aligned';
 
 export interface FormatterOptions {
     /** Collapse runs of 2+ blank lines (outside code/front matter/HTML) to a single blank line. */
