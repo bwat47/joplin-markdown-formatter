@@ -7,7 +7,7 @@ A Joplin plugin that reformats/normalizes the markdown of the current note, simi
 The formatter never re-prints the document from an AST (the Prettier / remark-stringify model). Instead it follows the ESLint-fixer model:
 
 1. Parse the markdown to an mdast tree **with source positions** (`mdast-util-from-markdown` + GFM + front matter + math extensions, with ambiguous single-dollar inline math disabled).
-2. Each rule uses the tree only to _locate_ things, then emits targeted string edits (`{ start, end, replacement }`) against the original source text.
+2. Each rule uses the tree only to *locate* things, then emits targeted string edits (`{ start, end, replacement }`) against the original source text.
 3. Edits are validated (in-bounds, non-overlapping) and applied.
 
 Bytes no rule explicitly touches survive verbatim. Syntax the parser doesn't recognize (`==highlight==`, plugin syntax, raw HTML) parses as plain text/paragraph nodes and passes through untouched — graceful degradation falls out of the architecture rather than needing per-syntax handling.
@@ -16,7 +16,7 @@ Bytes no rule explicitly touches survive verbatim. Syntax the parser doesn't rec
 
 `formatMarkdown(text, options)` in [src/formatter/pipeline.ts](../src/formatter/pipeline.ts) runs each enabled rule as its own **analyze → edit → apply → verify** pass. The text is re-parsed whenever a rule changes it, so byte offsets are always valid (the verification parse is reused as the next rule's tree, so each version of the text is parsed exactly once); notes are small, so repeated parsing is cheap and eliminates cross-rule offset-invalidation bugs. Within a rule, `applyEdits` rejects overlapping or out-of-bounds edits by throwing — the plugin shell catches and keeps the original note untouched.
 
-**Structural safety check** ([src/formatter/verify.ts](../src/formatter/verify.ts)): every rule's output is re-parsed and compared to the tree it started from, after normalizing away the differences rules are _allowed_ to make (positions, tight/loose `spread`, adjacent bullet lists merged by marker normalization). If a rule changed what the document means, its edits are dropped and the rule name is reported in `FormatResult.skippedRules` — a rule bug degrades to a logged no-op, never a corrupted note.
+**Structural safety check** ([src/formatter/verify.ts](../src/formatter/verify.ts)): every rule's output is re-parsed and compared to the tree it started from, after normalizing away the differences rules are *allowed* to make (positions, tight/loose `spread`, adjacent bullet lists merged by marker normalization). If a rule changed what the document means, its edits are dropped and the rule name is reported in `FormatResult.skippedRules` — a rule bug degrades to a logged no-op, never a corrupted note.
 
 ## Layout
 

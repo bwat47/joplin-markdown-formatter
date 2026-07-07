@@ -1,7 +1,7 @@
-> [!NOTE]  
+> [!NOTE]
 > This plugin was created entirely with AI tools.
 
-> [!NOTE]  
+> [!NOTE]
 > This plugin only works in the Markdown editor.
 
 # Markdown Formatter
