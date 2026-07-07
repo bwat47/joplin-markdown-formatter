@@ -23,7 +23,7 @@ The plugin parses Markdown to find known structures, then applies targeted edits
 - Normalize nested list indentation with tabs, 2 spaces, or 4 spaces.
 - Normalize Horizontal rule format and spacing above/below.
 - Optionally reformat GitHub Flavored Markdown tables in a compact or aligned style.
-- Ensure headings, code blocks, math blocks, tables, root-level lists, and blockquotes have a blank line before and after neighboring content.
+- Ensure headings, paragraphs, code blocks, math blocks, tables, root-level lists, and blockquotes have a blank line before and after neighboring content.
 - Ensure YAML front matter has a blank line before following content.
 - Collapse repeated blank lines outside protected content.
 - Trim trailing whitespace outside protected content, preserving two-space hard line breaks.
