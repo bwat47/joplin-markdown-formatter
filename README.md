@@ -18,6 +18,7 @@ The plugin parses Markdown to find known structures, then applies targeted edits
 - Renumber ordered lists sequentially while preserving the first item's number.
 - Normalize emphasis and bold delimiters.
 - Optionally convert double and single quotes in prose between straight and smart (curly) styles.
+- Optionally add a configured default language to fenced code blocks that do not specify one.
 - Normalize heading levels so they increase by at most one level at a time.
 - Normalize list spacing: semantic (keep each list tight or loose as authored, fixing mixed spacing), preserve, tight, or loose.
 - Normalize nested list indentation with tabs, 2 spaces, or 4 spaces.
@@ -54,6 +55,8 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Bold marker | `**bold**` | Prefer `**` or `__` for strong delimiters. |
 | Double quote style | Preserve | Convert double quotes in prose to straight or smart (curly) quotes. Code, math, HTML, front matter, and link titles are never changed. |
 | Single quote style | Preserve | Convert single quotes and apostrophes in prose to straight or smart (curly) quotes. Same exclusions as double quotes. |
+| Set default language on unlabeled code blocks | Off | Add the configured default language to fenced code blocks with no language. Indented code blocks are left unchanged. |
+| Default code block language | `text` | Language identifier to add when the default code block language rule is enabled. |
 | List spacing | Semantic | Semantic keeps each list tight or loose as authored and only fixes mixed spacing, so rendering never changes. Preserve, tight, and loose are also available. |
 | List indentation | Tabs | Indentation used before nested list markers. |
 | Table style | Preserve | Compact rebuilds cells with one space of padding; aligned pads cells so pipes line up. Preserve leaves tables unchanged. |

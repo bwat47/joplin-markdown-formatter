@@ -13,26 +13,28 @@ interface AnyNode {
     [key: string]: unknown;
 }
 
-export function isStructurallyEqual(before: Root, after: Root): boolean {
+export function isStructurallyEqual(before: Root, after: Root, ruleName?: string): boolean {
     return (
-        JSON.stringify(normalizeNode(before as unknown as AnyNode)) ===
-        JSON.stringify(normalizeNode(after as unknown as AnyNode))
+        JSON.stringify(normalizeNode(before as unknown as AnyNode, ruleName)) ===
+        JSON.stringify(normalizeNode(after as unknown as AnyNode, ruleName))
     );
 }
 
-function normalizeNode(node: AnyNode): AnyNode {
+function normalizeNode(node: AnyNode, ruleName?: string): AnyNode {
     const copy: AnyNode = { ...node };
     delete copy.position;
     // listSpacing legitimately changes tight/loose.
     if (copy.type === 'list' || copy.type === 'listItem') delete copy.spread;
     // headingLevels legitimately changes heading depth without changing heading text.
     if (copy.type === 'heading') delete copy.depth;
+    // codeBlockLanguage legitimately fills in missing fence info strings.
+    if (ruleName === 'codeBlockLanguage' && copy.type === 'code') delete copy.lang;
     // quoteStyle legitimately converts quote characters in prose text.
     if (copy.type === 'text' && typeof copy.value === 'string') {
         copy.value = copy.value.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
     }
     if (Array.isArray(copy.children)) {
-        copy.children = mergeAdjacentBulletLists(copy.children.map((child) => normalizeNode(child)));
+        copy.children = mergeAdjacentBulletLists(copy.children.map((child) => normalizeNode(child, ruleName)));
     }
     return copy;
 }

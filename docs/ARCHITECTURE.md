@@ -16,7 +16,7 @@ Bytes no rule explicitly touches survive verbatim. Syntax the parser doesn't rec
 
 `formatMarkdown(text, options)` in [src/formatter/pipeline.ts](../src/formatter/pipeline.ts) runs each enabled rule as its own **analyze → edit → apply → verify** pass. The text is re-parsed whenever a rule changes it, so byte offsets are always valid (the verification parse is reused as the next rule's tree, so each version of the text is parsed exactly once); notes are small, so repeated parsing is cheap and eliminates cross-rule offset-invalidation bugs. Within a rule, `applyEdits` rejects overlapping or out-of-bounds edits by throwing — the plugin shell catches and keeps the original note untouched.
 
-**Structural safety check** ([src/formatter/verify.ts](../src/formatter/verify.ts)): every rule's output is re-parsed and compared to the tree it started from, after normalizing away the differences rules are *allowed* to make (positions, tight/loose `spread`, adjacent bullet lists merged by marker normalization). If a rule changed what the document means, its edits are dropped and the rule name is reported in `FormatResult.skippedRules` — a rule bug degrades to a logged no-op, never a corrupted note.
+**Structural safety check** ([src/formatter/verify.ts](../src/formatter/verify.ts)): every rule's output is re-parsed and compared to the tree it started from, after normalizing away the differences rules are *allowed* to make (positions, tight/loose `spread`, adjacent bullet lists merged by marker normalization, and rule-specific metadata such as a default code block language). If a rule changed what the document means, its edits are dropped and the rule name is reported in `FormatResult.skippedRules` — a rule bug degrades to a logged no-op, never a corrupted note.
 
 ## Layout
 
@@ -48,6 +48,7 @@ Each rule implements `{ name, isEnabled(options), apply(context): Edit[] }`. Cur
 | `thematicBreaks` | `thematicBreakMarker` | Rewrite horizontal rules to the configured marker with one blank line around them |
 | `emphasisStyle` | `emphasisMarker`/`strongMarker` | Normalize `*`/`_` and `**`/`__` delimiters (intraword-safe) |
 | `quoteStyle` | `doubleQuoteStyle`/`singleQuoteStyle` | Convert quotes in prose text between straight and smart styles; `preserve` (default) leaves quotes as written |
+| `codeBlockLanguage` | `setDefaultCodeBlockLanguage`/`defaultCodeBlockLanguage` | Add the configured language to fenced code blocks with no info string; disabled by default |
 | `listSpacing` | `listSpacing` | Force lists tight or loose; `semantic` (default) keeps each list's authored tight/loose meaning, only fixing mixed spacing; `preserve` leaves lists as written |
 | `listIndentation` | `indentation` | Tab/2/4-space indent per level before the marker, one space after it |
 | `listBoundarySpacing` | `ensureListBlankLines` | Ensure root-level lists have one blank line before and after them |
