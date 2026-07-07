@@ -1,6 +1,8 @@
-> [!NOTE] This plugin was created entirely with AI tools.
+> [!NOTE]  
+> This plugin was created entirely with AI tools.
 
-> [!NOTE] This plugin only works in the Markdown editor.
+> [!NOTE]  
+> This plugin only works in the Markdown editor.
 
 # Markdown Formatter
 
