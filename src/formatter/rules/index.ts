@@ -10,6 +10,7 @@ import { listBoundarySpacing } from './listBoundarySpacing';
 import { tableStyle } from './tableStyle';
 import { headingLevels } from './headingLevels';
 import { headingSpacing } from './headingSpacing';
+import { paragraphSpacing } from './paragraphSpacing';
 import { codeBlockSpacing } from './codeBlockSpacing';
 import { mathBlockSpacing } from './mathBlockSpacing';
 import { tableSpacing } from './tableSpacing';
@@ -38,6 +39,7 @@ export const rules: Rule[] = [
     tableStyle,
     headingLevels,
     headingSpacing,
+    paragraphSpacing,
     codeBlockSpacing,
     mathBlockSpacing,
     tableSpacing,

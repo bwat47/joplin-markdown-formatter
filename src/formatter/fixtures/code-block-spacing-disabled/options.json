@@ -1,4 +1,5 @@
 {
     "ensureCodeBlockBlankLines": false,
+    "ensureParagraphBlankLines": false,
     "ensureFinalNewline": false
 }

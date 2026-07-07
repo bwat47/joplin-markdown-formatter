@@ -1,3 +1,4 @@
 {
-    "ensureBlockquoteBlankLines": false
+    "ensureBlockquoteBlankLines": false,
+    "ensureParagraphBlankLines": false
 }

@@ -1,3 +1,4 @@
 {
-    "ensureListBlankLines": false
+    "ensureListBlankLines": false,
+    "ensureParagraphBlankLines": false
 }
