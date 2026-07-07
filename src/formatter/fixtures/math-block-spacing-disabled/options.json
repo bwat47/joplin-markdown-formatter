@@ -1,3 +1,4 @@
 {
-    "ensureMathBlockBlankLines": false
+    "ensureMathBlockBlankLines": false,
+    "ensureParagraphBlankLines": false
 }

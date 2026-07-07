@@ -1,8 +1,6 @@
-> [!NOTE]
-> This plugin was created entirely with AI tools.
+> [!NOTE] This plugin was created entirely with AI tools.
 
-> [!NOTE]
-> This plugin only works in the Markdown editor.
+> [!NOTE] This plugin only works in the Markdown editor.
 
 # Markdown Formatter
 
@@ -45,29 +43,30 @@ The command formats the currently open note. If the note is already formatted, i
 
 Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 
-| Setting                               | Default      | Description                                                                                                                                                  |
-| ------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Unordered list marker                 | `-`          | Rewrite unordered bullets to dash or asterisk, or preserve them as written.                                                                                  |
-| Normalize ordered list numbering      | On           | Renumber ordered lists sequentially, keeping the first item number.                                                                                          |
-| Normalize heading level increments    | On           | Lower skipped heading levels so headings increase one level at a time.                                                                                       |
-| Emphasis (italic) marker              | `*emphasis*` | Prefer `*` or `_` for emphasis delimiters.                                                                                                                   |
-| Bold marker                           | `**bold**`   | Prefer `**` or `__` for strong delimiters.                                                                                                                   |
-| Double quote style                    | Preserve     | Convert double quotes in prose to straight or smart (curly) quotes. Code, math, HTML, front matter, and link titles are never changed.                       |
-| Single quote style                    | Preserve     | Convert single quotes and apostrophes in prose to straight or smart (curly) quotes. Same exclusions as double quotes.                                        |
-| List spacing                          | Semantic     | Semantic keeps each list tight or loose as authored and only fixes mixed spacing, so rendering never changes. Preserve, tight, and loose are also available. |
-| List indentation                      | Tabs         | Indentation used before nested list markers.                                                                                                                 |
-| Table style                           | Preserve     | Compact rebuilds cells with one space of padding; aligned pads cells so pipes line up. Preserve leaves tables unchanged.                                     |
-| Ensure blank lines around headings    | On           | Add one blank line before and after headings with neighboring content.                                                                                       |
-| Ensure blank lines around code blocks | On           | Add one blank line before and after code blocks with neighboring content.                                                                                    |
-| Ensure blank lines around math blocks | On           | Add one blank line before and after math blocks with neighboring content.                                                                                    |
-| Ensure blank lines around tables      | On           | Add one blank line before and after tables with neighboring content.                                                                                         |
-| Ensure blank lines around blockquotes | On           | Add one blank line before and after blockquotes with neighboring content. Quote interiors are never rewritten.                                               |
-| Ensure blank lines around lists       | On           | Add one blank line before and after root-level lists when neighboring content exists.                                                                        |
-| Ensure blank line after front matter  | On           | Add one blank line between YAML front matter and following content.                                                                                          |
-| Collapse consecutive blank lines      | On           | Reduce runs of blank lines to one blank line outside protected content.                                                                                      |
-| Trim trailing whitespace              | On           | Remove trailing spaces and tabs outside protected content, preserving two-space hard line breaks.                                                            |
-| Ensure trailing newline               | On           | End the note with exactly one newline.                                                                                                                       |
-| Display toast messages                | On           | Show a toast after formatting with the number of characters added and removed.                                                                               |
+| Setting | Default | Description |
+| --- | --- | --- |
+| Unordered list marker | `-` | Rewrite unordered bullets to dash or asterisk, or preserve them as written. |
+| Normalize ordered list numbering | On | Renumber ordered lists sequentially, keeping the first item number. |
+| Normalize heading level increments | On | Lower skipped heading levels so headings increase one level at a time. |
+| Emphasis (italic) marker | `*emphasis*` | Prefer `*` or `_` for emphasis delimiters. |
+| Bold marker | `**bold**` | Prefer `**` or `__` for strong delimiters. |
+| Double quote style | Preserve | Convert double quotes in prose to straight or smart (curly) quotes. Code, math, HTML, front matter, and link titles are never changed. |
+| Single quote style | Preserve | Convert single quotes and apostrophes in prose to straight or smart (curly) quotes. Same exclusions as double quotes. |
+| List spacing | Semantic | Semantic keeps each list tight or loose as authored and only fixes mixed spacing, so rendering never changes. Preserve, tight, and loose are also available. |
+| List indentation | Tabs | Indentation used before nested list markers. |
+| Table style | Preserve | Compact rebuilds cells with one space of padding; aligned pads cells so pipes line up. Preserve leaves tables unchanged. |
+| Ensure blank lines around headings | On | Add one blank line before and after headings with neighboring content. |
+| Ensure blank lines around paragraphs | On | Add one blank line before and after root-level paragraphs with neighboring content. |
+| Ensure blank lines around code blocks | On | Add one blank line before and after code blocks with neighboring content. |
+| Ensure blank lines around math blocks | On | Add one blank line before and after math blocks with neighboring content. |
+| Ensure blank lines around tables | On | Add one blank line before and after tables with neighboring content. |
+| Ensure blank lines around blockquotes | On | Add one blank line before and after blockquotes with neighboring content. Quote interiors are never rewritten. |
+| Ensure blank lines around lists | On | Add one blank line before and after root-level lists when neighboring content exists. |
+| Ensure blank line after front matter | On | Add one blank line between YAML front matter and following content. |
+| Collapse consecutive blank lines | On | Reduce runs of blank lines to one blank line outside protected content. |
+| Trim trailing whitespace | On | Remove trailing spaces and tabs outside protected content, preserving two-space hard line breaks. |
+| Ensure trailing newline | On | End the note with exactly one newline. |
+| Display toast messages | On | Show a toast after formatting with the number of characters added and removed. |
 
 ## Safety Model
 

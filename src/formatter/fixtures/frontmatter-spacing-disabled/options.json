@@ -1,3 +1,4 @@
 {
-    "ensureFrontmatterBlankLine": false
+    "ensureFrontmatterBlankLine": false,
+    "ensureParagraphBlankLines": false
 }

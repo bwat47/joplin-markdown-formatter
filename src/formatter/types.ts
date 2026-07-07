@@ -25,6 +25,8 @@ export interface FormatterOptions {
     trimTrailingWhitespace: boolean;
     /** Ensure headings have one blank line before and after neighboring content. */
     ensureHeadingBlankLines: boolean;
+    /** Ensure root-level paragraphs have one blank line before and after neighboring content. */
+    ensureParagraphBlankLines: boolean;
     /** Ensure code blocks have one blank line before and after neighboring content. */
     ensureCodeBlockBlankLines: boolean;
     /** Ensure math blocks have one blank line before and after neighboring content. */
@@ -70,6 +72,7 @@ export const DEFAULT_OPTIONS: FormatterOptions = {
     collapseBlankLines: true,
     trimTrailingWhitespace: true,
     ensureHeadingBlankLines: true,
+    ensureParagraphBlankLines: true,
     ensureCodeBlockBlankLines: true,
     ensureMathBlockBlankLines: true,
     ensureTableBlankLines: true,
