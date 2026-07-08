@@ -29,17 +29,9 @@ export function createBlockSpacingRule({ name, option, nodeType, shouldSpace }: 
         },
 
         apply({ text, tree }: RuleContext): Edit[] {
-            const edits: Edit[] = [];
-            const editKeys = new Set<string>();
+            const { edits, addEdit } = createEditSink(text);
             const lineStarts = computeLineStarts(text);
             const lineEnd = (i: number): number => lineStarts[i + 1] ?? text.length;
-            const addEdit = (edit: Edit): void => {
-                if (text.slice(edit.start, edit.end) === edit.replacement) return;
-                const key = `${edit.start}:${edit.end}:${edit.replacement}`;
-                if (editKeys.has(key)) return;
-                editKeys.add(key);
-                edits.push(edit);
-            };
 
             walkWithAncestors(tree, (node, ancestors) => {
                 if (node.type !== nodeType) return;
@@ -60,7 +52,21 @@ export function createBlockSpacingRule({ name, option, nodeType, shouldSpace }: 
     };
 }
 
-function addSpacingAbove(
+/** Create a dedup sink for {@link Edit}s: no-op replacements and repeat edits are dropped. */
+export function createEditSink(text: string): { edits: Edit[]; addEdit: (edit: Edit) => void } {
+    const edits: Edit[] = [];
+    const editKeys = new Set<string>();
+    const addEdit = (edit: Edit): void => {
+        if (text.slice(edit.start, edit.end) === edit.replacement) return;
+        const key = `${edit.start}:${edit.end}:${edit.replacement}`;
+        if (editKeys.has(key)) return;
+        editKeys.add(key);
+        edits.push(edit);
+    };
+    return { edits, addEdit };
+}
+
+export function addSpacingAbove(
     text: string,
     lineStarts: number[],
     lineEnd: (i: number) => number,
@@ -84,7 +90,7 @@ function addSpacingAbove(
     addEdit({ start: lineStarts[runStart], end: lineStarts[lineIndex], replacement: '\n' });
 }
 
-function addSpacingBelow(
+export function addSpacingBelow(
     text: string,
     lineStarts: number[],
     lineEnd: (i: number) => number,
