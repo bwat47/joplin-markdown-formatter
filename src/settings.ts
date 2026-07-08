@@ -20,6 +20,8 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'ensureHeadingBlankLines',
     'ensureParagraphBlankLines',
     'ensureCodeBlockBlankLines',
+    'setDefaultCodeBlockLanguage',
+    'defaultCodeBlockLanguage',
     'ensureMathBlockBlankLines',
     'ensureTableBlankLines',
     'ensureBlockquoteBlankLines',
@@ -200,6 +202,24 @@ export async function registerSettings(): Promise<void> {
             public: true,
             label: 'Ensure blank lines around code blocks',
             description: 'Add one blank line before and after code blocks when neighboring content exists.',
+        },
+        setDefaultCodeBlockLanguage: {
+            value: DEFAULT_OPTIONS.setDefaultCodeBlockLanguage,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Set default language on unlabeled code blocks',
+            description:
+                'Add the configured language to fenced code blocks that do not specify one. Indented code blocks are left unchanged.',
+        },
+        defaultCodeBlockLanguage: {
+            value: DEFAULT_OPTIONS.defaultCodeBlockLanguage,
+            type: SettingItemType.String,
+            section: SECTION,
+            public: true,
+            label: 'Default code block language',
+            description:
+                'Language identifier to add when the default code block language rule is enabled, for example text, javascript, or bash.',
         },
         ensureMathBlockBlankLines: {
             value: DEFAULT_OPTIONS.ensureMathBlockBlankLines,

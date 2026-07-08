@@ -44,7 +44,7 @@ export function formatMarkdown(text: string, options: Partial<FormatterOptions> 
         const next = applyEdits(current, edits);
         if (next === current) continue;
         const nextTree = parseMarkdown(next);
-        if (!isStructurallyEqual(tree, nextTree)) {
+        if (!isStructurallyEqual(tree, nextTree, rule.name)) {
             skippedRules.push(rule.name);
             continue;
         }

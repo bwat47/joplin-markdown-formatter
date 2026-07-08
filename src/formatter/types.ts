@@ -29,6 +29,10 @@ export interface FormatterOptions {
     ensureParagraphBlankLines: boolean;
     /** Ensure code blocks have one blank line before and after neighboring content. */
     ensureCodeBlockBlankLines: boolean;
+    /** Add the configured default language to fenced code blocks that do not specify one. */
+    setDefaultCodeBlockLanguage: boolean;
+    /** Language identifier used when setDefaultCodeBlockLanguage is enabled. */
+    defaultCodeBlockLanguage: string;
     /** Ensure math blocks have one blank line before and after neighboring content. */
     ensureMathBlockBlankLines: boolean;
     /** Ensure tables have one blank line before and after neighboring content. */
@@ -74,6 +78,8 @@ export const DEFAULT_OPTIONS: FormatterOptions = {
     ensureHeadingBlankLines: true,
     ensureParagraphBlankLines: true,
     ensureCodeBlockBlankLines: true,
+    setDefaultCodeBlockLanguage: false,
+    defaultCodeBlockLanguage: 'txt',
     ensureMathBlockBlankLines: true,
     ensureTableBlankLines: true,
     ensureBlockquoteBlankLines: true,

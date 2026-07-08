@@ -1,0 +1,4 @@
+{
+    "setDefaultCodeBlockLanguage": true,
+    "defaultCodeBlockLanguage": "bash"
+}
