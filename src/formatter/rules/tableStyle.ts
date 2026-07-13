@@ -1,4 +1,3 @@
-import stringWidth from 'string-width';
 import type { Table, TableRow } from 'mdast';
 import type { AlignType } from 'mdast';
 import type { Node } from 'unist';
@@ -18,9 +17,7 @@ import { computeLineStarts, lineIndexOfOffset } from '../lines';
  * Rows are replaced from their own start offset, so tables indented inside
  * list items keep their indentation. Tables inside blockquotes are skipped
  * (the delimiter row has no AST node, and rewriting around `>` prefixes is
- * not worth the risk). Column widths count terminal display columns via
- * string-width (CJK and emoji count as two), so alignment holds in
- * monospace fonts that render them double-width.
+ * not worth the risk). Column widths count UTF-16 code units.
  */
 export const tableStyle: Rule = {
     name: 'tableStyle',
@@ -50,7 +47,7 @@ export const tableStyle: Rule = {
             // and always uses three dashes plus alignment colons.
             const compact = options.tableStyle === 'compact';
             const widths = align.map((_, col) =>
-                compact ? 0 : Math.max(3, ...cellTexts.map((cells) => stringWidth(cells[col] ?? '')))
+                compact ? 0 : Math.max(3, ...cellTexts.map((cells) => (cells[col] ?? '').length))
             );
 
             const renderRow = (cells: string[]): string =>
@@ -115,7 +112,7 @@ function isEscapedPipe(text: string, pipeIndex: number): boolean {
 }
 
 function pad(value: string, width: number, align: AlignType): string {
-    const total = Math.max(width - stringWidth(value), 0);
+    const total = Math.max(width - value.length, 0);
     if (align === 'right') return ' '.repeat(total) + value;
     if (align === 'center') {
         const left = Math.floor(total / 2);

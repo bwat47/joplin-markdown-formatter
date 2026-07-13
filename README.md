@@ -91,7 +91,6 @@ Protected content such as fenced code blocks, indented code blocks, inline code,
 - Lists inside blockquotes are not reindented and their tight/loose spacing is not changed. Their list markers and ordered numbering can still be normalized.
 - Tables inside blockquotes are not reformatted.
 - Lists inside footnote definitions are not reindented.
-- Table alignment measures display width (CJK and emoji count as two columns), so cells line up in monospace fonts; proportional fonts may still drift.
 - Emphasis conversion to `_` skips cases where CommonMark would reinterpret intraword underscores or merge adjacent delimiter runs.
 - Smart quote conversion decides opening vs. closing from surrounding characters, so unusual constructs can get the wrong direction. Backslash-escaped quotes and quotes in image alt text and link titles are left as written.
 - Might be slow to format massive notes.

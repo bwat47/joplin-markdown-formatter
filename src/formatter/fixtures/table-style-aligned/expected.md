@@ -20,5 +20,5 @@ Wide characters:
 
 | Item      | Note |
 | --------- | ---- |
-| 日本語    | ok   |
+| 日本語       | ok   |
 | 🚀 launch | wide |
