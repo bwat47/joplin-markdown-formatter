@@ -27,6 +27,8 @@ export interface FormatterOptions {
     ensureHeadingBlankLines: boolean;
     /** Normalize whitespace between ATX heading markers and heading text to one space. */
     normalizeHeadingMarkerSpacing: boolean;
+    /** Remove up to three leading spaces before root-level ATX heading markers. */
+    removeHeadingIndentation: boolean;
     /** Ensure root-level paragraphs have one blank line before and after neighboring content. */
     ensureParagraphBlankLines: boolean;
     /** Ensure code blocks have one blank line before and after neighboring content. */
@@ -79,6 +81,7 @@ export const DEFAULT_OPTIONS: FormatterOptions = {
     trimTrailingWhitespace: true,
     ensureHeadingBlankLines: true,
     normalizeHeadingMarkerSpacing: true,
+    removeHeadingIndentation: true,
     ensureParagraphBlankLines: true,
     ensureCodeBlockBlankLines: true,
     setDefaultCodeBlockLanguage: false,

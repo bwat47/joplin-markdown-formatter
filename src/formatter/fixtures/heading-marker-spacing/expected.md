@@ -4,7 +4,7 @@
 
 ### Closed heading ###
 
-  #### Indented heading ####
+#### Indented heading ####
 
 > ## Quoted heading ##
 
