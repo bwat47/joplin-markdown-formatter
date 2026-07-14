@@ -20,6 +20,8 @@ The plugin parses Markdown to find known structures, then applies targeted edits
 - Optionally convert double and single quotes in prose between straight and smart (curly) styles.
 - Optionally add a configured default language to fenced code blocks that do not specify one.
 - Normalize heading levels so they increase by at most one level at a time.
+- Normalize spacing between ATX heading markers and text.
+- Remove leading spaces before root-level ATX heading markers.
 - Normalize list spacing: semantic (keep each list tight or loose as authored, fixing mixed spacing), preserve, tight, or loose.
 - Normalize nested list indentation with tabs, 2 spaces, or 4 spaces.
 - Normalize Horizontal rule format and spacing above/below.
@@ -51,6 +53,8 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Unordered list marker                         | `-`          | Rewrite unordered bullets to dash or asterisk, or preserve them as written.                                                                                  |
 | Normalize ordered list numbering              | On           | Renumber ordered lists sequentially, keeping the first item number.                                                                                          |
 | Normalize heading level increments            | On           | Lower skipped heading levels so headings increase one level at a time.                                                                                       |
+| Normalize heading marker spacing              | On           | Use one space between ATX heading markers and text, including optional closing markers.                                                                      |
+| Remove heading indentation                    | On           | Move root-level ATX headings to the start of the line without changing indented code or headings nested in containers.                                       |
 | Emphasis (italic) marker                      | `*emphasis*` | Prefer `*` or `_` for emphasis delimiters.                                                                                                                   |
 | Bold marker                                   | `**bold**`   | Prefer `**` or `__` for strong delimiters.                                                                                                                   |
 | Double quote style                            | Preserve     | Convert double quotes in prose to straight or smart (curly) quotes. Code, math, HTML, front matter, and link titles are never changed.                       |
