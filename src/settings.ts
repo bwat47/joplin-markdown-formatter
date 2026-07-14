@@ -18,6 +18,7 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'collapseBlankLines',
     'trimTrailingWhitespace',
     'ensureHeadingBlankLines',
+    'normalizeHeadingMarkerSpacing',
     'ensureParagraphBlankLines',
     'ensureCodeBlockBlankLines',
     'setDefaultCodeBlockLanguage',
@@ -186,6 +187,15 @@ export async function registerSettings(): Promise<void> {
             public: true,
             label: 'Ensure blank lines around headings',
             description: 'Add one blank line before and after headings when neighboring content exists.',
+        },
+        normalizeHeadingMarkerSpacing: {
+            value: DEFAULT_OPTIONS.normalizeHeadingMarkerSpacing,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Normalize heading marker spacing',
+            description:
+                'Use one space between ATX heading markers and heading text, including optional closing markers.',
         },
         ensureParagraphBlankLines: {
             value: DEFAULT_OPTIONS.ensureParagraphBlankLines,

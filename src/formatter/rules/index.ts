@@ -10,6 +10,7 @@ import { listIndentation } from './listIndentation';
 import { listBoundarySpacing } from './listBoundarySpacing';
 import { tableStyle } from './tableStyle';
 import { headingLevels } from './headingLevels';
+import { headingMarkerSpacing } from './headingMarkerSpacing';
 import { headingSpacing } from './headingSpacing';
 import { paragraphSpacing } from './paragraphSpacing';
 import { codeBlockSpacing } from './codeBlockSpacing';
@@ -40,6 +41,7 @@ export const rules: Rule[] = [
     listBoundarySpacing,
     tableStyle,
     headingLevels,
+    headingMarkerSpacing,
     headingSpacing,
     paragraphSpacing,
     codeBlockSpacing,
