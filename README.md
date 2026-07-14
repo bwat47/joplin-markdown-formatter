@@ -14,24 +14,8 @@ The plugin parses Markdown to find known structures, then applies targeted edits
 
 ## Features
 
-- Normalize unordered list markers to `-` or `*`, or preserve them as written.
-- Renumber ordered lists sequentially while preserving the first item's number.
-- Normalize emphasis and bold delimiters.
-- Optionally convert double and single quotes in prose between straight and smart (curly) styles.
-- Optionally add a configured default language to fenced code blocks that do not specify one.
-- Normalize heading levels so they increase by at most one level at a time.
-- Normalize spacing between ATX heading markers and text.
-- Remove leading spaces before root-level ATX heading markers.
-- Normalize list spacing: semantic (keep each list tight or loose as authored, fixing mixed spacing), preserve, tight, or loose.
-- Normalize nested list indentation with tabs, 2 spaces, or 4 spaces.
-- Normalize Horizontal rule format and spacing above/below.
-- Optionally reformat GitHub Flavored Markdown tables in a compact or aligned style.
-- Ensure headings, paragraphs, code blocks, math blocks, tables, root-level lists, and blockquotes have a blank line before and after neighboring content.
-- Ensure YAML front matter has a blank line before following content.
-- Collapse repeated blank lines outside protected content.
-- Trim trailing whitespace outside protected content, preserving two-space hard line breaks.
-- Ensure the note ends with exactly one trailing newline.
-- Diff changes and apply them through CodeMirror so formatting is undoable with Joplin's normal undo command, and cursor can stay anchored to unchanged text.
+- Formats the current note with configurable settings (see settings section below).
+- When applying formatting, the old and new text are diffed and only the changed spans are replaced, all in a single codemirror transaction, so the cursor and scroll position can stay anchored to unchanged text, and the changes can be undone with a single undo command.
 
 ## Usage
 
