@@ -9,11 +9,12 @@ import { walk } from '../walk';
  * `[a link](url)`, and a soft newline in the text becomes a space (or is dropped
  * if it is only trailing).
  *
- * Only `text` children of `link`/`linkReference` nodes are edited, so any
- * `inlineCode`, `math`, or emphasis inside the link text passes through
- * untouched — the whitespace those carry is meaningful. Single spaces that
- * separate inline nodes mid-text (e.g. `[a *b* c]`) survive because boundary
- * trimming only applies to the first/last child.
+ * All descendant `text` nodes are edited, including text inside emphasis and
+ * other inline formatting. Nodes such as `inlineCode` and `math` store their
+ * content as properties rather than text children, so their whitespace passes
+ * through untouched. Single spaces that separate inline nodes mid-text (e.g.
+ * `[a *b* c]`) survive because boundary trimming only applies to a direct
+ * first/last text child.
  *
  * Reference links are covered too. CommonMark normalizes reference *identifiers*
  * by collapsing/trimming/lowercasing their whitespace — exactly what this rule
@@ -39,16 +40,18 @@ export const linkTextSpacing: Rule = {
             if (children.length === 0) return;
 
             children.forEach((child, index) => {
-                if (child.type !== 'text') return;
-                const start = child.position?.start?.offset;
-                const end = child.position?.end?.offset;
-                if (start === undefined || end === undefined) return;
+                walk(child, (descendant) => {
+                    if (descendant.type !== 'text') return;
+                    const start = descendant.position?.start?.offset;
+                    const end = descendant.position?.end?.offset;
+                    if (start === undefined || end === undefined) return;
 
-                const source = text.slice(start, end);
-                let normalized = source.replace(/\s+/g, ' ');
-                if (index === 0) normalized = normalized.trimStart();
-                if (index === children.length - 1) normalized = normalized.trimEnd();
-                if (normalized !== source) edits.push({ start, end, replacement: normalized });
+                    const source = text.slice(start, end);
+                    let normalized = source.replace(/\s+/g, ' ');
+                    if (descendant === child && index === 0) normalized = normalized.trimStart();
+                    if (descendant === child && index === children.length - 1) normalized = normalized.trimEnd();
+                    if (normalized !== source) edits.push({ start, end, replacement: normalized });
+                });
             });
         });
 

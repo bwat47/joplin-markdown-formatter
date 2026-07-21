@@ -20,7 +20,7 @@ export function isStructurallyEqual(before: Root, after: Root, ruleName?: string
     );
 }
 
-function normalizeNode(node: AnyNode, ruleName?: string, withinLink = false): AnyNode {
+function normalizeNode(node: AnyNode, ruleName?: string, insideLink = false): AnyNode {
     const copy: AnyNode = { ...node };
     delete copy.position;
     // listSpacing legitimately changes tight/loose.
@@ -31,24 +31,39 @@ function normalizeNode(node: AnyNode, ruleName?: string, withinLink = false): An
     if (ruleName === 'codeBlockLanguage' && copy.type === 'code') delete copy.lang;
     // quoteStyle legitimately converts quote characters in prose text.
     if (copy.type === 'text' && typeof copy.value === 'string') {
-        copy.value = copy.value.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+        let value = copy.value.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+        if (ruleName === 'linkTextSpacing' && insideLink) value = value.replace(/\s+/g, ' ');
+        copy.value = value;
     }
     // linkTextSpacing legitimately collapses/trims whitespace inside link text.
     // The change only touches whitespace within link/linkReference nodes, so we
     // normalize the same way on both sides. A reference link's raw `label`
     // differs after editing while its `identifier` (which governs resolution) is
     // unchanged, so drop the cosmetic label from the comparison.
-    if (ruleName === 'linkTextSpacing') {
-        if (withinLink && copy.type === 'text' && typeof copy.value === 'string') {
-            copy.value = copy.value.replace(/\s+/g, ' ').trim();
-        }
-        if (copy.type === 'linkReference') delete copy.label;
-    }
+    if (ruleName === 'linkTextSpacing' && copy.type === 'linkReference') delete copy.label;
     if (Array.isArray(copy.children)) {
-        const childWithinLink = withinLink || copy.type === 'link' || copy.type === 'linkReference';
-        copy.children = mergeAdjacentBulletLists(
-            copy.children.map((child) => normalizeNode(child, ruleName, childWithinLink))
-        );
+        const isLink = copy.type === 'link' || copy.type === 'linkReference';
+        const lastChildIndex = copy.children.length - 1;
+        const children = copy.children
+            .map((child, index) => {
+                const normalized = normalizeNode(child, ruleName, insideLink || isLink);
+                if (ruleName !== 'linkTextSpacing' || !isLink || normalized.type !== 'text') {
+                    return normalized;
+                }
+
+                if (typeof normalized.value === 'string') {
+                    let value = normalized.value;
+                    if (index === 0) value = value.trimStart();
+                    if (index === lastChildIndex) value = value.trimEnd();
+                    normalized.value = value;
+                }
+                return normalized;
+            })
+            // Re-parsing omits a text node when boundary trimming makes it empty.
+            .filter(
+                (child) => ruleName !== 'linkTextSpacing' || !isLink || child.type !== 'text' || child.value !== ''
+            );
+        copy.children = mergeAdjacentBulletLists(children);
     }
     return copy;
 }

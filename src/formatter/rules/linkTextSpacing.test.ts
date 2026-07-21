@@ -16,6 +16,13 @@ describe('linkTextSpacing', () => {
         expect(format('[a     link](https://www.example.com/)')).toBe('[a link](https://www.example.com/)');
     });
 
+    test('collapses whitespace inside formatted link text', () => {
+        const input =
+            '[  **How Do I Properly Install       KVM on Linux**  ](https://sysguides.com/install-kvm-on-linux)';
+        const expected = '[**How Do I Properly Install KVM on Linux**](https://sysguides.com/install-kvm-on-linux)';
+        expect(format(input)).toBe(expected);
+    });
+
     test('drops a trailing newline inside link text', () => {
         expect(format('[a link\n](https://www.example.com/)')).toBe('[a link](https://www.example.com/)');
     });
@@ -26,6 +33,21 @@ describe('linkTextSpacing', () => {
 
     test('preserves single spaces that separate inline nodes mid-text', () => {
         expect(format('[ a *b* c ](https://www.example.com/)')).toBe('[a *b* c](https://www.example.com/)');
+    });
+
+    test('trims whitespace-only boundary nodes around inline content', () => {
+        const input = '[ *bold* and `code` ](https://www.example.com/)';
+        const result = formatMarkdown(input, options);
+        expect(result.text).toBe('[*bold* and `code`](https://www.example.com/)');
+        expect(result.skippedRules).not.toContain('linkTextSpacing');
+    });
+
+    test('trims whitespace-only boundary nodes in reference-link text', () => {
+        const input = ['[ *bold* ][ref]', '', '[ref]: https://www.example.com/'].join('\n');
+        const expected = ['[*bold*][ref]', '', '[ref]: https://www.example.com/'].join('\n');
+        const result = formatMarkdown(input, options);
+        expect(result.text).toBe(expected);
+        expect(result.skippedRules).not.toContain('linkTextSpacing');
     });
 
     test('leaves whitespace inside inline code within link text untouched', () => {
