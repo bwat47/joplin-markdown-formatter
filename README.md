@@ -44,6 +44,7 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Bold marker                                   | `**bold**`   | Prefer `**` or `__` for strong delimiters.                                                                                                                   |
 | Double quote style                            | Preserve     | Convert double quotes in prose to straight or smart (curly) quotes. Code, math, HTML, front matter, and link titles are never changed.                       |
 | Single quote style                            | Preserve     | Convert single quotes and apostrophes in prose to straight or smart (curly) quotes. Same exclusions as double quotes.                                        |
+| Normalize link text spacing                   | On           | Collapse internal whitespace and trim leading/trailing spaces inside link text, including reference links. Inline code inside link text and image alt text are left unchanged. |
 | Set default language on unlabeled code blocks | Off          | Add the configured default language to fenced code blocks with no language. Indented code blocks are left unchanged.                                         |
 | Default code block language                   | `txt`        | Language identifier to add when the default code block language rule is enabled.                                                                             |
 | List spacing                                  | Semantic     | Semantic keeps each list tight or loose as authored and only fixes mixed spacing, so rendering never changes. Preserve, tight, and loose are also available. |
@@ -82,6 +83,7 @@ Protected content such as fenced code blocks, indented code blocks, inline code,
 - Lists inside footnote definitions are not reindented.
 - Emphasis conversion to `_` skips cases where CommonMark would reinterpret intraword underscores or merge adjacent delimiter runs.
 - Smart quote conversion decides opening vs. closing from surrounding characters, so unusual constructs can get the wrong direction. Backslash-escaped quotes and quotes in image alt text and link titles are left as written.
+- Link text spacing normalizes only `text` inside links; a hard line break (`break` node) inside link text and image alt text are left as written.
 - Might be slow to format massive notes.
 
 ## Development

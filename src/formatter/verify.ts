@@ -20,7 +20,7 @@ export function isStructurallyEqual(before: Root, after: Root, ruleName?: string
     );
 }
 
-function normalizeNode(node: AnyNode, ruleName?: string): AnyNode {
+function normalizeNode(node: AnyNode, ruleName?: string, withinLink = false): AnyNode {
     const copy: AnyNode = { ...node };
     delete copy.position;
     // listSpacing legitimately changes tight/loose.
@@ -33,8 +33,22 @@ function normalizeNode(node: AnyNode, ruleName?: string): AnyNode {
     if (copy.type === 'text' && typeof copy.value === 'string') {
         copy.value = copy.value.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
     }
+    // linkTextSpacing legitimately collapses/trims whitespace inside link text.
+    // The change only touches whitespace within link/linkReference nodes, so we
+    // normalize the same way on both sides. A reference link's raw `label`
+    // differs after editing while its `identifier` (which governs resolution) is
+    // unchanged, so drop the cosmetic label from the comparison.
+    if (ruleName === 'linkTextSpacing') {
+        if (withinLink && copy.type === 'text' && typeof copy.value === 'string') {
+            copy.value = copy.value.replace(/\s+/g, ' ').trim();
+        }
+        if (copy.type === 'linkReference') delete copy.label;
+    }
     if (Array.isArray(copy.children)) {
-        copy.children = mergeAdjacentBulletLists(copy.children.map((child) => normalizeNode(child, ruleName)));
+        const childWithinLink = withinLink || copy.type === 'link' || copy.type === 'linkReference';
+        copy.children = mergeAdjacentBulletLists(
+            copy.children.map((child) => normalizeNode(child, ruleName, childWithinLink))
+        );
     }
     return copy;
 }

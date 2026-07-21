@@ -72,6 +72,8 @@ export interface FormatterOptions {
     thematicBreakMarker: ThematicBreakMarker;
     /** Renumber ordered lists sequentially. */
     normalizeOrderedListNumbering: boolean;
+    /** Collapse internal whitespace and trim leading/trailing whitespace inside link text. */
+    normalizeLinkTextSpacing: boolean;
     /** Ensure the document ends with exactly one trailing newline. */
     ensureFinalNewline: boolean;
 }
@@ -102,6 +104,7 @@ export const DEFAULT_OPTIONS: FormatterOptions = {
     unorderedListMarker: '-',
     thematicBreakMarker: '* * *',
     normalizeOrderedListNumbering: true,
+    normalizeLinkTextSpacing: true,
     ensureFinalNewline: true,
 };
 
