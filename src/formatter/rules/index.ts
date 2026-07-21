@@ -4,6 +4,7 @@ import { orderedListNumbers } from './orderedListNumbers';
 import { thematicBreaks } from './thematicBreaks';
 import { emphasisStyle } from './emphasisStyle';
 import { quoteStyle } from './quoteStyle';
+import { linkTextSpacing } from './linkTextSpacing';
 import { codeBlockLanguage } from './codeBlockLanguage';
 import { listSpacing } from './listSpacing';
 import { listIndentation } from './listIndentation';
@@ -36,6 +37,7 @@ export const rules: Rule[] = [
     thematicBreaks,
     emphasisStyle,
     quoteStyle,
+    linkTextSpacing,
     codeBlockLanguage,
     listSpacing,
     listIndentation,

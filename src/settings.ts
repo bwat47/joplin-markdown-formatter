@@ -40,6 +40,7 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'unorderedListMarker',
     'thematicBreakMarker',
     'normalizeOrderedListNumbering',
+    'normalizeLinkTextSpacing',
     'ensureFinalNewline',
 ];
 
@@ -131,6 +132,15 @@ export async function registerSettings(): Promise<void> {
             label: 'Single quote style',
             description:
                 'Convert single quotes and apostrophes in prose text. Code, math, HTML, front matter, and link titles are never changed.',
+        },
+        normalizeLinkTextSpacing: {
+            value: DEFAULT_OPTIONS.normalizeLinkTextSpacing,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Normalize link text spacing',
+            description:
+                'Collapse internal whitespace and trim leading/trailing spaces inside link text, including reference links. Inline code inside link text and image alt text are left unchanged.',
         },
         listSpacing: {
             value: DEFAULT_OPTIONS.listSpacing,

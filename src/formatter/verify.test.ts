@@ -28,6 +28,26 @@ describe('isStructurallyEqual', () => {
         expect(equal('*_x_*\n', '__x__\n')).toBe(false);
     });
 
+    test('link-text whitespace normalization is ignored for linkTextSpacing', () => {
+        const before = parseMarkdown('[ a   link ](https://example.com/)\n');
+        const after = parseMarkdown('[a link](https://example.com/)\n');
+        expect(isStructurallyEqual(before, after, 'linkTextSpacing')).toBe(true);
+        // Not exempt for other rules.
+        expect(isStructurallyEqual(before, after)).toBe(false);
+    });
+
+    test('link-text normalization ignores removed whitespace-only boundary nodes', () => {
+        const before = parseMarkdown('[ *bold* ](https://example.com/)\n');
+        const after = parseMarkdown('[*bold*](https://example.com/)\n');
+        expect(isStructurallyEqual(before, after, 'linkTextSpacing')).toBe(true);
+    });
+
+    test('link-text normalization still detects removed spaces around inline nodes', () => {
+        const before = parseMarkdown('[a *bold* c](https://example.com/)\n');
+        const after = parseMarkdown('[a*bold*c](https://example.com/)\n');
+        expect(isStructurallyEqual(before, after, 'linkTextSpacing')).toBe(false);
+    });
+
     test('a heading turning into a paragraph is detected', () => {
         expect(equal('# title\n', 'title\n')).toBe(false);
     });
