@@ -50,9 +50,9 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Link text spacing | All | Collapse excess internal whitespace and trim leading/trailing spaces inside link text, including reference links. `All` also turns line breaks (soft and hard) into a space so labels stay on one line; `spaces` leaves a label that spans lines as written; `preserve` leaves link text unchanged. Inline code inside link text and image alt text are never changed. |
 | Set default language on unlabeled code blocks | Off | Add the configured default language to fenced code blocks with no language. Indented code blocks are left unchanged. |
 | Default code block language | `txt` | Language identifier to add when the default code block language rule is enabled. |
-| List spacing | Semantic | Semantic keeps each list tight or loose as authored and only fixes mixed spacing, so rendering never changes. Preserve, tight, and loose are also available. |
+| List spacing | Semantic | `Semantic` keeps each list tight or loose as authored and only fixes mixed spacing, so rendering never changes. `Preserve`, `tight`, and `loose` are also available. |
 | List indentation | Tabs | Indentation used before nested list markers (tabs, 2 spaces, 4 spaces). |
-| Table style | Preserve | Compact rebuilds cells with one space of padding; aligned pads cells so pipes line up. Preserve leaves tables unchanged. |
+| Table style | Preserve | `Compact` rebuilds cells with one space of padding; `aligned` pads cells so pipes line up. `Preserve` leaves tables unchanged. |
 | Ensure blank lines around headings | On | Add one blank line before and after headings with neighboring content. |
 | Ensure blank lines around paragraphs | On | Add one blank line before and after root-level paragraphs with neighboring content. |
 | Ensure blank lines around code blocks | On | Add one blank line before and after code blocks with neighboring content. |
