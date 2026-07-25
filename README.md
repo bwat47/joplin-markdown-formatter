@@ -18,6 +18,8 @@ The plugin parses Markdown to find known structures, then applies targeted edits
 - When applying formatting, the old and new text are diffed and only the changed spans are replaced, all in a single codemirror transaction, so the cursor and scroll position can stay anchored to unchanged text, and the changes can be undone with a single undo command.
 - Optional diff preview: review the changes in a dialog, with the edited characters highlighted inside each changed line, and apply or cancel them (off by default).
 
+![diff preview](./images/diff_preview_desktop.png)
+
 ## Usage
 
 Install the plugin, open a Markdown note, then:
@@ -47,7 +49,7 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Bold marker | `**bold**` | Prefer `**` or `__` for strong delimiters. |
 | Double quote style | Preserve | Convert double quotes in prose to straight or smart (curly) quotes. Code, math, HTML, front matter, and link titles are never changed. |
 | Single quote style | Preserve | Convert single quotes and apostrophes in prose to straight or smart (curly) quotes. Same exclusions as double quotes. |
-| Link text spacing | All | Collapse excess internal whitespace and trim leading/trailing spaces inside link text, including reference links. `All` also turns line breaks (soft and hard) into a space so labels stay on one line; `spaces` leaves a label that spans lines as written; `preserve` leaves link text unchanged. Inline code inside link text and image alt text are never changed. |
+| Link text spacing | All | Collapse excess internal whitespace and trim leading/trailing spaces inside link text, including reference links. `All` also turns line breaks (soft and hard) into a space so labels stay on one line; `spaces` removes excess whitespace but preserves line breaks; `preserve` leaves link text unchanged. Inline code inside link text and image alt text are never changed. |
 | Set default language on unlabeled code blocks | Off | Add the configured default language to fenced code blocks with no language. Indented code blocks are left unchanged. |
 | Default code block language | `txt` | Language identifier to add when the default code block language rule is enabled. |
 | List spacing | Semantic | `Semantic` keeps each list tight or loose as authored and only fixes mixed spacing, so rendering never changes. `Preserve`, `tight`, and `loose` are also available. |
