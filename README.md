@@ -16,6 +16,7 @@ The plugin parses Markdown to find known structures, then applies targeted edits
 
 - Formats the current note with configurable settings (see settings section below).
 - When applying formatting, the old and new text are diffed and only the changed spans are replaced, all in a single codemirror transaction, so the cursor and scroll position can stay anchored to unchanged text, and the changes can be undone with a single undo command.
+- Optional diff preview: review the changes in a dialog, with the edited characters highlighted inside each changed line, and apply or cancel them (off by default).
 
 ## Usage
 
@@ -27,6 +28,8 @@ Install the plugin, open a Markdown note, then:
 - Click `Format Markdown` button in the formatting toolbar
 
 The command formats the currently open note. If the note is already formatted, it does not write the note back.
+
+With `Preview changes before applying` enabled, the command shows the changes as a diff first and only writes the note if you click `Apply`.
 
 ## Settings
 
@@ -61,6 +64,7 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Collapse consecutive blank lines              | On           | Reduce runs of blank lines to one blank line outside protected content.                                                                                      |
 | Trim trailing whitespace                      | On           | Remove trailing spaces and tabs outside protected content, preserving two-space hard line breaks.                                                            |
 | Ensure trailing newline                       | On           | End the note with exactly one newline.                                                                                                                       |
+| Preview changes before applying               | Off          | Show the formatting changes as a diff, with buttons to apply or cancel them.                                                                                 |
 | Display toast messages                        | On           | Show a toast after formatting with the number of characters added and removed.                                                                               |
 
 ## Safety Model

@@ -1,0 +1,129 @@
+/*
+ * Diff preview dialog styles.
+ *
+ * Colours come from Joplin's theme variables where they exist, each with a
+ * literal fallback in case a variable is missing. Added/removed tints are
+ * alpha overlays rather than solid colours so they read correctly over both
+ * light and dark theme backgrounds.
+ */
+
+/*
+ * The dialog is opened with fit-to-content off, which gives the webview a
+ * fixed 90vw x 90vh box: `100vh` here is exactly the room between the dialog
+ * padding and the button bar, and Joplin's own page has no margin or padding
+ * to subtract. Filling it with a flex column keeps the diff pinned to the
+ * buttons instead of stopping short of them.
+ */
+.mdfmt-diff {
+    box-sizing: border-box;
+    color: var(--joplin-color, #32373f);
+    display: flex;
+    flex-direction: column;
+    font-family: var(--joplin-font-family, sans-serif);
+    font-size: var(--joplin-font-size, 14px);
+    height: 100vh;
+}
+
+.mdfmt-diff__header {
+    border-bottom: 1px solid var(--joplin-divider-color, #dddddd);
+    flex: none;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+}
+
+.mdfmt-diff__title {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+}
+
+.mdfmt-diff__summary {
+    margin: 0;
+    opacity: 0.75;
+}
+
+.mdfmt-diff__warning {
+    background: rgba(219, 171, 9, 0.15);
+    border-radius: 3px;
+    margin: 8px 0 0 0;
+    padding: 6px 8px;
+}
+
+.mdfmt-diff__empty {
+    margin: 0;
+    opacity: 0.75;
+}
+
+.mdfmt-diff__body {
+    border: 1px solid var(--joplin-divider-color, #dddddd);
+    border-radius: 3px;
+    box-sizing: border-box;
+    /* min-height lets the scroll area shrink below its content height. */
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.mdfmt-hunk + .mdfmt-hunk {
+    border-top: 1px solid var(--joplin-divider-color, #dddddd);
+    margin-top: 4px;
+}
+
+.mdfmt-hunk__header {
+    font-family: var(--joplin-monospace-font-family, monospace);
+    font-size: 0.85em;
+    opacity: 0.6;
+    padding: 4px 8px;
+}
+
+.mdfmt-line {
+    display: grid;
+    font-family: var(--joplin-monospace-font-family, monospace);
+    font-size: 0.9em;
+    grid-template-columns: 3.5em 3.5em 1.2em minmax(0, 1fr);
+    line-height: 1.5;
+}
+
+.mdfmt-line__num {
+    opacity: 0.45;
+    padding-right: 0.6em;
+    text-align: right;
+    user-select: none;
+}
+
+.mdfmt-line__marker {
+    text-align: center;
+    user-select: none;
+    white-space: pre;
+}
+
+.mdfmt-line__text {
+    overflow-wrap: anywhere;
+    padding-right: 8px;
+    white-space: pre-wrap;
+}
+
+.mdfmt-line--add {
+    background: rgba(46, 160, 67, 0.16);
+}
+
+.mdfmt-line--remove {
+    background: rgba(218, 54, 51, 0.16);
+}
+
+.mdfmt-line--note {
+    font-style: italic;
+    opacity: 0.6;
+}
+
+/* Changed spans within a replaced line: same hue, stronger tint. */
+.mdfmt-line--add .mdfmt-line__change {
+    background: rgba(46, 160, 67, 0.4);
+    border-radius: 2px;
+}
+
+.mdfmt-line--remove .mdfmt-line__change {
+    background: rgba(218, 54, 51, 0.4);
+    border-radius: 2px;
+}
