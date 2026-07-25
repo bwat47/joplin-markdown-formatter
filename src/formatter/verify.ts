@@ -35,37 +35,60 @@ function normalizeNode(node: AnyNode, ruleName?: string, insideLink = false): An
         if (ruleName === 'linkTextSpacing' && insideLink) value = value.replace(/\s+/g, ' ');
         copy.value = value;
     }
-    // linkTextSpacing legitimately collapses/trims whitespace inside link text.
-    // The change only touches whitespace within link/linkReference nodes, so we
-    // normalize the same way on both sides. A reference link's raw `label`
-    // differs after editing while its `identifier` (which governs resolution) is
-    // unchanged, so drop the cosmetic label from the comparison.
+    // linkTextSpacing legitimately collapses/trims whitespace inside link text,
+    // including hard breaks (see collapseHardBreaks). The change only touches
+    // whitespace within link/linkReference nodes, so we normalize the same way on
+    // both sides. A reference link's raw `label` differs after editing while its
+    // `identifier` (which governs resolution) is unchanged, so drop the cosmetic
+    // label from the comparison.
     if (ruleName === 'linkTextSpacing' && copy.type === 'linkReference') delete copy.label;
     if (Array.isArray(copy.children)) {
         const isLink = copy.type === 'link' || copy.type === 'linkReference';
-        const lastChildIndex = copy.children.length - 1;
-        const children = copy.children
-            .map((child, index) => {
-                const normalized = normalizeNode(child, ruleName, insideLink || isLink);
-                if (ruleName !== 'linkTextSpacing' || !isLink || normalized.type !== 'text') {
-                    return normalized;
-                }
-
-                if (typeof normalized.value === 'string') {
-                    let value = normalized.value;
-                    if (index === 0) value = value.trimStart();
-                    if (index === lastChildIndex) value = value.trimEnd();
-                    normalized.value = value;
-                }
-                return normalized;
-            })
-            // Re-parsing omits a text node when boundary trimming makes it empty.
-            .filter(
-                (child) => ruleName !== 'linkTextSpacing' || !isLink || child.type !== 'text' || child.value !== ''
-            );
+        const inLinkText = ruleName === 'linkTextSpacing' && (insideLink || isLink);
+        let children = copy.children.map((child) => normalizeNode(child, ruleName, insideLink || isLink));
+        // linkTextSpacing legitimately turns a hard break inside link text into a
+        // space, at any depth of inline nesting.
+        if (inLinkText) children = collapseHardBreaks(children);
+        if (ruleName === 'linkTextSpacing' && isLink) children = trimBoundaryText(children);
         copy.children = mergeAdjacentBulletLists(children);
     }
     return copy;
+}
+
+/**
+ * Replace `break` children with the single space the rule collapses them to,
+ * then merge the text nodes that end up adjacent — re-parsing the rewritten
+ * text yields one text node where the tree before the edit had text/break/text.
+ */
+function collapseHardBreaks(children: AnyNode[]): AnyNode[] {
+    const result: AnyNode[] = [];
+    for (const child of children) {
+        const node: AnyNode = child.type === 'break' ? { type: 'text', value: ' ' } : child;
+        const previous = result[result.length - 1];
+        if (node.type === 'text' && previous?.type === 'text') {
+            previous.value = `${previous.value as string}${node.value as string}`.replace(/\s+/g, ' ');
+            continue;
+        }
+        result.push(node);
+    }
+    return result;
+}
+
+/**
+ * Trim the text at the brackets the way the rule does, and drop a text node
+ * that trimming empties — re-parsing omits it.
+ */
+function trimBoundaryText(children: AnyNode[]): AnyNode[] {
+    const lastIndex = children.length - 1;
+    return children
+        .map((child, index) => {
+            if (child.type !== 'text' || typeof child.value !== 'string') return child;
+            let value = child.value;
+            if (index === 0) value = value.trimStart();
+            if (index === lastIndex) value = value.trimEnd();
+            return { ...child, value };
+        })
+        .filter((child) => child.type !== 'text' || child.value !== '');
 }
 
 /**

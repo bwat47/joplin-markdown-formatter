@@ -14,6 +14,7 @@ const SECTION = 'markdownFormatter';
 const DISPLAY_TOAST_MESSAGES_KEY = 'displayToastMessages';
 const SHOW_DIFF_PREVIEW_KEY = 'showDiffPreview';
 const LEGACY_ALIGN_TABLES_KEY = 'alignTables';
+const LEGACY_NORMALIZE_LINK_TEXT_SPACING_KEY = 'normalizeLinkTextSpacing';
 
 const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'collapseBlankLines',
@@ -41,7 +42,7 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'unorderedListMarker',
     'thematicBreakMarker',
     'normalizeOrderedListNumbering',
-    'normalizeLinkTextSpacing',
+    'linkTextSpacing',
     'ensureFinalNewline',
 ];
 
@@ -134,14 +135,29 @@ export async function registerSettings(): Promise<void> {
             description:
                 'Convert single quotes and apostrophes in prose text. Code, math, HTML, front matter, and link titles are never changed.',
         },
-        normalizeLinkTextSpacing: {
-            value: DEFAULT_OPTIONS.normalizeLinkTextSpacing,
-            type: SettingItemType.Bool,
+        linkTextSpacing: {
+            value: DEFAULT_OPTIONS.linkTextSpacing,
+            type: SettingItemType.String,
             section: SECTION,
             public: true,
-            label: 'Normalize link text spacing',
+            isEnum: true,
+            options: {
+                all: 'All (also collapse line breaks, keeping labels on one line)',
+                spaces: 'Spaces only (preserve line breaks inside labels)',
+                preserve: 'Preserve (leave link text unchanged)',
+            },
+            label: 'Link text spacing',
             description:
-                'Collapse internal whitespace and trim leading/trailing spaces inside link text, including reference links. Inline code inside link text and image alt text are left unchanged.',
+                'Collapse excess internal whitespace and trim leading/trailing spaces inside link text, including reference links. All also turns line breaks (soft and hard) into a space; spaces only leaves any label that spans lines as written. Inline code inside link text and image alt text are never changed.',
+        },
+        // Deprecated: replaced by linkTextSpacing. Kept hidden so an existing
+        // "off" choice can be migrated once, then reset.
+        [LEGACY_NORMALIZE_LINK_TEXT_SPACING_KEY]: {
+            value: true,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: false,
+            label: 'Normalize link text spacing (deprecated)',
         },
         listSpacing: {
             value: DEFAULT_OPTIONS.listSpacing,
@@ -344,6 +360,7 @@ export async function registerSettings(): Promise<void> {
     });
 
     await migrateLegacyAlignTables();
+    await migrateLegacyLinkTextSpacing();
 }
 
 /** One-time migration: alignTables=true becomes tableStyle='aligned'. */
@@ -351,6 +368,19 @@ async function migrateLegacyAlignTables(): Promise<void> {
     if (await joplin.settings.value(LEGACY_ALIGN_TABLES_KEY)) {
         await joplin.settings.setValue('tableStyle', 'aligned');
         await joplin.settings.setValue(LEGACY_ALIGN_TABLES_KEY, false);
+    }
+}
+
+/**
+ * One-time migration: normalizeLinkTextSpacing=false becomes
+ * linkTextSpacing='preserve'. The old setting was on by default, and its `true`
+ * state matches the new default, so only an explicit opt-out needs carrying
+ * over. The legacy key is reset to its default afterwards so this runs once.
+ */
+async function migrateLegacyLinkTextSpacing(): Promise<void> {
+    if ((await joplin.settings.value(LEGACY_NORMALIZE_LINK_TEXT_SPACING_KEY)) === false) {
+        await joplin.settings.setValue('linkTextSpacing', 'preserve');
+        await joplin.settings.setValue(LEGACY_NORMALIZE_LINK_TEXT_SPACING_KEY, true);
     }
 }
 

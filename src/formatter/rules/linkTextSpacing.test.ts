@@ -70,9 +70,9 @@ describe('linkTextSpacing', () => {
         expect(format('<https://www.example.com/>')).toBe('<https://www.example.com/>');
     });
 
-    test('is a no-op when disabled', () => {
+    test('is a no-op when set to preserve', () => {
         const input = '[ a link ](https://www.example.com/)';
-        expect(formatMarkdown(input, { ...options, normalizeLinkTextSpacing: false }).text).toBe(input);
+        expect(formatMarkdown(input, { ...options, linkTextSpacing: 'preserve' }).text).toBe(input);
     });
 
     test('is not dropped by structural verification', () => {
@@ -153,15 +153,127 @@ describe('linkTextSpacing', () => {
         });
     });
 
-    test('leaves hard line breaks and the indentation after them as written', () => {
-        const input = '[a   \n   b](https://www.example.com/)';
-        // Only trailing-whitespace trimming applies (three spaces -> a two-space break).
-        expect(format(input)).toBe('[a  \n   b](https://www.example.com/)');
+    describe('hard line breaks', () => {
+        test('collapses a hard break and the indentation after it to one space', () => {
+            expect(format('[a   \n   b](https://www.example.com/)')).toBe('[a b](https://www.example.com/)');
+        });
+
+        test('collapses a hard break nested inside strong', () => {
+            expect(format('[**a *b*   \nc**](https://www.example.com/)')).toBe(
+                '[**a *b* c**](https://www.example.com/)'
+            );
+        });
+
+        test('collapses the backslash form of a hard break', () => {
+            expect(format('[a\\\nb](https://www.example.com/)')).toBe('[a b](https://www.example.com/)');
+        });
+
+        test('collapses a hard break between two inline nodes', () => {
+            expect(format('[**a**  \n**b**](https://www.example.com/)')).toBe(
+                '[**a** **b**](https://www.example.com/)'
+            );
+        });
+
+        test('drops a trailing hard break', () => {
+            expect(format('[a  \n](https://www.example.com/)')).toBe('[a](https://www.example.com/)');
+        });
+
+        test('keeps an escaped backslash before a soft break', () => {
+            // `a\\` + newline is an escaped backslash and a *soft* break, not a hard
+            // break, even though the raw text looks like the case above.
+            expect(format('[a\\\\\nb](https://www.example.com/)')).toBe('[a\\\\ b](https://www.example.com/)');
+        });
+
+        test('is not dropped by structural verification', () => {
+            const result = formatMarkdown('[a  \nb](https://www.example.com/)', options);
+            expect(result.skippedRules).not.toContain('linkTextSpacing');
+            expect(result.text).toBe('[a b](https://www.example.com/)');
+        });
+
+        test('leaves hard breaks outside link text alone', () => {
+            expect(format('a  \nb [c](https://www.example.com/)')).toBe('a  \nb [c](https://www.example.com/)');
+        });
     });
 
-    test('leaves a hard line break nested inside strong as written', () => {
-        expect(format('[**a *b*   \nc**](https://www.example.com/)')).toBe(
-            '[**a *b*  \nc**](https://www.example.com/)'
-        );
+    describe('links inside blockquotes', () => {
+        // A quoted continuation line opens with a `>` that sits inside the link's
+        // source range without being part of the label, so multi-line links there
+        // are left alone.
+        test('leaves a multi-line link as written', () => {
+            const input = '> [a  \n> b](https://www.example.com/)';
+            const result = formatMarkdown(input, options);
+            expect(result.text).toBe(input);
+            expect(result.skippedRules).not.toContain('linkTextSpacing');
+        });
+
+        test('still normalizes a single-line link', () => {
+            expect(format('> [ a  link ](https://www.example.com/)')).toBe('> [a link](https://www.example.com/)');
+        });
+
+        test('still normalizes other links in the same note', () => {
+            const input = ['> [a  ', '> b](https://www.example.com/)', '', '[ c  d ](https://www.example.com/)'].join(
+                '\n'
+            );
+            const expected = ['> [a  ', '> b](https://www.example.com/)', '', '[c d](https://www.example.com/)'].join(
+                '\n'
+            );
+            const result = formatMarkdown(input, options);
+            expect(result.text).toBe(expected);
+            expect(result.skippedRules).not.toContain('linkTextSpacing');
+        });
+    });
+
+    describe("'spaces' mode", () => {
+        const formatSpaces = (input: string): string =>
+            formatMarkdown(input, { ...options, linkTextSpacing: 'spaces' }).text;
+
+        test('collapses and trims whitespace within a line', () => {
+            expect(formatSpaces('[  a   link  ](https://www.example.com/)')).toBe('[a link](https://www.example.com/)');
+        });
+
+        test('collapses whitespace inside nested inline formatting', () => {
+            expect(formatSpaces('[ **a   b** ](https://www.example.com/)')).toBe('[**a b**](https://www.example.com/)');
+        });
+
+        test('leaves a soft line break as written', () => {
+            const input = '[a\nb](https://www.example.com/)';
+            const result = formatMarkdown(input, { ...options, linkTextSpacing: 'spaces' });
+            expect(result.text).toBe(input);
+            expect(result.skippedRules).not.toContain('linkTextSpacing');
+        });
+
+        test('leaves a hard line break as written', () => {
+            const input = '[a  \nb](https://www.example.com/)';
+            const result = formatMarkdown(input, {
+                ...options,
+                linkTextSpacing: 'spaces',
+                trimTrailingWhitespace: false,
+            });
+            expect(result.text).toBe(input);
+            expect(result.skippedRules).not.toContain('linkTextSpacing');
+        });
+
+        test('leaves the whitespace bordering a line break alone', () => {
+            // That whitespace is part of the same run as the break, so the whole
+            // run is skipped rather than half-normalized.
+            const input = '[a **b** \n   c](https://www.example.com/)';
+            const result = formatMarkdown(input, {
+                ...options,
+                linkTextSpacing: 'spaces',
+                trimTrailingWhitespace: false,
+            });
+            expect(result.text).toBe(input);
+        });
+
+        test('still normalizes a single-line link elsewhere in the note', () => {
+            const input = ['[a\nb](https://www.example.com/)', '', '[ c  d ](https://www.example.com/)'].join('\n');
+            const expected = ['[a\nb](https://www.example.com/)', '', '[c d](https://www.example.com/)'].join('\n');
+            expect(formatSpaces(input)).toBe(expected);
+        });
+
+        test('is idempotent', () => {
+            const once = formatSpaces('[  a   link\n  test  ](https://www.example.com/)');
+            expect(formatSpaces(once)).toBe(once);
+        });
     });
 });
