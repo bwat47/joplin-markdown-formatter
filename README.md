@@ -18,7 +18,7 @@ The plugin parses Markdown to find known structures, then applies targeted edits
 - When applying formatting, the old and new text are diffed and only the changed spans are replaced, all in a single codemirror transaction, so the cursor and scroll position can stay anchored to unchanged text, and the changes can be undone with a single undo command.
 - Optional diff preview: review the changes in a dialog, with the edited characters highlighted inside each changed line, and apply or cancel them (off by default).
 
-![diff preview](./images/diff_preview_desktop.png)
+    ![diff preview](./images/diff_preview_desktop.png)
 
 ## Usage
 
