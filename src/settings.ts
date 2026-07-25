@@ -143,7 +143,7 @@ export async function registerSettings(): Promise<void> {
             isEnum: true,
             options: {
                 all: 'All (also collapse line breaks, keeping labels on one line)',
-                spaces: 'Spaces only (leave multi-line labels as written)',
+                spaces: 'Spaces only (preserve line breaks inside labels)',
                 preserve: 'Preserve (leave link text unchanged)',
             },
             label: 'Link text spacing',

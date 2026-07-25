@@ -87,7 +87,7 @@ Protected content such as fenced code blocks, indented code blocks, inline code,
 - Lists inside footnote definitions are not reindented.
 - Emphasis conversion to `_` skips cases where CommonMark would reinterpret intraword underscores or merge adjacent delimiter runs.
 - Smart quote conversion decides opening vs. closing from surrounding characters, so unusual constructs can get the wrong direction. Backslash-escaped quotes and quotes in image alt text and link titles are left as written.
-- Link text spacing normalizes only `text` inside links; image alt text and inline code are left as written. A link inside a blockquote whose label spans lines is skipped, because each quoted continuation line starts with a `>` that is not part of the label.
+- Link text spacing normalizes only `text` and (optionally) line breaks inside links; image alt text and inline code are left as written. A link inside a blockquote whose label spans lines is skipped, because each quoted continuation line starts with a `>` that is not part of the label.
 - Might be slow to format massive notes.
 
 ## Development
