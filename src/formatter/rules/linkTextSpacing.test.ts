@@ -113,11 +113,55 @@ describe('linkTextSpacing', () => {
         test('trims a leading space that precedes a newline', () => {
             expect(format('[ \n a](https://www.example.com/)')).toBe('[a](https://www.example.com/)');
         });
+
+        // The gap can sit between the children of any inline container, not just
+        // between the link's own children.
+        test('collapses the space before a newline nested inside strong', () => {
+            expect(format('[**a *b* \nc**](https://www.example.com/)')).toBe('[**a *b* c**](https://www.example.com/)');
+        });
+
+        test('collapses the space before a newline nested inside emphasis', () => {
+            expect(format('[*a **b** \nc*](https://www.example.com/)')).toBe('[*a **b** c*](https://www.example.com/)');
+        });
+
+        test('collapses the space after nested inline code', () => {
+            expect(format('[**a `x  y` \nb**](https://www.example.com/)')).toBe(
+                '[**a `x  y` b**](https://www.example.com/)'
+            );
+        });
+
+        test('collapses the space before a newline nested inside strikethrough', () => {
+            expect(format('[~~a *b* \nc~~](https://www.example.com/)')).toBe('[~~a *b* c~~](https://www.example.com/)');
+        });
+
+        test('collapses gaps two container levels deep', () => {
+            expect(format('[**a *b `c` \nd* e**](https://www.example.com/)')).toBe(
+                '[**a *b `c` d* e**](https://www.example.com/)'
+            );
+        });
+
+        test('collapses a newline between two nested inline nodes', () => {
+            expect(format('[**a *b* \n *c* d**](https://www.example.com/)')).toBe(
+                '[**a *b* *c* d**](https://www.example.com/)'
+            );
+        });
+
+        test('collapses continuation-line indentation nested inside strong', () => {
+            expect(format('[**a *b*\n   c**](https://www.example.com/)')).toBe(
+                '[**a *b* c**](https://www.example.com/)'
+            );
+        });
     });
 
     test('leaves hard line breaks and the indentation after them as written', () => {
         const input = '[a   \n   b](https://www.example.com/)';
         // Only trailing-whitespace trimming applies (three spaces -> a two-space break).
         expect(format(input)).toBe('[a  \n   b](https://www.example.com/)');
+    });
+
+    test('leaves a hard line break nested inside strong as written', () => {
+        expect(format('[**a *b*   \nc**](https://www.example.com/)')).toBe(
+            '[**a *b*  \nc**](https://www.example.com/)'
+        );
     });
 });

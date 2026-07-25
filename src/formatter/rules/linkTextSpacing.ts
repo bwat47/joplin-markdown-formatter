@@ -1,5 +1,5 @@
 import type { Link, LinkReference } from 'mdast';
-import type { Node } from 'unist';
+import type { Node, Parent } from 'unist';
 import type { Edit, Rule, RuleContext } from '../types';
 import { walk } from '../walk';
 
@@ -40,6 +40,11 @@ function linkTextRegion(link: Link | LinkReference, text: string): Span | null {
  * the space the newline collapsed to (`[a **b**  c]`), which took a second
  * format run to clean up.
  *
+ * A gap can open between the children of any inline container, not just between
+ * the link's own children (`[**a *b* \nc**](url)`), so a container marks only
+ * its delimiters as covered and lets its children cover the rest — otherwise its
+ * span would hide the gaps nested inside it.
+ *
  * Gaps touching a `break` node are skipped: hard line breaks inside link text
  * (and the continuation indent that follows them) are preserved as written.
  */
@@ -47,6 +52,11 @@ function editableSpans(link: Link | LinkReference, text: string, region: Span): 
     const spans: Span[] = [];
     const covered = new Array<boolean>(region.end - region.start).fill(false);
     const breakEdges = new Set<number>();
+    const cover = (from: number, to: number) => {
+        for (let offset = Math.max(from, region.start); offset < Math.min(to, region.end); offset += 1) {
+            covered[offset - region.start] = true;
+        }
+    };
 
     walk(link, (node) => {
         if (node === (link as Node)) return;
@@ -54,13 +64,24 @@ function editableSpans(link: Link | LinkReference, text: string, region: Span): 
         const end = node.position?.end?.offset;
         if (start === undefined || end === undefined) return;
 
-        for (let offset = Math.max(start, region.start); offset < Math.min(end, region.end); offset += 1) {
-            covered[offset - region.start] = true;
-        }
         if (node.type === 'text') spans.push({ start, end });
         else if (node.type === 'break') {
             breakEdges.add(start);
             breakEdges.add(end);
+        }
+
+        // A container (emphasis, strong, delete, ...) covers only the delimiters
+        // around its children; the children themselves are visited in turn, so
+        // whatever they leave uncovered between them stays a gap. Leaves — and
+        // any node whose children lack positions — cover their whole span.
+        const children = (node as Parent).children;
+        const childrenStart = children?.[0]?.position?.start?.offset;
+        const childrenEnd = children?.[children.length - 1]?.position?.end?.offset;
+        if (childrenStart === undefined || childrenEnd === undefined) {
+            cover(start, end);
+        } else {
+            cover(start, childrenStart);
+            cover(childrenEnd, end);
         }
     });
 
