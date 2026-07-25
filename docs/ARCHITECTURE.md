@@ -35,6 +35,11 @@ src/
     protectedRanges.ts      Source ranges of literal content (code, front matter, HTML)
     rules/                  One module per rule; ordered in rules/index.ts
     fixtures/               <case>/{input.md, expected.md, options.json?} test fixtures
+  diffPreview/              Optional "review before applying" dialog
+    lineDiff.ts             Line diff -> unified-style hunks (pure)
+    render.ts               Hunks -> dialog HTML (pure)
+    dialog.ts               Joplin dialog view; the only Joplin-aware module here
+    styles.css              Dialog stylesheet, copied to dist/ by the build
 ```
 
 ## Rules
@@ -94,3 +99,13 @@ The generated Joplin webpack scaffold copies non-TypeScript files from `src/` in
 The plugin registers a `formatMarkdownNote` command (Edit menu). It reads the live CodeMirror editor text through the content script, runs the pure formatter, and writes back only when the text actually changed (avoids dirtying `updated_time`). Any formatter error aborts the write-back.
 
 The write-back goes through a CodeMirror 6 content script ([src/contentScripts/codeMirror.ts](../src/contentScripts/codeMirror.ts)) rather than the built-in `editor.setText` command: `setText` reloads the editor content, which wipes the undo history. The content script registers `markdownFormatter__getNoteText` and `markdownFormatter__setNoteText` editor commands (invoked from the main plugin via `editor.execCommand`). The setter receives the text that was formatted plus the replacement text and dispatches only if the editor still matches that source text, avoiding stale buffer overwrites if the user types while formatting is in flight. The replacement is a normal CodeMirror transaction — undoable with Ctrl+Z — and uses `diff-match-patch-es` to replace only the changed spans in a single dispatch, which also keeps the cursor and scroll position anchored to unchanged text.
+
+## Diff preview
+
+When the `showDiffPreview` setting is on, the command opens a modal dialog between formatting and write-back, and only writes if the user clicks Apply. The dialog view is created once in `onStart` (view registration belongs there) and its HTML is replaced per invocation.
+
+[lineDiff.ts](../src/diffPreview/lineDiff.ts) runs diff-match-patch in line mode (`diffLinesToChars` → `diffMain` → `diffCharsToLines`) and groups changed lines into unified-diff hunks with three lines of context, merging changes that are closer than twice the context so their context blocks do not overlap. Each run of removed lines is then aligned against the added lines that follow it, and paired lines are diffed at the character level so the changed spans can be highlighted inside the line — most edits here are a single character, which a plain line diff renders as an indistinguishable remove/add pair. The runs are usually different lengths (the spacing rules insert blank lines among rewritten ones), so the alignment walks both sides in order and pairs by similarity, with one lookahead step to skip a line that has no counterpart; index-matching would drift after the first insertion. A pair sharing less than 30% of the longer line stays unpaired rather than being shredded into per-character noise.
+
+[render.ts](../src/diffPreview/render.ts) turns hunks into static HTML — no scripts in the webview; the Apply/Cancel buttons are Joplin's. Both modules are pure and unit-tested; only `dialog.ts` imports the Joplin API.
+
+Nothing about the safety of the write changes: the preview runs before the same content-script write-back, which still refuses to apply if the editor text has drifted from what was formatted.

@@ -2,13 +2,15 @@ import joplin from 'api';
 import { ContentScriptType, MenuItemLocation, ToastType, ToolbarButtonLocation } from 'api/types';
 import { computeCharacterChangeStats, formatCharacterChangeStats } from './changeStats';
 import { EDITOR_CONTENT_SCRIPT_ID, GET_NOTE_TEXT_COMMAND, SET_NOTE_TEXT_COMMAND } from './constants';
+import { confirmFormattingChanges, registerDiffPreviewDialog } from './diffPreview/dialog';
 import { formatMarkdown } from './formatter';
-import { loadDisplayToastMessages, loadFormatterOptions, registerSettings } from './settings';
+import { loadDisplayToastMessages, loadFormatterOptions, loadShowDiffPreview, registerSettings } from './settings';
 import logger from './logger';
 
 joplin.plugins.register({
     onStart: async function () {
         await registerSettings();
+        await registerDiffPreviewDialog();
 
         await joplin.contentScripts.register(
             ContentScriptType.CodeMirrorPlugin,
@@ -30,9 +32,10 @@ joplin.plugins.register({
                         return;
                     }
 
-                    const [options, displayToastMessages] = await Promise.all([
+                    const [options, displayToastMessages, showDiffPreview] = await Promise.all([
                         loadFormatterOptions(),
                         loadDisplayToastMessages(),
+                        loadShowDiffPreview(),
                     ]);
                     const result = formatMarkdown(currentText, options);
                     if (result.skippedRules.length > 0) {
@@ -47,6 +50,13 @@ joplin.plugins.register({
                             });
                         }
                         return;
+                    }
+                    if (showDiffPreview) {
+                        const confirmed = await confirmFormattingChanges(currentText, result.text, result.skippedRules);
+                        if (!confirmed) {
+                            logger.debug('Formatting cancelled from the diff preview.');
+                            return;
+                        }
                     }
                     // Replace via the content script so the change is a normal
                     // CodeMirror transaction (undoable), not an editor reload.

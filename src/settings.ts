@@ -12,6 +12,7 @@ import { DEFAULT_OPTIONS } from './formatter';
 
 const SECTION = 'markdownFormatter';
 const DISPLAY_TOAST_MESSAGES_KEY = 'displayToastMessages';
+const SHOW_DIFF_PREVIEW_KEY = 'showDiffPreview';
 const LEGACY_ALIGN_TABLES_KEY = 'alignTables';
 
 const OPTION_KEYS: Array<keyof FormatterOptions> = [
@@ -324,6 +325,14 @@ export async function registerSettings(): Promise<void> {
             label: 'Ensure trailing newline',
             description: 'End the note with exactly one newline.',
         },
+        [SHOW_DIFF_PREVIEW_KEY]: {
+            value: false,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Preview changes before applying',
+            description: 'Show the formatting changes as a diff, with buttons to apply or cancel them.',
+        },
         [DISPLAY_TOAST_MESSAGES_KEY]: {
             value: true,
             type: SettingItemType.Bool,
@@ -352,4 +361,8 @@ export async function loadFormatterOptions(): Promise<FormatterOptions> {
 
 export async function loadDisplayToastMessages(): Promise<boolean> {
     return Boolean(await joplin.settings.value(DISPLAY_TOAST_MESSAGES_KEY));
+}
+
+export async function loadShowDiffPreview(): Promise<boolean> {
+    return Boolean(await joplin.settings.value(SHOW_DIFF_PREVIEW_KEY));
 }
