@@ -15,9 +15,12 @@ import { computeLineStarts, lineIndexOfOffset } from '../lines';
  * in both styles.
  *
  * Rows are replaced from their own start offset, so tables indented inside
- * list items keep their indentation. Tables inside blockquotes are skipped
- * (the delimiter row has no AST node, and rewriting around `>` prefixes is
- * not worth the risk). Column widths count UTF-16 code units.
+ * list items keep their indentation. Ragged rows keep their own cell count —
+ * a row with fewer or more cells than the delimiter row is rebuilt with
+ * exactly the cells it has, since adding or dropping one changes the parsed
+ * table. Tables inside blockquotes are skipped (the delimiter row has no AST
+ * node, and rewriting around `>` prefixes is not worth the risk). Column
+ * widths count UTF-16 code units.
  */
 export const tableStyle: Rule = {
     name: 'tableStyle',
@@ -39,8 +42,9 @@ export const tableStyle: Rule = {
             if (rows.length === 0) return;
 
             const cellTexts = rows.map((row) => row.children.map((cell) => extractCellText(text, cell)));
-            // Excess cells beyond the header are kept by the parser; keep them here too.
-            const columnCount = Math.max(table.align?.length ?? 0, ...cellTexts.map((cells) => cells.length));
+            // The delimiter row defines the table's columns; a ragged row keeps
+            // exactly the cells it was written with (see renderRow).
+            const columnCount = table.align?.length ?? cellTexts[0].length;
             const align: AlignType[] = Array.from({ length: columnCount }, (_, i) => table.align?.[i] ?? null);
 
             // Compact style never pads cells (width 0 is a no-op for pad())
@@ -50,8 +54,12 @@ export const tableStyle: Rule = {
                 compact ? 0 : Math.max(3, ...cellTexts.map((cells) => (cells[col] ?? '').length))
             );
 
+            // Only the cells the row actually has are rendered: adding a missing
+            // cell or dropping an excess one would change the parsed table, which
+            // the structural check rejects (dropping every edit in the document).
+            // Cells past the last column have no width or alignment to follow.
             const renderRow = (cells: string[]): string =>
-                '| ' + align.map((a, col) => pad(cells[col] ?? '', widths[col], a)).join(' | ') + ' |';
+                '| ' + cells.map((cell, col) => pad(cell, widths[col] ?? 0, align[col] ?? null)).join(' | ') + ' |';
 
             // The delimiter row has no AST node; it is the line after the header row.
             const headerEnd = rows[0].position?.end?.offset;
@@ -62,15 +70,21 @@ export const tableStyle: Rule = {
             const delimiterMatch = /^([ \t]*)([|: \t-]+?)\r?\n?$/.exec(delimiterText);
             if (!delimiterMatch) return;
 
-            for (const row of rows) {
+            // Rows are staged so a row without offsets abandons the whole table:
+            // rewriting some rows and not the delimiter row would corrupt it.
+            const rowEdits: Edit[] = [];
+            for (const [index, row] of rows.entries()) {
                 const start = row.position?.start?.offset;
                 const end = row.position?.end?.offset;
                 if (start === undefined || end === undefined) return;
-                const replacement = renderRow(cellTexts[rows.indexOf(row)]);
+                const cells = cellTexts[index];
+                if (cells.length === 0) continue;
+                const replacement = renderRow(cells);
                 if (text.slice(start, end) !== replacement) {
-                    edits.push({ start, end, replacement });
+                    rowEdits.push({ start, end, replacement });
                 }
             }
+            edits.push(...rowEdits);
 
             const delimiterRow =
                 '| ' +
