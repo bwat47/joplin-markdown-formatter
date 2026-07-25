@@ -53,6 +53,14 @@ export const listIndentation: Rule = {
         const actions = new Map<number, MarkerAction | ShiftAction>();
 
         const processList = (list: List, depth: number, parentContentCol: number): void => {
+            // A nested list can open on the same line as the markers containing it
+            // (`1. - - a`). Actions are keyed by line, so only the innermost marker's
+            // rewrite would survive, and it replaces from the line start — wiping out
+            // the markers before it. Such a list is left as written, descendants
+            // included; the containing item's shift actions keep its later lines
+            // aligned relative to the parent's content column.
+            if (startsMidLine(text, lineStarts, list)) return;
+
             const indentCols = depth === 0 ? 0 : Math.max(unitCols * depth, parentContentCol);
 
             for (const item of list.children as ListItem[]) {
@@ -130,6 +138,19 @@ export const listIndentation: Rule = {
         return edits;
     },
 };
+
+/**
+ * True when anything other than whitespace precedes the list on its opening
+ * line — i.e. the list is nested directly after its parent's marker, as in
+ * `1. - a`. Only a list's first item can start mid-line, so the list's own
+ * start offset answers this for every item.
+ */
+function startsMidLine(text: string, lineStarts: number[], list: List): boolean {
+    const startOffset = list.position?.start?.offset;
+    if (startOffset === undefined) return false;
+    const lineStart = lineStarts[lineIndexOfOffset(lineStarts, startOffset)];
+    return /\S/.test(text.slice(lineStart, startOffset));
+}
 
 /**
  * Indentation string occupying exactly `columns` display columns: full tabs
