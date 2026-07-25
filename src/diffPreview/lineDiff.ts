@@ -196,11 +196,17 @@ function groupIntoHunks(lines: AnchoredLine[], contextLines: number): DiffHunk[]
 }
 
 function toHunk(lines: AnchoredLine[]): DiffHunk {
+    const oldCount = lines.filter((line) => line.kind !== 'add').length;
+    const newCount = lines.filter((line) => line.kind !== 'remove').length;
     return {
-        oldStart: lines[0].oldAnchor,
-        oldCount: lines.filter((line) => line.kind !== 'add').length,
-        newStart: lines[0].newAnchor,
-        newCount: lines.filter((line) => line.kind !== 'remove').length,
+        // A side with no lines starts at the line it follows, per the unified
+        // diff convention: a note formatted away to nothing is `+0,0`, not
+        // `+1,0`. The anchors hold the position *after* that line, which is
+        // what a non-empty side needs.
+        oldStart: oldCount === 0 ? lines[0].oldAnchor - 1 : lines[0].oldAnchor,
+        oldCount,
+        newStart: newCount === 0 ? lines[0].newAnchor - 1 : lines[0].newAnchor,
+        newCount,
         lines,
     };
 }

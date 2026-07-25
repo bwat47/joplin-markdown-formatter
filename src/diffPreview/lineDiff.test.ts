@@ -114,6 +114,21 @@ describe('computeLineDiff', () => {
         ]);
     });
 
+    test('starts an empty side at the line it follows, not at line 1', () => {
+        // Unified-diff convention for a zero-length range, as `git diff` emits it.
+        const [deletion] = computeLineDiff('a\nb\n', '');
+        expect(deletion).toMatchObject({ oldStart: 1, oldCount: 2, newStart: 0, newCount: 0 });
+
+        const [insertion] = computeLineDiff('', 'a\nb\n');
+        expect(insertion).toMatchObject({ oldStart: 0, oldCount: 0, newStart: 1, newCount: 2 });
+    });
+
+    test('keeps a non-empty side anchored to its first line', () => {
+        // The same anchor drives both cases, so a replaced line must still report 1.
+        const [hunk] = computeLineDiff('a\n', 'b\n');
+        expect(hunk).toMatchObject({ oldStart: 1, oldCount: 1, newStart: 1, newCount: 1 });
+    });
+
     test('flags a final line with no trailing newline', () => {
         const [hunk] = computeLineDiff('a\nb', 'a\nb\n');
 
