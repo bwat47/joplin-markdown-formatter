@@ -80,6 +80,9 @@ The formatter follows a "parse for analysis, edit the original text" model. Each
 
 If a rule's edits would change the parsed document structure in an unexpected way, that rule is skipped and the note is left with the last safe output. If formatting fails, the plugin leaves the original note unchanged.
 
+> [!NOTE]
+> If the diff preview shows "[Rule] Skipped by the structural safety check", it's probably a bug with that rule (causing the rule to be skipped), create an issue on github with example markdown that re-creates the issue.
+
 Protected content such as fenced code blocks, indented code blocks, inline code, YAML front matter, math, and HTML blocks is preserved by whitespace-oriented rules.
 
 ## Known Limitations
