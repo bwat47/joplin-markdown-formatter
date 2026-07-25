@@ -17,6 +17,7 @@ type UnorderedListMarker = '-' | '*' | 'preserve';
 type ThematicBreakMarker = '---' | '- - -' | '***' | '* * *';
 export type QuoteStyle = 'preserve' | 'straight' | 'smart';
 type TableStyle = 'preserve' | 'compact' | 'aligned';
+type LinkTextSpacing = 'preserve' | 'spaces' | 'all';
 
 export interface FormatterOptions {
     /** Collapse runs of 2+ blank lines (outside code/front matter/HTML) to a single blank line. */
@@ -72,8 +73,12 @@ export interface FormatterOptions {
     thematicBreakMarker: ThematicBreakMarker;
     /** Renumber ordered lists sequentially. */
     normalizeOrderedListNumbering: boolean;
-    /** Collapse internal whitespace and trim leading/trailing whitespace inside link text. */
-    normalizeLinkTextSpacing: boolean;
+    /**
+     * Whitespace normalization inside link text: leave it as written, collapse
+     * and trim only within a line (spaces), or also turn line breaks — soft and
+     * hard — into a space so the label ends up on one line (all).
+     */
+    linkTextSpacing: LinkTextSpacing;
     /** Ensure the document ends with exactly one trailing newline. */
     ensureFinalNewline: boolean;
 }
@@ -104,7 +109,7 @@ export const DEFAULT_OPTIONS: FormatterOptions = {
     unorderedListMarker: '-',
     thematicBreakMarker: '* * *',
     normalizeOrderedListNumbering: true,
-    normalizeLinkTextSpacing: true,
+    linkTextSpacing: 'all',
     ensureFinalNewline: true,
 };
 

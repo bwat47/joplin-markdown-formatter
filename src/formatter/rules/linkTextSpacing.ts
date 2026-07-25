@@ -1,13 +1,16 @@
 import type { Link, LinkReference } from 'mdast';
 import type { Node, Parent } from 'unist';
 import type { Edit, Rule, RuleContext } from '../types';
-import { walk } from '../walk';
+import { walk, walkWithAncestors } from '../walk';
 
 /** A half-open source range `[start, end)`. */
 interface Span {
     start: number;
     end: number;
 }
+
+/** Matches any line ending, including the `\r` half of a CRLF pair. */
+const LINE_BREAK = /[\r\n]/;
 
 /**
  * Source range between a link's brackets: just after `[` up to the `]` that
@@ -29,9 +32,10 @@ function linkTextRegion(link: Link | LinkReference, text: string): Span | null {
 }
 
 /**
- * Source ranges inside `region` this rule may rewrite: every descendant `text`
- * node, plus whitespace runs that belong to no node at all, merged into
- * maximal runs so each run is normalized as one piece.
+ * Source ranges inside `region` this rule may rewrite — every descendant `text`
+ * and `break` node, plus whitespace runs that belong to no node at all — merged
+ * into maximal runs so each run is normalized as one piece, and the `break`
+ * spans among them.
  *
  * The gaps matter because CommonMark strips the whitespace around a soft line
  * ending, and mdast positions follow: in `[a **b** \nc](url)` the space before
@@ -44,14 +48,11 @@ function linkTextRegion(link: Link | LinkReference, text: string): Span | null {
  * the link's own children (`[**a *b* \nc**](url)`), so a container marks only
  * its delimiters as covered and lets its children cover the rest — otherwise its
  * span would hide the gaps nested inside it.
- *
- * Gaps touching a `break` node are skipped: hard line breaks inside link text
- * (and the continuation indent that follows them) are preserved as written.
  */
-function editableSpans(link: Link | LinkReference, text: string, region: Span): Span[] {
+function editableRuns(link: Link | LinkReference, text: string, region: Span): { runs: Span[]; breaks: Span[] } {
     const spans: Span[] = [];
+    const breaks: Span[] = [];
     const covered = new Array<boolean>(region.end - region.start).fill(false);
-    const breakEdges = new Set<number>();
     const cover = (from: number, to: number) => {
         for (let offset = Math.max(from, region.start); offset < Math.min(to, region.end); offset += 1) {
             covered[offset - region.start] = true;
@@ -66,8 +67,11 @@ function editableSpans(link: Link | LinkReference, text: string, region: Span): 
 
         if (node.type === 'text') spans.push({ start, end });
         else if (node.type === 'break') {
-            breakEdges.add(start);
-            breakEdges.add(end);
+            // A hard break is whitespace like any other here: it collapses to a
+            // single space, which also frees the indentation that follows it to
+            // merge into the same run.
+            spans.push({ start, end });
+            breaks.push({ start, end });
         }
 
         // A container (emphasis, strong, delete, ...) covers only the delimiters
@@ -93,17 +97,37 @@ function editableSpans(link: Link | LinkReference, text: string, region: Span): 
         index = gapEnd - 1;
 
         if (!/^\s+$/.test(text.slice(gap.start, gap.end))) continue;
-        if (breakEdges.has(gap.start) || breakEdges.has(gap.end)) continue;
         spans.push(gap);
     }
 
-    return mergeSpans(spans);
+    return { runs: mergeSpans(spans), breaks };
 }
 
-/** Merge touching or overlapping spans so no two edits can collide. */
+/**
+ * Collapse a run to single spaces, with each hard break inside it standing in
+ * for one space.
+ *
+ * Breaks are substituted by offset rather than by pattern because the two forms
+ * a `break` node can take are not both whitespace, and one of them is not even
+ * distinguishable in the raw text: `a\` + newline is a hard break, while `a\\` +
+ * newline is an escaped backslash followed by a *soft* break. Only the tree
+ * tells them apart, so a regex over the source would eat the wrong backslash.
+ */
+function collapseRun(run: Span, text: string, breaks: Span[]): string {
+    let result = '';
+    let cursor = run.start;
+    for (const hardBreak of breaks) {
+        if (hardBreak.start < cursor || hardBreak.end > run.end) continue;
+        result += text.slice(cursor, hardBreak.start) + ' ';
+        cursor = hardBreak.end;
+    }
+    return (result + text.slice(cursor, run.end)).replace(/\s+/g, ' ');
+}
+
+/** Merge touching or overlapping spans, in source order, so no two edits collide. */
 function mergeSpans(spans: Span[]): Span[] {
     const merged: Span[] = [];
-    for (const span of [...spans].sort((a, b) => a.start - b.start)) {
+    for (const span of [...spans].sort((a, b) => a.start - b.start || a.end - b.end)) {
         const last = merged[merged.length - 1];
         if (last && span.start <= last.end) last.end = Math.max(last.end, span.end);
         else merged.push({ ...span });
@@ -112,11 +136,15 @@ function mergeSpans(spans: Span[]): Span[] {
 }
 
 /**
- * Normalize whitespace inside link text: collapse runs of whitespace (including
- * newlines) to a single space and trim leading/trailing whitespace right inside
- * the brackets. So `[ a link ](url)` -> `[a link](url)`, `[a     link](url)` ->
- * `[a link](url)`, and a soft newline in the text becomes a space (or is dropped
- * if it is only trailing).
+ * Normalize whitespace inside link text: collapse runs of whitespace to a single
+ * space and trim leading/trailing whitespace right inside the brackets. So
+ * `[ a link ](url)` -> `[a link](url)` and `[a     link](url)` -> `[a link](url)`.
+ *
+ * The `all` mode (default) also treats line breaks as collapsible whitespace, so
+ * a newline in the text becomes a space (or is dropped if it is only trailing)
+ * and the label ends up on one line. The `spaces` mode leaves any run that
+ * contains a line break entirely alone — including the whitespace bordering it,
+ * which is part of the same run — so multi-line labels stay as written.
  *
  * All descendant `text` nodes are edited, including text inside emphasis and
  * other inline formatting. Nodes such as `inlineCode` and `math` store their
@@ -124,6 +152,13 @@ function mergeSpans(spans: Span[]): Span[] {
  * through untouched. Single spaces that separate inline nodes mid-text (e.g.
  * `[a *b* c]`) survive because boundary trimming only applies where the text
  * touches a bracket.
+ *
+ * Under `all`, hard line breaks collapse to a single space like any other line
+ * break, in both the two-space and backslash forms. They render as a `<br>`
+ * inside the anchor, which Joplin's editor displays as a broken-looking link,
+ * and a one-line label is what the rest of this rule normalizes toward. Dropping
+ * the `break` node is a structural change, so `verify.ts` grants this rule a
+ * matching exemption.
  *
  * Reference links are covered too. CommonMark normalizes reference *identifiers*
  * by collapsing/trimming/lowercasing their whitespace — exactly what this rule
@@ -137,25 +172,39 @@ export const linkTextSpacing: Rule = {
     name: 'linkTextSpacing',
 
     isEnabled(options) {
-        return options.normalizeLinkTextSpacing;
+        return options.linkTextSpacing !== 'preserve';
     },
 
-    apply({ text, tree }: RuleContext): Edit[] {
+    apply({ text, tree, options }: RuleContext): Edit[] {
         const edits: Edit[] = [];
+        const collapseLineBreaks = options.linkTextSpacing === 'all';
 
-        walk(tree, (node) => {
+        walkWithAncestors(tree, (node, ancestors) => {
             if (node.type !== 'link' && node.type !== 'linkReference') return;
             const link = node as Link | LinkReference;
             if (link.children.length === 0) return;
             const region = linkTextRegion(link, text);
             if (!region) return;
+            // Inside a blockquote, a line break in the link text means the next
+            // line opens with a `>` marker that sits inside the region but is not
+            // part of the label; collapsing the run would drag it into the text.
+            // Leave that one link alone rather than let the whole rule fail
+            // verification and be dropped for the entire note.
+            if (
+                LINE_BREAK.test(text.slice(region.start, region.end)) &&
+                ancestors.some((ancestor) => ancestor.type === 'blockquote')
+            ) {
+                return;
+            }
 
-            for (const span of editableSpans(link, text, region)) {
-                const source = text.slice(span.start, span.end);
-                let normalized = source.replace(/\s+/g, ' ');
-                if (span.start === region.start) normalized = normalized.trimStart();
-                if (span.end === region.end) normalized = normalized.trimEnd();
-                if (normalized !== source) edits.push({ start: span.start, end: span.end, replacement: normalized });
+            const { runs, breaks } = editableRuns(link, text, region);
+            for (const run of runs) {
+                const source = text.slice(run.start, run.end);
+                if (!collapseLineBreaks && LINE_BREAK.test(source)) continue;
+                let normalized = collapseRun(run, text, breaks);
+                if (run.start === region.start) normalized = normalized.trimStart();
+                if (run.end === region.end) normalized = normalized.trimEnd();
+                if (normalized !== source) edits.push({ start: run.start, end: run.end, replacement: normalized });
             }
         });
 
