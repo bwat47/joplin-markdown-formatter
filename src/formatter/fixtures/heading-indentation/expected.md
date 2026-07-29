@@ -10,7 +10,7 @@
 
   # Heading inside a list
 
->  ## Heading inside a blockquote
+> ## Heading inside a blockquote
 
  Setext heading
  ---------------
