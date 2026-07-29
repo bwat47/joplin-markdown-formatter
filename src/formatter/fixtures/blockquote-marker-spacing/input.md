@@ -14,6 +14,8 @@
 
 > ```js
 >   const x = 1;
+>>>literal markers
+>   >literal marker after indentation
 > ```
 
 > - list item

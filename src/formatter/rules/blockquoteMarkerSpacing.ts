@@ -146,20 +146,20 @@ function addLineEdits(
     const markers = matchMarkerPrefix(text, lineStart, lineEndOffset);
     if (markers.length === 0) return; // lazy continuation line, no marker to normalize
 
-    // Between two markers is always pure structural whitespace (content can
-    // never start there), and any gap the matcher accepted is within the
-    // per-level budget, so shrinking it to one space never changes what the
-    // next parse recognizes.
-    for (let i = 0; i < markers.length - 1; i++) {
-        addEdit({ start: markers[i].end, end: markers[i + 1].start, replacement: ' ' });
-    }
-
     const markerEnd = markers[markers.length - 1].end;
 
     // The marker's position itself sits inside literal content that started
     // on an earlier line (e.g. an interior line of a fenced/indented code
-    // block quoted line-by-line) — the whole remainder is protected.
+    // block quoted line-by-line) — the whole prefix and remainder are
+    // protected, including any `>` characters that resemble nested markers.
     if (protectedRanges.some((range) => range.start < markerEnd && range.end > markerEnd)) return;
+
+    // Between two structural markers is always pure whitespace, and any gap
+    // the matcher accepted is within the per-level budget, so shrinking it to
+    // one space never changes what the next parse recognizes.
+    for (let i = 0; i < markers.length - 1; i++) {
+        addEdit({ start: markers[i].end, end: markers[i + 1].start, replacement: ' ' });
+    }
 
     const wsMatch = /^[ \t]*/.exec(text.slice(markerEnd, lineEndOffset))!;
     const wsEnd = markerEnd + wsMatch[0].length;
