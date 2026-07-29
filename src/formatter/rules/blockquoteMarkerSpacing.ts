@@ -12,9 +12,10 @@ import { createEditSink } from './blockSpacing';
 const TAB_SIZE = 4;
 
 /**
- * Normalize the whitespace right after a blockquote's `>` marker(s) to a
- * single space. Only the gap between the last `>` and the line's content is
- * touched; indentation before/between markers is left as written.
+ * Normalize the whitespace around a blockquote's `>` marker(s) to a single
+ * space: between consecutive markers of a nested quote, and between the
+ * last marker and the quoted content. Indentation before the first marker
+ * is left as written.
  *
  * Three kinds of content make blind collapsing unsafe, so all are left alone:
  * - Literal content (code, HTML, math, front matter) protected by
@@ -55,7 +56,7 @@ export const blockquoteMarkerSpacing: Rule = {
 
             for (let line = firstLine; line <= lastLine; line++) {
                 if (skipLines.has(line)) continue;
-                addLineEdit(text, lineStarts[line], lineEnd(line), protectedRanges, addEdit);
+                addLineEdits(text, lineStarts[line], lineEnd(line), protectedRanges, addEdit);
             }
         });
 
@@ -81,19 +82,26 @@ function collectListLines(tree: RuleContext['tree'], lineStarts: number[]): Set<
     return skipLines;
 }
 
+/** Half-open [start, end) span of one `>` character in a marker chain. */
+interface MarkerSpan {
+    start: number;
+    end: number;
+}
+
 /**
- * Find the end of the last `>` marker in a (possibly nested) blockquote
- * prefix, replicating micromark's container matching (see
+ * Find every `>` marker in a (possibly nested) blockquote prefix, replicating
+ * micromark's container matching (see
  * `micromark-core-commonmark/lib/block-quote.js`): each level allows 0 to
  * `TAB_SIZE - 1` columns of leading space/tab (tab-stop aware) before its
  * `>`, then optionally consumes exactly one following space/tab character
  * (not tab-expanded) as that level's own before the next level is attempted.
- * Returns null if the line has no marker at all (a lazy continuation line).
+ * Returns an empty array for a line with no marker at all (a lazy
+ * continuation line).
  */
-function matchMarkerPrefix(text: string, lineStart: number, lineEnd: number): number | null {
+function matchMarkerPrefix(text: string, lineStart: number, lineEnd: number): MarkerSpan[] {
+    const markers: MarkerSpan[] = [];
     let pos = lineStart;
     let col = 0;
-    let lastMarkerEnd: number | null = null;
 
     for (;;) {
         const levelStartCol = col;
@@ -109,9 +117,10 @@ function matchMarkerPrefix(text: string, lineStart: number, lineEnd: number): nu
         }
         if (p >= lineEnd || text[p] !== '>') break;
 
+        const markerStart = p;
         p++;
         c++;
-        lastMarkerEnd = p;
+        markers.push({ start: markerStart, end: p });
         pos = p;
         col = c;
 
@@ -124,18 +133,28 @@ function matchMarkerPrefix(text: string, lineStart: number, lineEnd: number): nu
         }
     }
 
-    return lastMarkerEnd;
+    return markers;
 }
 
-function addLineEdit(
+function addLineEdits(
     text: string,
     lineStart: number,
     lineEndOffset: number,
     protectedRanges: OffsetRange[],
     addEdit: (edit: Edit) => void
 ): void {
-    const markerEnd = matchMarkerPrefix(text, lineStart, lineEndOffset);
-    if (markerEnd === null) return; // lazy continuation line, no marker to normalize
+    const markers = matchMarkerPrefix(text, lineStart, lineEndOffset);
+    if (markers.length === 0) return; // lazy continuation line, no marker to normalize
+
+    // Between two markers is always pure structural whitespace (content can
+    // never start there), and any gap the matcher accepted is within the
+    // per-level budget, so shrinking it to one space never changes what the
+    // next parse recognizes.
+    for (let i = 0; i < markers.length - 1; i++) {
+        addEdit({ start: markers[i].end, end: markers[i + 1].start, replacement: ' ' });
+    }
+
+    const markerEnd = markers[markers.length - 1].end;
 
     // The marker's position itself sits inside literal content that started
     // on an earlier line (e.g. an interior line of a fenced/indented code
