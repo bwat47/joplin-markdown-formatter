@@ -29,6 +29,7 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'ensureMathBlockBlankLines',
     'ensureTableBlankLines',
     'ensureBlockquoteBlankLines',
+    'normalizeBlockquoteMarkerSpacing',
     'ensureListBlankLines',
     'ensureFrontmatterBlankLine',
     'normalizeHeadingLevels',
@@ -291,6 +292,15 @@ export async function registerSettings(): Promise<void> {
             public: true,
             label: 'Ensure blank lines around blockquotes',
             description: 'Add one blank line before and after blockquotes when neighboring content exists.',
+        },
+        normalizeBlockquoteMarkerSpacing: {
+            value: DEFAULT_OPTIONS.normalizeBlockquoteMarkerSpacing,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Normalize blockquote marker spacing',
+            description:
+                'Use one space between blockquote `>` markers and quoted content, and between markers in nested quotes (`>>` becomes `> >`). Content requiring exact indentation (e.g. code inside the quote) and lists inside blockquotes are left unchanged.',
         },
         ensureListBlankLines: {
             value: DEFAULT_OPTIONS.ensureListBlankLines,

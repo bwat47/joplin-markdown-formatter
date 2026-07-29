@@ -21,8 +21,8 @@ Lazy continuation is still quoted
 TestAbove
 
 > ABC1
->>> ABC2
->> Test
+> > > ABC2
+> > Test
 > ABC3
 
 1. TestBelow
