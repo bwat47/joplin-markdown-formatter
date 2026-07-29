@@ -300,7 +300,7 @@ export async function registerSettings(): Promise<void> {
             public: true,
             label: 'Normalize blockquote marker spacing',
             description:
-                'Use one space between blockquote `>` markers and the quoted content. Content requiring exact indentation (e.g. code inside the quote) and lists inside blockquotes are left unchanged.',
+                'Use one space between blockquote `>` markers and quoted content, and between markers in nested quotes (`>>` becomes `> >`). Content requiring exact indentation (e.g. code inside the quote) and lists inside blockquotes are left unchanged.',
         },
         ensureListBlankLines: {
             value: DEFAULT_OPTIONS.ensureListBlankLines,
