@@ -4,20 +4,29 @@ import { getProtectedRanges, type OffsetRange } from '../protectedRanges';
 import { walkWithAncestors } from '../walk';
 import { createEditSink } from './blockSpacing';
 
-/** 0-3 leading spaces, then one or more `>` markers (nested quotes stack them on one line). */
-const MARKER_PREFIX = /^(?: {0,3}>)+/;
+/**
+ * Number of columns a tab advances to (the next multiple of), matching
+ * micromark's `constants.tabSize`. A block quote marker allows up to
+ * `TAB_SIZE - 1` columns of indentation before it.
+ */
+const TAB_SIZE = 4;
 
 /**
  * Normalize the whitespace right after a blockquote's `>` marker(s) to a
  * single space. Only the gap between the last `>` and the line's content is
  * touched; indentation before/between markers is left as written.
  *
- * Two kinds of content make blind collapsing unsafe, so both are left alone:
+ * Three kinds of content make blind collapsing unsafe, so all are left alone:
  * - Literal content (code, HTML, math, front matter) protected by
  *   {@link getProtectedRanges}, which can rely on exact indentation.
  * - Lines inside a list nested in a blockquote, where a continuation line's
  *   indentation determines which list item it belongs to (same exemption
  *   `listIndentation` already makes for lists inside blockquotes).
+ * - A line where content right after the marker(s) itself starts with `>`:
+ *   the parser only treats that `>` as a further nesting level within a
+ *   tight column budget (see {@link matchMarkerPrefix}), so shrinking the
+ *   gap in front of it could turn literal quoted text into a new nesting
+ *   level on the next parse.
  */
 export const blockquoteMarkerSpacing: Rule = {
     name: 'blockquoteMarkerSpacing',
@@ -72,6 +81,52 @@ function collectListLines(tree: RuleContext['tree'], lineStarts: number[]): Set<
     return skipLines;
 }
 
+/**
+ * Find the end of the last `>` marker in a (possibly nested) blockquote
+ * prefix, replicating micromark's container matching (see
+ * `micromark-core-commonmark/lib/block-quote.js`): each level allows 0 to
+ * `TAB_SIZE - 1` columns of leading space/tab (tab-stop aware) before its
+ * `>`, then optionally consumes exactly one following space/tab character
+ * (not tab-expanded) as that level's own before the next level is attempted.
+ * Returns null if the line has no marker at all (a lazy continuation line).
+ */
+function matchMarkerPrefix(text: string, lineStart: number, lineEnd: number): number | null {
+    let pos = lineStart;
+    let col = 0;
+    let lastMarkerEnd: number | null = null;
+
+    for (;;) {
+        const levelStartCol = col;
+        let p = pos;
+        let c = col;
+        while (p < lineEnd) {
+            const ch = text[p];
+            if (ch !== ' ' && ch !== '\t') break;
+            const nextCol = ch === '\t' ? (Math.floor(c / TAB_SIZE) + 1) * TAB_SIZE : c + 1;
+            if (nextCol - levelStartCol > TAB_SIZE - 1) break;
+            c = nextCol;
+            p++;
+        }
+        if (p >= lineEnd || text[p] !== '>') break;
+
+        p++;
+        c++;
+        lastMarkerEnd = p;
+        pos = p;
+        col = c;
+
+        if (pos < lineEnd) {
+            const ch = text[pos];
+            if (ch === ' ' || ch === '\t') {
+                pos++;
+                col = ch === '\t' ? (Math.floor(col / TAB_SIZE) + 1) * TAB_SIZE : col + 1;
+            }
+        }
+    }
+
+    return lastMarkerEnd;
+}
+
 function addLineEdit(
     text: string,
     lineStart: number,
@@ -79,10 +134,8 @@ function addLineEdit(
     protectedRanges: OffsetRange[],
     addEdit: (edit: Edit) => void
 ): void {
-    const markerMatch = MARKER_PREFIX.exec(text.slice(lineStart, lineEndOffset));
-    if (!markerMatch) return; // lazy continuation line, no marker to normalize
-
-    const markerEnd = lineStart + markerMatch[0].length;
+    const markerEnd = matchMarkerPrefix(text, lineStart, lineEndOffset);
+    if (markerEnd === null) return; // lazy continuation line, no marker to normalize
 
     // The marker's position itself sits inside literal content that started
     // on an earlier line (e.g. an interior line of a fenced/indented code
@@ -100,8 +153,13 @@ function addLineEdit(
     }
 
     const cappedByProtection = cap < wsEnd;
-    const atEndOfLine = !cappedByProtection && /^\r?\n?$/.test(text.slice(wsEnd, lineEndOffset));
-    if (atEndOfLine) return; // blank quote line; trimTrailingWhitespace handles it
+    if (!cappedByProtection) {
+        if (/^\r?\n?$/.test(text.slice(wsEnd, lineEndOffset))) return; // blank quote line; trim rule handles it
+        // matchMarkerPrefix deliberately stopped short of this `>` (the gap
+        // exceeded the level budget); shrinking the gap could make it a new
+        // nesting level on the next parse instead of literal quoted text.
+        if (text[wsEnd] === '>') return;
+    }
 
     addEdit({ start: markerEnd, end: cap, replacement: ' ' });
 }
