@@ -18,6 +18,7 @@ type ThematicBreakMarker = '---' | '- - -' | '***' | '* * *';
 export type QuoteStyle = 'preserve' | 'straight' | 'smart';
 type TableStyle = 'preserve' | 'compact' | 'aligned';
 type LinkTextSpacing = 'preserve' | 'spaces' | 'all';
+export type MinimumHeadingLevel = 'none' | 'h2' | 'firstHeading';
 
 export interface FormatterOptions {
     /** Collapse runs of 2+ blank lines (outside code/front matter/HTML) to a single blank line. */
@@ -52,6 +53,13 @@ export interface FormatterOptions {
     ensureFrontmatterBlankLine: boolean;
     /** Lower skipped heading levels so headings increase by at most one level at a time. */
     normalizeHeadingLevels: boolean;
+    /**
+     * Shallowest heading level the document may use, applied alongside
+     * normalizeHeadingLevels: `none` leaves the first heading's level alone,
+     * `h2` moves the whole document so its first heading is level 2, and
+     * `firstHeading` floors every heading at the first heading's own level.
+     */
+    minimumHeadingLevel: MinimumHeadingLevel;
     /**
      * Force lists tight or loose, keep each list's authored tight/loose
      * meaning while fixing mixed spacing (semantic), or leave spacing alone.
@@ -102,6 +110,7 @@ export const DEFAULT_OPTIONS: FormatterOptions = {
     ensureListBlankLines: true,
     ensureFrontmatterBlankLine: true,
     normalizeHeadingLevels: true,
+    minimumHeadingLevel: 'none',
     listSpacing: 'semantic',
     indentation: 'tabs',
     tableStyle: 'preserve',

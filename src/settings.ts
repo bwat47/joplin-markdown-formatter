@@ -33,6 +33,7 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'ensureListBlankLines',
     'ensureFrontmatterBlankLine',
     'normalizeHeadingLevels',
+    'minimumHeadingLevel',
     'listSpacing',
     'indentation',
     'tableStyle',
@@ -325,6 +326,21 @@ export async function registerSettings(): Promise<void> {
             public: true,
             label: 'Normalize heading level increments',
             description: 'Lower skipped heading levels so headings increase by at most one level at a time.',
+        },
+        minimumHeadingLevel: {
+            value: DEFAULT_OPTIONS.minimumHeadingLevel,
+            type: SettingItemType.String,
+            section: SECTION,
+            public: true,
+            isEnum: true,
+            options: {
+                none: 'None (no minimum heading level)',
+                h2: 'H2 (start the note at level 2)',
+                firstHeading: 'First heading (start at the first heading’s own level)',
+            },
+            label: 'Minimum heading level',
+            description:
+                'Shallowest heading level the note may use, applied by the heading level increment rule. H2 moves every heading by the same amount so the first one becomes level 2, keeping the note’s relative hierarchy. First heading keeps the first heading as written and raises any later heading that goes above it. Setext (underlined) headings are left as written.',
         },
         collapseBlankLines: {
             value: DEFAULT_OPTIONS.collapseBlankLines,
