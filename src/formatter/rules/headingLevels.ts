@@ -34,9 +34,11 @@ export const headingLevels: Rule = {
 
         for (const heading of headings) {
             const shifted = clamp(heading.depth + shift, baseline, MAX_DEPTH);
-            // `shifted` and `previousDepth + 1` are both at least `baseline`, so
-            // the increment cap can never drag a heading back under it.
-            const desiredDepth = previousDepth === undefined ? shifted : Math.min(shifted, previousDepth + 1);
+            // The increment cap is floored again: a heading the rule could not
+            // rewrite (see below) leaves `previousDepth` under `baseline`, and
+            // capping against it would push this heading under the floor too.
+            const desiredDepth =
+                previousDepth === undefined ? shifted : Math.max(Math.min(shifted, previousDepth + 1), baseline);
 
             // A heading we cannot rewrite (setext, or missing offsets) keeps its
             // authored level in the text, so the ones after it must normalize
