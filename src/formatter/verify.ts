@@ -3,6 +3,11 @@
  * still *mean* the same thing. Trees are compared after normalizing away the
  * differences rules are allowed to make; anything else indicates a rule bug,
  * and the pipeline drops that rule's edits instead of writing them back.
+ *
+ * Each exemption is scoped to the rule that owns it via `ruleName`, so a buggy
+ * rule cannot ride on another rule's allowance — changing heading depth, say,
+ * only passes for headingLevels. The one exception is list tight/loose, which
+ * no single rule owns; see the note below.
  */
 
 import type { Root } from 'mdast';
@@ -23,15 +28,19 @@ export function isStructurallyEqual(before: Root, after: Root, ruleName?: string
 function normalizeNode(node: AnyNode, ruleName?: string, insideLink = false): AnyNode {
     const copy: AnyNode = { ...node };
     delete copy.position;
-    // listSpacing legitimately changes tight/loose.
+    // Tight/loose is derived from blank lines rather than owned by one rule: any
+    // rule that moves a blank line near a list boundary changes it legitimately
+    // (e.g. headingIndentation unindenting a heading inside a list item). So this
+    // exemption stays global — scoping it to listSpacing would drop the edits of
+    // every other spacing rule that touches a list.
     if (copy.type === 'list' || copy.type === 'listItem') delete copy.spread;
     // headingLevels legitimately changes heading depth without changing heading text.
-    if (copy.type === 'heading') delete copy.depth;
+    if (ruleName === 'headingLevels' && copy.type === 'heading') delete copy.depth;
     // codeBlockLanguage legitimately fills in missing fence info strings.
     if (ruleName === 'codeBlockLanguage' && copy.type === 'code') delete copy.lang;
     // quoteStyle legitimately converts quote characters in prose text.
     if (copy.type === 'text' && typeof copy.value === 'string') {
-        let value = copy.value.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+        let value = ruleName === 'quoteStyle' ? copy.value.replace(/[“”]/g, '"').replace(/[‘’]/g, "'") : copy.value;
         if (ruleName === 'linkTextSpacing' && insideLink) value = value.replace(/\s+/g, ' ');
         copy.value = value;
     }
@@ -50,7 +59,7 @@ function normalizeNode(node: AnyNode, ruleName?: string, insideLink = false): An
         // space, at any depth of inline nesting.
         if (inLinkText) children = collapseHardBreaks(children);
         if (ruleName === 'linkTextSpacing' && isLink) children = trimBoundaryText(children);
-        copy.children = mergeAdjacentBulletLists(children);
+        copy.children = ruleName === 'listMarkers' ? mergeAdjacentBulletLists(children) : children;
     }
     return copy;
 }

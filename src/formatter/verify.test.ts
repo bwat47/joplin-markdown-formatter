@@ -16,12 +16,28 @@ describe('isStructurallyEqual', () => {
         expect(equal('- a\n- b\n', '- a\n\n- b\n')).toBe(true);
     });
 
-    test('heading depth normalization is ignored', () => {
-        expect(equal('# a\n\n#### b\n', '# a\n\n## b\n')).toBe(true);
+    test('heading depth normalization is ignored for headingLevels', () => {
+        const before = parseMarkdown('# a\n\n#### b\n');
+        const after = parseMarkdown('# a\n\n## b\n');
+        expect(isStructurallyEqual(before, after, 'headingLevels')).toBe(true);
+        // Not exempt for other rules: no one else may change heading depth.
+        expect(isStructurallyEqual(before, after, 'headingMarkerSpacing')).toBe(false);
     });
 
-    test('adjacent bullet lists merged by marker normalization are equal', () => {
-        expect(equal('* a\n\n- b\n', '- a\n- b\n')).toBe(true);
+    test('quote character conversion is ignored for quoteStyle', () => {
+        const before = parseMarkdown('He said “hi” and ‘bye’.\n');
+        const after = parseMarkdown('He said "hi" and \'bye\'.\n');
+        expect(isStructurallyEqual(before, after, 'quoteStyle')).toBe(true);
+        // Not exempt for other rules: no one else may rewrite quote characters.
+        expect(isStructurallyEqual(before, after, 'emphasisStyle')).toBe(false);
+    });
+
+    test('adjacent bullet lists merged by marker normalization are equal for listMarkers', () => {
+        const before = parseMarkdown('* a\n\n- b\n');
+        const after = parseMarkdown('- a\n- b\n');
+        expect(isStructurallyEqual(before, after, 'listMarkers')).toBe(true);
+        // Not exempt for other rules: no one else may merge sibling lists.
+        expect(isStructurallyEqual(before, after, 'listSpacing')).toBe(false);
     });
 
     test('changed emphasis nesting is detected', () => {
