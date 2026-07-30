@@ -42,6 +42,7 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Unordered list marker | `-` | Rewrite unordered bullets to dash or asterisk, or preserve them as written. |
 | Normalize ordered list numbering | On | Renumber ordered lists sequentially, keeping the first item number. |
 | Normalize heading level increments | On | Lower skipped heading levels so headings increase one level at a time. |
+| Minimum heading level | None | Shallowest heading level the note may use, applied by the rule above. `H2` moves every heading by the same amount so the first one becomes level 2, keeping the note's relative hierarchy; `first heading` keeps the first heading as written and raises any later heading that goes above it; `none` leaves levels unfloored. |
 | Normalize heading marker spacing | On | Use one space between ATX heading markers and text, including optional closing markers. |
 | Remove heading indentation | On | Move root-level ATX headings to the start of the line without changing indented code or headings nested in containers. |
 | Horizontal rule marker | `* * *` | Preferred format for horizontal rules. |
