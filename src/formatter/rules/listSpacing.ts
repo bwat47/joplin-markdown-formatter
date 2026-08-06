@@ -5,6 +5,35 @@ import { walkWithAncestors } from '../walk';
 import { computeLineStarts, isBlankLine, lineIndexOfOffset } from '../lines';
 
 /**
+ * The gap between each pair of adjacent nodes, as `[endOffset, startOffset]`.
+ * Pairs where either position is missing are skipped.
+ */
+function* adjacentGaps(nodes: readonly Node[]): Generator<[number, number]> {
+    for (let i = 0; i < nodes.length - 1; i++) {
+        const from = nodes[i].position?.end?.offset;
+        const to = nodes[i + 1].position?.start?.offset;
+        if (from !== undefined && to !== undefined) yield [from, to];
+    }
+}
+
+/**
+ * Every gap a list's spacing is defined by: first the gaps between an item's
+ * own blocks (paragraph -> nested list), then those between consecutive items.
+ */
+function* listGaps(items: readonly ListItem[]): Generator<[number, number]> {
+    for (const item of items) yield* adjacentGaps(item.children);
+    yield* adjacentGaps(items);
+}
+
+/**
+ * True when no item holds block content after its first child other than a
+ * trailing nested list — anything else needs its blank lines and renders loose.
+ */
+function isTightable(items: readonly ListItem[]): boolean {
+    return items.every((item) => item.children.every((child, index) => index === 0 || child.type === 'list'));
+}
+
+/**
  * Force lists tight (no blank lines between items) or loose (one blank line
  * between items). Each list node is handled independently, so nested lists
  * are normalized too.
@@ -68,18 +97,9 @@ export const listSpacing: Rule = {
          * CommonMark looseness, read from the text itself: a blank line
          * between two items or between two blocks within an item.
          */
-        const isLooseList = (items: ListItem[]): boolean => {
-            for (const item of items) {
-                for (let i = 0; i < item.children.length - 1; i++) {
-                    const from = item.children[i].position?.end?.offset;
-                    const to = item.children[i + 1].position?.start?.offset;
-                    if (from !== undefined && to !== undefined && hasBlankLineBetween(from, to)) return true;
-                }
-            }
-            for (let i = 0; i < items.length - 1; i++) {
-                const from = items[i].position?.end?.offset;
-                const to = items[i + 1].position?.start?.offset;
-                if (from !== undefined && to !== undefined && hasBlankLineBetween(from, to)) return true;
+        const isLooseList = (items: readonly ListItem[]): boolean => {
+            for (const [from, to] of listGaps(items)) {
+                if (hasBlankLineBetween(from, to)) return true;
             }
             return false;
         };
@@ -87,51 +107,19 @@ export const listSpacing: Rule = {
         walkWithAncestors(tree, (node: Node, ancestors: Node[]) => {
             if (node.type !== 'list') return;
             if (ancestors.some((ancestor) => ancestor.type === 'blockquote')) return;
-            const list = node as List;
-            const items = list.children;
+            const items = (node as List).children;
+
+            if (options.listSpacing === 'tight') {
+                if (!isTightable(items)) return;
+                for (const [from, to] of listGaps(items)) removeBlankLinesBetween(from, to);
+                return;
+            }
 
             // Semantic: tight lists have no blank lines to remove, so only
             // loose lists need work — make their spacing consistently loose.
             if (options.listSpacing === 'semantic' && !isLooseList(items)) return;
 
-            if (options.listSpacing === 'tight') {
-                // An item with block content after its first child (other than a
-                // trailing nested list) cannot be tightened.
-                const tightable = items.every((item: ListItem) =>
-                    item.children.every((child, index) => index === 0 || child.type === 'list')
-                );
-                if (!tightable) return;
-
-                for (const item of items) {
-                    // Close gaps between an item's own blocks (paragraph -> nested list).
-                    for (let i = 0; i < item.children.length - 1; i++) {
-                        const from = item.children[i].position?.end?.offset;
-                        const to = item.children[i + 1].position?.start?.offset;
-                        if (from !== undefined && to !== undefined) removeBlankLinesBetween(from, to);
-                    }
-                }
-                for (let i = 0; i < items.length - 1; i++) {
-                    const from = items[i].position?.end?.offset;
-                    const to = items[i + 1].position?.start?.offset;
-                    if (from !== undefined && to !== undefined) removeBlankLinesBetween(from, to);
-                }
-            } else {
-                // loose: ensure one blank line between an item's own blocks
-                // and between consecutive items.
-                for (const item of items) {
-                    for (let i = 0; i < item.children.length - 1; i++) {
-                        const from = item.children[i].position?.end?.offset;
-                        const to = item.children[i + 1].position?.start?.offset;
-                        if (from !== undefined && to !== undefined) ensureBlankLineBetween(from, to);
-                    }
-                }
-                for (let i = 0; i < items.length - 1; i++) {
-                    const from = items[i].position?.end?.offset;
-                    const to = items[i + 1].position?.start?.offset;
-                    if (from === undefined || to === undefined) continue;
-                    ensureBlankLineBetween(from, to);
-                }
-            }
+            for (const [from, to] of listGaps(items)) ensureBlankLineBetween(from, to);
         });
 
         return edits;
