@@ -1,7 +1,44 @@
-import type { List, ListItem } from 'mdast';
+import type { List, ListItem, Root } from 'mdast';
 import type { Edit, Rule, RuleContext } from '../types';
 import type { Indentation } from '../types';
 import { computeLineStarts, isBlankLine, lineIndexOfOffset, columnWidth, indentBeyondColumn } from '../lines';
+
+interface MarkerAction {
+    kind: 'marker';
+    /** Offset just past the marker's trailing whitespace (first content char, or EOL for empty items). */
+    contentOffset: number;
+    marker: string;
+    indentCols: number;
+    emptyItem: boolean;
+}
+
+interface ShiftAction {
+    kind: 'shift';
+    oldContentCol: number;
+    newContentCol: number;
+}
+
+type LineAction = MarkerAction | ShiftAction;
+
+/** What one item's marker line and continuation lines need, once measured. */
+interface ItemLayout {
+    markerLine: number;
+    lastLine: number;
+    marker: MarkerAction;
+    shift: ShiftAction;
+    /** Content column of the rewritten item, i.e. where a nested list may start. */
+    newContentCol: number;
+}
+
+interface ListContext {
+    text: string;
+    lineStarts: number[];
+    /** Columns of indentation per nesting level. */
+    unitCols: number;
+    // Innermost assignment wins: parents fill their whole span first,
+    // then recursion into nested lists overwrites the nested lines.
+    actions: Map<number, LineAction>;
+}
 
 /**
  * Normalize list indentation: a configurable unit (tab / 2 spaces / 4
@@ -32,112 +69,125 @@ export const listIndentation: Rule = {
 
     apply({ text, tree, options }: RuleContext): Edit[] {
         const lineStarts = computeLineStarts(text);
-        const lineEnd = (i: number): number => lineStarts[i + 1] ?? text.length;
-        const unitCols = options.indentation === 'spaces2' ? 2 : 4;
-
-        interface MarkerAction {
-            kind: 'marker';
-            /** Offset just past the marker's trailing whitespace (first content char, or EOL for empty items). */
-            contentOffset: number;
-            marker: string;
-            indentCols: number;
-            emptyItem: boolean;
-        }
-        interface ShiftAction {
-            kind: 'shift';
-            oldContentCol: number;
-            newContentCol: number;
-        }
-        // Innermost assignment wins: parents fill their whole span first,
-        // then recursion into nested lists overwrites the nested lines.
-        const actions = new Map<number, MarkerAction | ShiftAction>();
-
-        const processList = (list: List, depth: number, parentContentCol: number): void => {
-            // A nested list can open on the same line as the markers containing it
-            // (`1. - - a`). Actions are keyed by line, so only the innermost marker's
-            // rewrite would survive, and it replaces from the line start — wiping out
-            // the markers before it. Such a list is left as written, descendants
-            // included; the containing item's shift actions keep its later lines
-            // aligned relative to the parent's content column.
-            if (startsMidLine(text, lineStarts, list)) return;
-
-            const indentCols = depth === 0 ? 0 : Math.max(unitCols * depth, parentContentCol);
-
-            for (const item of list.children as ListItem[]) {
-                const startOffset = item.position?.start?.offset;
-                const endOffset = item.position?.end?.offset;
-                if (startOffset === undefined || endOffset === undefined) continue;
-
-                const markerMatch = list.ordered
-                    ? /^\d{1,9}[.)]/.exec(text.slice(startOffset, startOffset + 11))
-                    : /^[-*+]/.exec(text.slice(startOffset, startOffset + 1));
-                if (!markerMatch) continue;
-                const marker = markerMatch[0];
-
-                let contentOffset = startOffset + marker.length;
-                while (contentOffset < text.length && (text[contentOffset] === ' ' || text[contentOffset] === '\t')) {
-                    contentOffset++;
-                }
-                const emptyItem =
-                    contentOffset >= text.length || text[contentOffset] === '\n' || text[contentOffset] === '\r';
-
-                const markerLine = lineIndexOfOffset(lineStarts, startOffset);
-                const markerEndCol = columnWidth(text.slice(lineStarts[markerLine], startOffset + marker.length));
-                // An empty marker line's content column is markerEnd + 1 per CommonMark.
-                const oldContentCol = emptyItem
-                    ? markerEndCol + 1
-                    : columnWidth(text.slice(lineStarts[markerLine], contentOffset));
-                // More than 4 columns after the marker means the item starts with
-                // indented code; collapsing that spacing would change meaning.
-                if (!emptyItem && oldContentCol - markerEndCol > 4) continue;
-                const newContentCol = indentCols + marker.length + 1;
-
-                actions.set(markerLine, { kind: 'marker', contentOffset, marker, indentCols, emptyItem });
-
-                const lastLine = lineIndexOfOffset(lineStarts, Math.max(endOffset - 1, startOffset));
-                for (let line = markerLine + 1; line <= lastLine; line++) {
-                    actions.set(line, { kind: 'shift', oldContentCol, newContentCol });
-                }
-
-                for (const child of item.children) {
-                    if (child.type === 'list') processList(child, depth + 1, newContentCol);
-                }
-            }
-        };
-
-        for (const child of tree.children) {
-            if (child.type === 'list') processList(child, 0, 0);
-        }
+        const actions = collectActions(text, lineStarts, tree, options.indentation === 'spaces2' ? 2 : 4);
 
         const edits: Edit[] = [];
         for (const [line, action] of actions) {
             const start = lineStarts[line];
-            const end = lineEnd(line);
-
-            if (action.kind === 'marker') {
-                const newPrefix =
-                    makeIndent(action.indentCols, options.indentation) + action.marker + (action.emptyItem ? '' : ' ');
-                const oldPrefix = text.slice(start, action.contentOffset);
-                if (oldPrefix !== newPrefix) {
-                    edits.push({ start, end: action.contentOffset, replacement: newPrefix });
-                }
-            } else {
-                if (isBlankLine(text, start, end)) continue;
-                const ws = /^[ \t]*/.exec(text.slice(start, end))![0];
-                const wsCols = columnWidth(ws);
-                // Lazy continuation lines (indented less than the content column) stay as written.
-                if (wsCols < action.oldContentCol) continue;
-                const newWs =
-                    makeIndent(action.newContentCol, options.indentation) +
-                    indentBeyondColumn(ws, action.oldContentCol);
-                if (newWs !== ws) {
-                    edits.push({ start, end: start + ws.length, replacement: newWs });
-                }
-            }
+            const end = lineStarts[line + 1] ?? text.length;
+            const edit =
+                action.kind === 'marker'
+                    ? markerEdit(text, start, action, options.indentation)
+                    : shiftEdit(text, start, end, action, options.indentation);
+            if (edit) edits.push(edit);
         }
         return edits;
     },
 };
+
+/** Map every line of every root-level list to the rewrite it needs. */
+function collectActions(text: string, lineStarts: number[], tree: Root, unitCols: number): Map<number, LineAction> {
+    const ctx: ListContext = { text, lineStarts, unitCols, actions: new Map() };
+    for (const child of tree.children) {
+        if (child.type === 'list') processList(ctx, child, 0, 0);
+    }
+    return ctx.actions;
+}
+
+function processList(ctx: ListContext, list: List, depth: number, parentContentCol: number): void {
+    // A nested list can open on the same line as the markers containing it
+    // (`1. - - a`). Actions are keyed by line, so only the innermost marker's
+    // rewrite would survive, and it replaces from the line start — wiping out
+    // the markers before it. Such a list is left as written, descendants
+    // included; the containing item's shift actions keep its later lines
+    // aligned relative to the parent's content column.
+    if (startsMidLine(ctx.text, ctx.lineStarts, list)) return;
+
+    const indentCols = depth === 0 ? 0 : Math.max(ctx.unitCols * depth, parentContentCol);
+
+    for (const item of list.children as ListItem[]) {
+        const layout = measureItem(ctx, list, item, indentCols);
+        if (!layout) continue;
+
+        ctx.actions.set(layout.markerLine, layout.marker);
+        for (let line = layout.markerLine + 1; line <= layout.lastLine; line++) {
+            ctx.actions.set(line, layout.shift);
+        }
+
+        for (const child of item.children) {
+            if (child.type === 'list') processList(ctx, child, depth + 1, layout.newContentCol);
+        }
+    }
+}
+
+/**
+ * Measure one list item's marker and content columns. Returns null when the
+ * item must be left as written (no position, no recognizable marker, or
+ * marker spacing wide enough that the content is indented code).
+ */
+function measureItem(ctx: ListContext, list: List, item: ListItem, indentCols: number): ItemLayout | null {
+    const { text, lineStarts } = ctx;
+    const startOffset = item.position?.start?.offset;
+    const endOffset = item.position?.end?.offset;
+    if (startOffset === undefined || endOffset === undefined) return null;
+
+    const marker = matchMarker(text, list, startOffset);
+    if (marker === null) return null;
+
+    const contentOffset = skipSpaces(text, startOffset + marker.length);
+    const emptyItem = contentOffset >= text.length || text[contentOffset] === '\n' || text[contentOffset] === '\r';
+
+    const markerLine = lineIndexOfOffset(lineStarts, startOffset);
+    const markerEndCol = columnWidth(text.slice(lineStarts[markerLine], startOffset + marker.length));
+    // An empty marker line's content column is markerEnd + 1 per CommonMark.
+    const oldContentCol = emptyItem ? markerEndCol + 1 : columnWidth(text.slice(lineStarts[markerLine], contentOffset));
+    // More than 4 columns after the marker means the item starts with
+    // indented code; collapsing that spacing would change meaning.
+    if (!emptyItem && oldContentCol - markerEndCol > 4) return null;
+    const newContentCol = indentCols + marker.length + 1;
+
+    return {
+        markerLine,
+        lastLine: lineIndexOfOffset(lineStarts, Math.max(endOffset - 1, startOffset)),
+        marker: { kind: 'marker', contentOffset, marker, indentCols, emptyItem },
+        shift: { kind: 'shift', oldContentCol, newContentCol },
+        newContentCol,
+    };
+}
+
+/** The item's list marker (`-`, `1.`, `2)`, ...) at `startOffset`, or null. */
+function matchMarker(text: string, list: List, startOffset: number): string | null {
+    const match = list.ordered
+        ? /^\d{1,9}[.)]/.exec(text.slice(startOffset, startOffset + 11))
+        : /^[-*+]/.exec(text.slice(startOffset, startOffset + 1));
+    return match ? match[0] : null;
+}
+
+/** First offset at or after `offset` that is not a space or tab. */
+function skipSpaces(text: string, offset: number): number {
+    let i = offset;
+    while (i < text.length && (text[i] === ' ' || text[i] === '\t')) i++;
+    return i;
+}
+
+/** Rewrite a marker line's prefix to `indent + marker + ' '`. */
+function markerEdit(text: string, start: number, action: MarkerAction, style: Indentation): Edit | null {
+    const newPrefix = makeIndent(action.indentCols, style) + action.marker + (action.emptyItem ? '' : ' ');
+    const oldPrefix = text.slice(start, action.contentOffset);
+    if (oldPrefix === newPrefix) return null;
+    return { start, end: action.contentOffset, replacement: newPrefix };
+}
+
+/** Shift a continuation line's leading whitespace to the new content column. */
+function shiftEdit(text: string, start: number, end: number, action: ShiftAction, style: Indentation): Edit | null {
+    if (isBlankLine(text, start, end)) return null;
+    const ws = /^[ \t]*/.exec(text.slice(start, end))![0];
+    // Lazy continuation lines (indented less than the content column) stay as written.
+    if (columnWidth(ws) < action.oldContentCol) return null;
+    const newWs = makeIndent(action.newContentCol, style) + indentBeyondColumn(ws, action.oldContentCol);
+    if (newWs === ws) return null;
+    return { start, end: start + ws.length, replacement: newWs };
+}
 
 /**
  * True when anything other than whitespace precedes the list on its opening
