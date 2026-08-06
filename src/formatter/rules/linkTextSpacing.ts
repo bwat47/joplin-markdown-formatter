@@ -89,15 +89,18 @@ function editableRuns(link: Link | LinkReference, text: string, region: Span): {
         }
     });
 
-    for (let index = 0; index < covered.length; index += 1) {
-        if (covered[index]) continue;
+    let index = 0;
+    while (index < covered.length) {
+        if (covered[index]) {
+            index += 1;
+            continue;
+        }
         let gapEnd = index;
         while (gapEnd < covered.length && !covered[gapEnd]) gapEnd += 1;
         const gap = { start: region.start + index, end: region.start + gapEnd };
-        index = gapEnd - 1;
+        index = gapEnd;
 
-        if (!/^\s+$/.test(text.slice(gap.start, gap.end))) continue;
-        spans.push(gap);
+        if (/^\s+$/.test(text.slice(gap.start, gap.end))) spans.push(gap);
     }
 
     return { runs: mergeSpans(spans), breaks };
@@ -122,6 +125,35 @@ function collapseRun(run: Span, text: string, breaks: Span[]): string {
         cursor = hardBreak.end;
     }
     return (result + text.slice(cursor, run.end)).replace(/\s+/g, ' ');
+}
+
+/**
+ * Inside a blockquote, a line break in the link text means the next line opens
+ * with a `>` marker that sits inside the region but is not part of the label;
+ * collapsing the run would drag it into the text. Leave that one link alone
+ * rather than let the whole rule fail verification and be dropped for the
+ * entire note.
+ */
+function isMultiLineInBlockquote(text: string, region: Span, ancestors: Node[]): boolean {
+    return (
+        LINE_BREAK.test(text.slice(region.start, region.end)) &&
+        ancestors.some((ancestor) => ancestor.type === 'blockquote')
+    );
+}
+
+/** Edits that normalize the whitespace runs inside one link's text region. */
+function linkTextEdits(link: Link | LinkReference, text: string, region: Span, collapseLineBreaks: boolean): Edit[] {
+    const edits: Edit[] = [];
+    const { runs, breaks } = editableRuns(link, text, region);
+    for (const run of runs) {
+        const source = text.slice(run.start, run.end);
+        if (!collapseLineBreaks && LINE_BREAK.test(source)) continue;
+        let normalized = collapseRun(run, text, breaks);
+        if (run.start === region.start) normalized = normalized.trimStart();
+        if (run.end === region.end) normalized = normalized.trimEnd();
+        if (normalized !== source) edits.push({ start: run.start, end: run.end, replacement: normalized });
+    }
+    return edits;
 }
 
 /** Merge touching or overlapping spans, in source order, so no two edits collide. */
@@ -185,27 +217,9 @@ export const linkTextSpacing: Rule = {
             if (link.children.length === 0) return;
             const region = linkTextRegion(link, text);
             if (!region) return;
-            // Inside a blockquote, a line break in the link text means the next
-            // line opens with a `>` marker that sits inside the region but is not
-            // part of the label; collapsing the run would drag it into the text.
-            // Leave that one link alone rather than let the whole rule fail
-            // verification and be dropped for the entire note.
-            if (
-                LINE_BREAK.test(text.slice(region.start, region.end)) &&
-                ancestors.some((ancestor) => ancestor.type === 'blockquote')
-            ) {
-                return;
-            }
+            if (isMultiLineInBlockquote(text, region, ancestors)) return;
 
-            const { runs, breaks } = editableRuns(link, text, region);
-            for (const run of runs) {
-                const source = text.slice(run.start, run.end);
-                if (!collapseLineBreaks && LINE_BREAK.test(source)) continue;
-                let normalized = collapseRun(run, text, breaks);
-                if (run.start === region.start) normalized = normalized.trimStart();
-                if (run.end === region.end) normalized = normalized.trimEnd();
-                if (normalized !== source) edits.push({ start: run.start, end: run.end, replacement: normalized });
-            }
+            edits.push(...linkTextEdits(link, text, region, collapseLineBreaks));
         });
 
         return edits;
