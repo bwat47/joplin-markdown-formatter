@@ -1,4 +1,5 @@
 import type { Edit, Rule, RuleContext } from '../types';
+import { trailingWhitespaceStart } from '../lines';
 import { getProtectedRanges } from '../protectedRanges';
 
 /**
@@ -19,9 +20,8 @@ export const finalNewline: Rule = {
     apply({ text, tree }: RuleContext): Edit[] {
         if (text.length === 0) return [];
 
-        // Matches trailing spaces, tabs, and newlines at EOF, e.g. "text \n\n" -> "text".
-        const trailingWhitespace = /[ \t\r\n]+$/.exec(text);
-        let cut = trailingWhitespace ? trailingWhitespace.index : text.length;
+        // Skips back over trailing spaces, tabs, and newlines at EOF, e.g. "text \n\n" -> "text".
+        let cut = trailingWhitespaceStart(text, ' \t\r\n');
 
         if (cut === 0) {
             // Whitespace-only document: empty it rather than leave a lone newline.

@@ -19,6 +19,18 @@ export function isBlankLine(text: string, lineStart: number, lineEnd: number): b
     return /^[ \t]*\r?\n?$/.test(text.slice(lineStart, lineEnd));
 }
 
+/**
+ * Offset where the trailing run of `whitespace` characters begins, or
+ * `text.length` when the text does not end in one. Scanned backwards rather
+ * than matched with `/[ \t]+$/`, which backtracks quadratically on long
+ * whitespace runs, e.g. trailingWhitespaceStart('a  ') === 1.
+ */
+export function trailingWhitespaceStart(text: string, whitespace = ' \t'): number {
+    let start = text.length;
+    while (start > 0 && whitespace.includes(text[start - 1])) start--;
+    return start;
+}
+
 /** Index of the line containing `offset` (greatest i with starts[i] <= offset). */
 export function lineIndexOfOffset(lineStarts: number[], offset: number): number {
     let low = 0;

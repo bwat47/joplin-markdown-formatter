@@ -83,10 +83,12 @@ function addAtxHeadingEdits(text: string, heading: Heading, desiredDepth: number
     const marker = '#'.repeat(desiredDepth);
     edits.push({ start, end: start + opening[1].length, replacement: marker });
 
-    const closing = /[\t ]+(#{1,})[\t ]*$/.exec(source);
+    // Only the last whitespace character before the closing sequence is matched:
+    // `[\t ]+` here would backtrack quadratically over a long whitespace run.
+    const closing = /[\t ](#+)[\t ]*$/.exec(source);
     if (!closing) return true;
 
-    const closingStart = start + closing.index + closing[0].indexOf(closing[1]);
+    const closingStart = start + closing.index + 1;
     edits.push({ start: closingStart, end: closingStart + closing[1].length, replacement: marker });
     return true;
 }

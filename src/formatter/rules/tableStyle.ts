@@ -3,7 +3,7 @@ import type { AlignType } from 'mdast';
 import type { Node } from 'unist';
 import type { Edit, Rule, RuleContext } from '../types';
 import { walkWithAncestors } from '../walk';
-import { computeLineStarts, lineIndexOfOffset } from '../lines';
+import { computeLineStarts, lineIndexOfOffset, trailingWhitespaceStart } from '../lines';
 
 /**
  * Rebuild table rows in canonical `| a | b |` form, and the delimiter row to
@@ -67,7 +67,10 @@ export const tableStyle: Rule = {
             const delimiterLine = lineIndexOfOffset(lineStarts, headerEnd) + 1;
             const delimiterStart = lineStarts[delimiterLine];
             const delimiterText = text.slice(delimiterStart, lineEnd(delimiterLine));
-            const delimiterMatch = /^([ \t]*)([|: \t-]+?)\r?\n?$/.exec(delimiterText);
+            // The delimiter body starts at a non-whitespace character so it cannot
+            // overlap the leading-indent group, and it excludes \r and \n so the
+            // greedy run stops at the line ending: neither part backtracks.
+            const delimiterMatch = /^([ \t]*)([|:-][|: \t-]*)\r?\n?$/.exec(delimiterText);
             if (!delimiterMatch) return;
 
             // Rows are staged so a row without offsets abandons the whole table:
@@ -110,7 +113,7 @@ function extractCellText(text: string, cell: TableRow['children'][number]): stri
     if (raw.startsWith('|')) raw = raw.slice(1);
     // A last cell's range extends over trailing whitespace after the closing
     // pipe; drop it so an unescaped pipe is still recognized as a boundary.
-    raw = raw.replace(/[ \t]+$/, '');
+    raw = raw.slice(0, trailingWhitespaceStart(raw));
     if (raw.endsWith('|') && !isEscapedPipe(raw, raw.length - 1)) {
         raw = raw.slice(0, -1);
     }

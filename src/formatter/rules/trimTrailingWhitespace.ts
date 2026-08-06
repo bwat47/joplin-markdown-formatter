@@ -1,6 +1,6 @@
 import type { Edit, Rule, RuleContext } from '../types';
 import type { Root } from 'mdast';
-import { computeLineStarts } from '../lines';
+import { computeLineStarts, trailingWhitespaceStart } from '../lines';
 import { getProtectedRanges, intersectsProtectedRange } from '../protectedRanges';
 import { walk } from '../walk';
 
@@ -30,14 +30,15 @@ export const trimTrailingWhitespace: Rule = {
             if (text[contentEnd - 1] === '\r') contentEnd--;
 
             const line = text.slice(start, contentEnd);
-            const trailingWhitespace = /[ \t]+$/.exec(line);
-            if (trailingWhitespace === null) continue;
+            const whitespaceStart = trailingWhitespaceStart(line);
+            if (whitespaceStart === line.length) continue;
 
-            const trimStart = start + trailingWhitespace.index;
+            const trimStart = start + whitespaceStart;
             const trimEnd = contentEnd;
             if (intersectsProtectedRange(protectedRanges, trimStart, trimEnd)) continue;
 
-            const preserveHardBreak = hardBreakStarts.has(trimStart) && trailingWhitespace[0].endsWith('  ');
+            // The run reaches the end of the line, so it ends in two spaces whenever the line does.
+            const preserveHardBreak = hardBreakStarts.has(trimStart) && line.endsWith('  ');
             const replacement = preserveHardBreak ? '  ' : '';
             if (text.slice(trimStart, trimEnd) === replacement) continue;
 

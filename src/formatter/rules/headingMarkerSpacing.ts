@@ -1,4 +1,5 @@
 import type { Edit, Rule, RuleContext } from '../types';
+import { trailingWhitespaceStart } from '../lines';
 import { walk } from '../walk';
 
 /** Normalize separators inside ATX headings without reprinting their text. */
@@ -34,8 +35,15 @@ function addAtxHeadingSpacingEdits(text: string, start: number, end: number, edi
 
     addSeparatorEdit(start + opening[1].length, opening[2], edits);
 
-    const closing = /([\t ]+)(#{1,})[\t ]*$/.exec(source);
-    if (closing) addSeparatorEdit(start + closing.index, closing[1], edits);
+    // Only the last whitespace character before the closing sequence is matched
+    // (`[\t ]+` here would backtrack quadratically over a long whitespace run);
+    // the rest of the separator is found by scanning back from the markers.
+    const closing = /[\t ](#+)[\t ]*$/.exec(source);
+    if (!closing) return;
+
+    const markerStart = closing.index + 1;
+    const separatorStart = trailingWhitespaceStart(source.slice(0, markerStart));
+    addSeparatorEdit(start + separatorStart, source.slice(separatorStart, markerStart), edits);
 }
 
 function addSeparatorEdit(start: number, separator: string, edits: Edit[]): void {
