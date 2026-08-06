@@ -28,6 +28,16 @@ export function isStructurallyEqual(before: Root, after: Root, ruleName?: string
 function normalizeNode(node: AnyNode, ruleName?: string, insideLink = false): AnyNode {
     const copy: AnyNode = { ...node };
     delete copy.position;
+    dropExemptFields(copy, ruleName);
+    normalizeTextValue(copy, ruleName, insideLink);
+    if (Array.isArray(copy.children)) {
+        copy.children = normalizeChildren(copy.children, copy.type, ruleName, insideLink);
+    }
+    return copy;
+}
+
+/** Drop the fields a rule is allowed to change, so both sides compare equal. */
+function dropExemptFields(copy: AnyNode, ruleName?: string): void {
     // Tight/loose is derived from blank lines rather than owned by one rule: any
     // rule that moves a blank line near a list boundary changes it legitimately
     // (e.g. headingIndentation unindenting a heading inside a list item). So this
@@ -38,12 +48,6 @@ function normalizeNode(node: AnyNode, ruleName?: string, insideLink = false): An
     if (ruleName === 'headingLevels' && copy.type === 'heading') delete copy.depth;
     // codeBlockLanguage legitimately fills in missing fence info strings.
     if (ruleName === 'codeBlockLanguage' && copy.type === 'code') delete copy.lang;
-    // quoteStyle legitimately converts quote characters in prose text.
-    if (copy.type === 'text' && typeof copy.value === 'string') {
-        let value = ruleName === 'quoteStyle' ? copy.value.replace(/[“”]/g, '"').replace(/[‘’]/g, "'") : copy.value;
-        if (ruleName === 'linkTextSpacing' && insideLink) value = value.replace(/\s+/g, ' ');
-        copy.value = value;
-    }
     // linkTextSpacing legitimately collapses/trims whitespace inside link text,
     // including hard breaks (see collapseHardBreaks). The change only touches
     // whitespace within link/linkReference nodes, so we normalize the same way on
@@ -51,17 +55,31 @@ function normalizeNode(node: AnyNode, ruleName?: string, insideLink = false): An
     // `identifier` (which governs resolution) is unchanged, so drop the cosmetic
     // label from the comparison.
     if (ruleName === 'linkTextSpacing' && copy.type === 'linkReference') delete copy.label;
-    if (Array.isArray(copy.children)) {
-        const isLink = copy.type === 'link' || copy.type === 'linkReference';
-        const inLinkText = ruleName === 'linkTextSpacing' && (insideLink || isLink);
-        let children = copy.children.map((child) => normalizeNode(child, ruleName, insideLink || isLink));
-        // linkTextSpacing legitimately turns a hard break inside link text into a
-        // space, at any depth of inline nesting.
-        if (inLinkText) children = collapseHardBreaks(children);
-        if (ruleName === 'linkTextSpacing' && isLink) children = trimBoundaryText(children);
-        copy.children = ruleName === 'listMarkers' ? mergeAdjacentBulletLists(children) : children;
-    }
-    return copy;
+}
+
+/** Normalize the text differences a rule is allowed to introduce, in place. */
+function normalizeTextValue(copy: AnyNode, ruleName: string | undefined, insideLink: boolean): void {
+    if (copy.type !== 'text' || typeof copy.value !== 'string') return;
+    // quoteStyle legitimately converts quote characters in prose text.
+    let value = ruleName === 'quoteStyle' ? copy.value.replace(/[“”]/g, '"').replace(/[‘’]/g, "'") : copy.value;
+    if (ruleName === 'linkTextSpacing' && insideLink) value = value.replace(/\s+/g, ' ');
+    copy.value = value;
+}
+
+function normalizeChildren(
+    children: AnyNode[],
+    parentType: string,
+    ruleName: string | undefined,
+    insideLink: boolean
+): AnyNode[] {
+    const isLink = parentType === 'link' || parentType === 'linkReference';
+    const inLinkText = ruleName === 'linkTextSpacing' && (insideLink || isLink);
+    let result = children.map((child) => normalizeNode(child, ruleName, insideLink || isLink));
+    // linkTextSpacing legitimately turns a hard break inside link text into a
+    // space, at any depth of inline nesting.
+    if (inLinkText) result = collapseHardBreaks(result);
+    if (ruleName === 'linkTextSpacing' && isLink) result = trimBoundaryText(result);
+    return ruleName === 'listMarkers' ? mergeAdjacentBulletLists(result) : result;
 }
 
 /**
