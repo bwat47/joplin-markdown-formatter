@@ -107,8 +107,9 @@ function editableRuns(link: Link | LinkReference, text: string, region: Span): {
 }
 
 /**
- * Collapse a run to single spaces, with each hard break inside it standing in
- * for one space.
+ * A run's source with each hard break inside it replaced by the single space it
+ * collapses to, so the rest of the normalization can treat it as plain
+ * whitespace.
  *
  * Breaks are substituted by offset rather than by pattern because the two forms
  * a `break` node can take are not both whitespace, and one of them is not even
@@ -116,7 +117,7 @@ function editableRuns(link: Link | LinkReference, text: string, region: Span): {
  * newline is an escaped backslash followed by a *soft* break. Only the tree
  * tells them apart, so a regex over the source would eat the wrong backslash.
  */
-function collapseRun(run: Span, text: string, breaks: Span[]): string {
+function substituteBreaks(run: Span, text: string, breaks: Span[]): string {
     let result = '';
     let cursor = run.start;
     for (const hardBreak of breaks) {
@@ -124,7 +125,30 @@ function collapseRun(run: Span, text: string, breaks: Span[]): string {
         result += text.slice(cursor, hardBreak.start) + ' ';
         cursor = hardBreak.end;
     }
-    return (result + text.slice(cursor, run.end)).replace(/\s+/g, ' ');
+    return result + text.slice(cursor, run.end);
+}
+
+/**
+ * Normalize one run: every whitespace segment in it collapses to a single space,
+ * or to nothing where that segment sits against a bracket.
+ *
+ * Under `spaces`, a segment containing a line break is instead left exactly as
+ * written — including the whitespace bordering the break, which is part of the
+ * same segment — so a multi-line label keeps its line breaks and its
+ * continuation indentation while the spacing on each line is still normalized.
+ * That also keeps hard breaks intact without needing the tree: whichever form
+ * one takes, the part of it this rule would rewrite is whitespace containing a
+ * newline, so it lands in the frozen branch and the ambiguous backslash is never
+ * touched.
+ */
+function normalizeRun(run: Span, text: string, breaks: Span[], region: Span, collapseLineBreaks: boolean): string {
+    const source = collapseLineBreaks ? substituteBreaks(run, text, breaks) : text.slice(run.start, run.end);
+    return source.replace(/\s+/g, (whitespace: string, at: number) => {
+        if (!collapseLineBreaks && LINE_BREAK.test(whitespace)) return whitespace;
+        const againstOpenBracket = at === 0 && run.start === region.start;
+        const againstCloseBracket = at + whitespace.length === source.length && run.end === region.end;
+        return againstOpenBracket || againstCloseBracket ? '' : ' ';
+    });
 }
 
 /**
@@ -147,10 +171,7 @@ function linkTextEdits(link: Link | LinkReference, text: string, region: Span, c
     const { runs, breaks } = editableRuns(link, text, region);
     for (const run of runs) {
         const source = text.slice(run.start, run.end);
-        if (!collapseLineBreaks && LINE_BREAK.test(source)) continue;
-        let normalized = collapseRun(run, text, breaks);
-        if (run.start === region.start) normalized = normalized.trimStart();
-        if (run.end === region.end) normalized = normalized.trimEnd();
+        const normalized = normalizeRun(run, text, breaks, region, collapseLineBreaks);
         if (normalized !== source) edits.push({ start: run.start, end: run.end, replacement: normalized });
     }
     return edits;
@@ -174,9 +195,10 @@ function mergeSpans(spans: Span[]): Span[] {
  *
  * The `all` mode (default) also treats line breaks as collapsible whitespace, so
  * a newline in the text becomes a space (or is dropped if it is only trailing)
- * and the label ends up on one line. The `spaces` mode leaves any run that
- * contains a line break entirely alone — including the whitespace bordering it,
- * which is part of the same run — so multi-line labels stay as written.
+ * and the label ends up on one line. The `spaces` mode keeps multi-line labels on
+ * their own lines: it leaves any whitespace containing a line break exactly as
+ * written — including the whitespace bordering the break, so indentation on a
+ * continuation line survives — while still normalizing the spacing on each line.
  *
  * All descendant `text` nodes are edited, including text inside emphasis and
  * other inline formatting. Nodes such as `inlineCode` and `math` store their

@@ -254,8 +254,8 @@ describe('linkTextSpacing', () => {
         });
 
         test('leaves the whitespace bordering a line break alone', () => {
-            // That whitespace is part of the same run as the break, so the whole
-            // run is skipped rather than half-normalized.
+            // The space before the break and the indentation after it are part of
+            // the same whitespace run as the break itself, so all of it is frozen.
             const input = '[a **b** \n   c](https://www.example.com/)';
             const result = formatMarkdown(input, {
                 ...options,
@@ -269,6 +269,30 @@ describe('linkTextSpacing', () => {
             const input = ['[a\nb](https://www.example.com/)', '', '[ c  d ](https://www.example.com/)'].join('\n');
             const expected = ['[a\nb](https://www.example.com/)', '', '[c d](https://www.example.com/)'].join('\n');
             expect(formatSpaces(input)).toBe(expected);
+        });
+
+        test('normalizes each line of a multi-line label', () => {
+            const input = '[  a **google     link** \ntext123             ](https://www.example.com/)';
+            const expected = '[a **google link**\ntext123](https://www.example.com/)';
+            const result = formatMarkdown(input, { ...options, linkTextSpacing: 'spaces' });
+            expect(result.text).toBe(expected);
+            expect(result.skippedRules).not.toContain('linkTextSpacing');
+        });
+
+        test('trims the label boundaries even when the label spans lines', () => {
+            expect(formatSpaces('[  a\nb  ](https://www.example.com/)')).toBe('[a\nb](https://www.example.com/)');
+        });
+
+        test('leaves a boundary whitespace run that reaches the bracket across a line break', () => {
+            // The indentation before `]` is part of the same run as the break, so
+            // trimming at the bracket must not nibble at it.
+            const input = '[a\n  ](https://www.example.com/)';
+            const result = formatMarkdown(input, {
+                ...options,
+                linkTextSpacing: 'spaces',
+                trimTrailingWhitespace: false,
+            });
+            expect(result.text).toBe(input);
         });
 
         test('is idempotent', () => {
