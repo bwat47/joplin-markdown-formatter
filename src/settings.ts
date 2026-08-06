@@ -150,7 +150,7 @@ export async function registerSettings(): Promise<void> {
             },
             label: 'Link text spacing',
             description:
-                'Collapse excess internal whitespace and trim leading/trailing spaces inside link text, including reference links. All also turns line breaks (soft and hard) into a space; spaces only leaves any label that spans lines as written. Inline code inside link text and image alt text are never changed.',
+                'Collapse excess internal whitespace and trim leading/trailing spaces inside link text, including reference links. All also turns line breaks (soft and hard) into a space; spaces only preserves line breaks and their surrounding whitespace while normalizing other whitespace on each line. Inline code inside link text and image alt text are never changed.',
         },
         // Deprecated: replaced by linkTextSpacing. Kept hidden so an existing
         // "off" choice can be migrated once, then reset.
