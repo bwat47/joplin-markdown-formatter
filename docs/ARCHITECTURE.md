@@ -1,114 +1,109 @@
 # Architecture
 
-A Joplin plugin that reformats/normalizes the markdown of the current note, similar to Prettier but with configurable behavior and a strict "don't touch what you don't understand" contract.
+Joplin Markdown Formatter normalizes the current note while preserving syntax it does not explicitly understand. It is split into a pure formatting core and a thin Joplin integration layer.
 
-## Core principle: parse for analysis, edit the original text
+## System overview
 
-The formatter never re-prints the document from an AST (the Prettier / remark-stringify model). Instead it follows the ESLint-fixer model:
-
-1. Parse the markdown to an mdast tree **with source positions** (`mdast-util-from-markdown` + GFM + front matter + math extensions, with ambiguous single-dollar inline math disabled).
-2. Each rule uses the tree only to *locate* things, then emits targeted string edits (`{ start, end, replacement }`) against the original source text.
-3. Edits are validated (in-bounds, non-overlapping) and applied.
-
-Bytes no rule explicitly touches survive verbatim. Syntax the parser doesn't recognize (`==highlight==`, plugin syntax, raw HTML) parses as plain text/paragraph nodes and passes through untouched — graceful degradation falls out of the architecture rather than needing per-syntax handling.
-
-## Pipeline
-
-`formatMarkdown(text, options)` in [src/formatter/pipeline.ts](../src/formatter/pipeline.ts) runs each enabled rule as its own **analyze → edit → apply → verify** pass. The text is re-parsed whenever a rule changes it, so byte offsets are always valid (the verification parse is reused as the next rule's tree, so each version of the text is parsed exactly once); notes are small, so repeated parsing is cheap and eliminates cross-rule offset-invalidation bugs. Within a rule, `applyEdits` rejects overlapping or out-of-bounds edits by throwing — the plugin shell catches and keeps the original note untouched.
-
-**Structural safety check** ([src/formatter/verify.ts](../src/formatter/verify.ts)): every rule's output is re-parsed and compared to the tree it started from, after normalizing away the differences rules are *allowed* to make (positions, tight/loose `spread`, adjacent bullet lists merged by marker normalization, hard breaks collapsed inside link text, and rule-specific metadata such as a default code block language). If a rule changed what the document means, its edits are dropped and the rule name is reported in `FormatResult.skippedRules` — a rule bug degrades to a logged no-op, never a corrupted note.
-
-## Layout
-
-```txt
-src/
-  index.ts                  Joplin plugin shell: command registration, content-script editor bridge
-  logger.ts                 Prefixed console logger
-  formatter/                Pure core - no Joplin imports, fully unit-testable
-    index.ts                Public surface (formatMarkdown, options types)
-    pipeline.ts             Rule runner
-    parse.ts                Parser wrapper (isolates the mdast dependency)
-    edits.ts                Edit validation + application
-    types.ts                FormatterOptions, Edit, Rule interfaces
-    walk.ts                 Minimal unist tree walker
-    lines.ts                Line-offset helpers
-    protectedRanges.ts      Source ranges of literal content (code, front matter, HTML)
-    rules/                  One module per rule; ordered in rules/index.ts
-    fixtures/               <case>/{input.md, expected.md, options.json?} test fixtures
-  diffPreview/              Optional "review before applying" dialog
-    lineDiff.ts             Line diff -> unified-style hunks (pure)
-    render.ts               Hunks -> dialog HTML (pure)
-    dialog.ts               Joplin dialog view; the only Joplin-aware module here
-    styles.css              Dialog stylesheet, copied to dist/ by the build
+```text
+Joplin command
+    |
+    v
+Read CodeMirror buffer ---> Load settings
+    |                            |
+    +-----------> Formatter <----+
+                     |
+              optional diff preview
+                     |
+                     v
+            guarded CodeMirror update
 ```
 
-## Rules
+The major areas are:
 
-Each rule implements `{ name, isEnabled(options), apply(context): Edit[] }`. Current rules, in execution order (content normalization → list structure → layout → whitespace cleanup → final newline):
+- [`src/index.ts`](../src/index.ts): coordinates the Joplin command, settings, preview, notifications, and error handling.
+- [`src/contentScripts/`](../src/contentScripts/): reads and updates the live CodeMirror editor buffer.
+- [`src/formatter/`](../src/formatter/): pure, Joplin-independent formatting engine.
+- [`src/diffPreview/`](../src/diffPreview/): computes and renders the optional review dialog.
+- [`src/settings.ts`](../src/settings.ts): registers settings and maps them to formatter options.
 
-| Rule | Option | Behavior |
-| --- | --- | --- |
-| `listMarkers` | `unorderedListMarker` | Rewrite unordered bullets (`-`/`*`/`+`) to the configured one; `preserve` leaves them as written |
-| `orderedListNumbers` | `normalizeOrderedListNumbering` | Renumber ordered lists sequentially from the first item's number |
-| `thematicBreaks` | `thematicBreakMarker` | Rewrite horizontal rules to the configured marker with one blank line around them |
-| `emphasisStyle` | `emphasisMarker`/`strongMarker` | Normalize `*`/`_` and `**`/`__` delimiters (intraword-safe) |
-| `quoteStyle` | `doubleQuoteStyle`/`singleQuoteStyle` | Convert quotes in prose text between straight and smart styles; `preserve` (default) leaves quotes as written |
-| `linkTextSpacing` | `linkTextSpacing` | Collapse internal whitespace and trim leading/trailing whitespace inside link/reference-link text; `all` (default) also turns line breaks (soft and hard) into a space, `spaces` preserves line breaks and their surrounding whitespace while normalizing other whitespace on each line, and `preserve` leaves link text alone |
-| `codeBlockLanguage` | `setDefaultCodeBlockLanguage`/`defaultCodeBlockLanguage` | Add the configured language to fenced code blocks with no info string; disabled by default |
-| `listSpacing` | `listSpacing` | Force lists tight or loose; `semantic` (default) keeps each list's authored tight/loose meaning, only fixing mixed spacing; `preserve` leaves lists as written |
-| `listIndentation` | `indentation` | Tab/2/4-space indent per level before the marker, one space after it |
-| `listBoundarySpacing` | `ensureListBlankLines` | Ensure root-level lists have one blank line before and after them |
-| `tableStyle` | `tableStyle` | Rebuild table cells compact (one space of padding) or aligned (pipes line up, respecting column alignment); `preserve` (default) leaves tables as written |
-| `headingIndentation` | `removeHeadingIndentation` | Move root-level ATX heading markers to the start of the line |
-| `headingLevels` | `normalizeHeadingLevels`/`minimumHeadingLevel` | Lower skipped heading levels so headings increase by at most one level, and optionally floor the document at a minimum level |
-| `headingMarkerSpacing` | `normalizeHeadingMarkerSpacing` | Use one space between ATX heading markers and text, including closing markers |
-| `headingSpacing` | `ensureHeadingBlankLines` | Ensure headings have one blank line before and after them |
-| `paragraphSpacing` | `ensureParagraphBlankLines` | Ensure root-level paragraphs have one blank line before and after them |
-| `codeBlockSpacing` | `ensureCodeBlockBlankLines` | Ensure code blocks have one blank line before and after them |
-| `mathBlockSpacing` | `ensureMathBlockBlankLines` | Ensure math blocks have one blank line before and after them |
-| `tableSpacing` | `ensureTableBlankLines` | Ensure tables have one blank line before and after them |
-| `blockquoteMarkerSpacing` | `normalizeBlockquoteMarkerSpacing` | Use one space between consecutive `>` markers in a nested quote and between the last marker and quoted content; leaves indentation before the first marker, protected content, and lists inside blockquotes untouched |
-| `blockquoteSpacing` | `ensureBlockquoteBlankLines` | Ensure blockquotes have one blank line before and after them; quote interiors are never touched |
-| `frontmatterSpacing` | `ensureFrontmatterBlankLine` | Ensure YAML front matter has one blank line before following content |
-| `collapseBlankLines` | `collapseBlankLines` | Collapse 2+ blank lines to one, outside protected ranges |
-| `trimTrailingWhitespace` | `trimTrailingWhitespace` | Trim trailing spaces/tabs outside protected ranges, preserving two-space hard breaks |
-| `finalNewline` | `ensureFinalNewline` | Exactly one trailing newline at EOF |
+## Formatting model
 
-"Protected ranges" (`protectedRanges.ts`) are the source spans of literal-content nodes — code blocks, inline code, YAML front matter, HTML blocks, and math. Whitespace-level rules skip anything overlapping them.
+The formatter parses Markdown for analysis but edits the original source. It does not serialize the syntax tree back to Markdown.
 
-### Documented limitations
+Each formatting rule:
 
-- Lists inside blockquotes are exempt from `listIndentation`, `listSpacing`, `listBoundarySpacing`, and `blockquoteMarkerSpacing` (the `>` prefix makes leading-whitespace rewriting ambiguous, and a list continuation line's indentation determines which item it belongs to); marker and numbering normalization still apply there. Tables inside blockquotes are exempt from `tableStyle`. `blockquoteMarkerSpacing` also leaves a line untouched wherever its post-marker whitespace overlaps a protected range (e.g. an indented or fenced code block quoted line-by-line), so code requiring exact indentation is never reflowed; indentation before the first marker is left as authored, but every gap between consecutive markers of a nested quote, and the gap before quoted content, is normalized to one space. Marker matching replicates micromark's tab-stop-aware container matching (each level allows 0-3 columns of leading space/tab before its `>`) so gaps up to that budget — including tabs — are recognized and normalized rather than misread as content; a gap wide enough to fall outside every level's budget is left untouched instead of being shrunk, since shrinking it could turn literal quoted text starting with `>` into a new nesting level on the next parse. Heading, paragraph, code-block, math-block, table, and blockquote spacing are also skipped inside blockquotes, where ordinary blank lines would split the quote. `blockquoteSpacing` only spaces a quote's outer boundaries: nesting changes inside a quote (e.g. `>` jumping to `>>>`) and lazy continuation lines belong to the same blockquote node, and rewriting them would change rendering. Lists inside footnote definitions are not reindented or spaced around. A nested list that opens on the same line as the marker containing it (`1. - - a`) is left as written by `listIndentation`, descendants included: `listIndentation` keys its edits by line, assuming one marker per line, and reindenting the inner marker alone would delete the markers before it on that line. Nested lists and list item paragraphs are not spaced around separately because those blank lines can change tight/loose rendering inside the parent list.
-- A ragged table row (fewer or more cells than the delimiter row) is rebuilt by `tableStyle` with exactly the cells it was written with. Padding a short row out to the full column count adds a `tableCell` to the tree and dropping an excess cell removes one, either of which fails the structural check — and because a rule's edits are applied as one batch, that would drop table formatting for *every* table in the document. Short rows are common by accident: a paragraph line written directly under a table with no blank line is absorbed as a one-cell row.
-- `headingLevels` only rewrites ATX markers, so a setext (underlined) heading keeps its authored level — rewriting it would mean converting the whole construct to ATX. Headings it cannot rewrite are excluded from the running level: the headings after one normalize against the level actually left in the text, not the level the rule wanted, so the document stays consistent with what a reader sees. That running level can therefore sit below `minimumHeadingLevel`, so the increment cap is floored at the minimum a second time — otherwise a rewritable heading following a too-shallow setext one would be capped under the configured floor. `minimumHeadingLevel: 'h2'` derives its shift from the first heading's level, which means a setext first heading pins the shift even though that heading itself does not move.
-- Emphasis conversion toward `_` skips intraword delimiters and delimiters that would merge with adjacent runs — CommonMark forbids or reinterprets those; the nodes are left as written.
-- Smart quote conversion decides opening vs. closing from adjacent characters (SmartyPants-style heuristics), which can pick the wrong direction in unusual constructs (e.g. a quotation opening with punctuation). Backslash-escaped quotes are left as written because rewriting the quote character would turn the escape into a literal backslash. Quotes in image alt text and link titles are not converted (they are node properties, not `text` nodes).
-- Link text spacing edits descendant `text` nodes of `link`/`linkReference` nodes, including text inside emphasis and other inline formatting, plus the whitespace runs that belong to no node at all: CommonMark strips the whitespace bordering a soft line ending, so in `[a **b** \nc](url)` the space before the newline lies between the `strong` and `text` spans. Such a gap can open between the children of any inline container (`[**a *b* \nc**](url)`), so containers count only their delimiters as covered source and gaps are collected at every level. Gaps are merged with the neighboring text so one run normalizes them. Inline code and math keep their whitespace because their content is stored as node properties rather than text children. A hard line break (`break` node) inside link text collapses to a single space along with the indentation that follows it, in both the two-space and backslash forms (a one-line label is what the rest of the rule normalizes toward). Removing the node is a structural change, so `verify.ts` compares both trees with link-text breaks already replaced by a space (`collapseHardBreaks`); the break spans come from the tree rather than a pattern, because `a\` + newline (a hard break) and `a\\` + newline (an escaped backslash before a *soft* break) are indistinguishable in the raw text. Image alt text is not touched (it is a node property, not a `text` node). A link inside a blockquote whose text spans lines is skipped entirely: the `>` opening each quoted continuation line falls inside the link's source range without being part of the label. In `spaces` mode each whitespace segment is handled independently: a segment containing a line break is preserved verbatim, including its bordering whitespace and continuation indentation, while other segments on the same lines are collapsed or trimmed normally. A multiline label is therefore no longer skipped wholesale. Reference labels are normalized cosmetically; CommonMark identifier normalization means resolution is unchanged.
+1. Inspects an mdast tree with source positions.
+2. Produces targeted text edits against the original source.
+3. Lets the pipeline validate and apply those edits.
+4. Has its result parsed and structurally verified before it is accepted.
 
-## Settings
+This model preserves every byte that no rule intentionally changes, including unsupported or plugin-specific syntax. It also avoids broad reformatting caused by AST serialization.
 
-[src/settings.ts](../src/settings.ts) registers one Joplin settings section whose keys are identical to the `FormatterOptions` property names; `loadFormatterOptions()` merges saved values over `DEFAULT_OPTIONS`. The command loads settings on every run, so changes apply immediately.
+### Rule pipeline
 
-## Testing
+[`formatMarkdown`](../src/formatter/pipeline.ts) runs enabled rules in a fixed order. Rules are grouped broadly as:
 
-Fixture-based: each directory under `src/formatter/fixtures/` holds `input.md`, `expected.md`, and an optional `options.json` (partial `FormatterOptions`). The harness (`fixtures.test.ts`) asserts `format(input) === expected` and **idempotency** (`format(expected) === expected`) for every case. `edits.test.ts` unit-tests edit application. Vitest runs the TypeScript/ESM test suite directly.
+- content normalization, such as list markers, emphasis, quotes, and link text;
+- structural formatting, such as list indentation, heading levels, and table layout;
+- block spacing around headings, lists, tables, code, math, and blockquotes;
+- document cleanup, such as blank lines, trailing whitespace, and the final newline.
 
-## Packaging
+The current rule registry and execution order live in [`src/formatter/rules/index.ts`](../src/formatter/rules/index.ts). Each rule implements the small `Rule` interface defined in [`src/formatter/types.ts`](../src/formatter/types.ts).
 
-The generated Joplin webpack scaffold copies non-TypeScript files from `src/` into `dist/`, which is useful for real plugin assets such as `manifest.json` and content-script resources. Test-only assets are excluded by [webpack.config.override.js](../webpack.config.override.js), which appends ignore patterns for fixtures and test files to the generated `CopyPlugin` configuration. The main `webpack.config.js` only contains a small hook to load that override so framework updates are easier to re-apply.
+The document is re-parsed after an accepted change, so every rule sees a tree whose positions match the current text. This favors correctness and simple rule implementations over minimizing parse calls; Joplin notes are small enough for that tradeoff.
 
-## Joplin shell
+## Safety boundaries
 
-The plugin registers a `formatMarkdownNote` command (Edit menu). It reads the live CodeMirror editor text through the content script, runs the pure formatter, and writes back only when the text actually changed (avoids dirtying `updated_time`). Any formatter error aborts the write-back.
+Two checks prevent unsafe writes:
 
-The write-back goes through a CodeMirror 6 content script ([src/contentScripts/codeMirror.ts](../src/contentScripts/codeMirror.ts)) rather than the built-in `editor.setText` command: `setText` reloads the editor content, which wipes the undo history. The content script registers `markdownFormatter__getNoteText` and `markdownFormatter__setNoteText` editor commands (invoked from the main plugin via `editor.execCommand`). The setter receives the text that was formatted plus the replacement text and dispatches only if the editor still matches that source text, avoiding stale buffer overwrites if the user types while formatting is in flight. The replacement is a normal CodeMirror transaction — undoable with Ctrl+Z — and uses `diff-match-patch-es` to replace only the changed spans in a single dispatch, which also keeps the cursor and scroll position anchored to unchanged text.
+- [`applyEdits`](../src/formatter/edits.ts) rejects overlapping or out-of-bounds edits.
+- [`verify.ts`](../src/formatter/verify.ts) compares the syntax tree before and after each rule, ignoring only the structural differences that rule is allowed to introduce.
+
+If structural verification fails, that rule's changes are discarded and its name is returned in `FormatResult.skippedRules`. If formatting throws, the Joplin layer leaves the note unchanged.
+
+Literal content such as code, inline code, front matter, HTML, and math is represented by protected source ranges. Whitespace-oriented rules do not edit those ranges.
+
+Some valid Markdown constructs are intentionally left unchanged when their whitespace carries structural meaning or cannot be rewritten safely in isolation. Examples include much of the content inside blockquotes, lists inside footnotes, same-line nested list markers, ragged table rows, setext heading markers, and ambiguous emphasis or quote delimiters. These constraints are enforced near the relevant rules and covered by fixtures and unit tests rather than duplicated here in implementation-level detail.
+
+## Joplin integration
+
+The plugin registers the `formatMarkdownNote` command and exposes it in the Edit menu and editor toolbar. On each invocation it:
+
+1. Reads the live editor text and current settings.
+2. Runs the pure formatter.
+3. Optionally asks the user to review a diff.
+4. Writes only when the result changed and the editor still contains the text that was formatted.
+
+Reads and writes go through the CodeMirror content script in [`src/contentScripts/codeMirror.ts`](../src/contentScripts/codeMirror.ts). Updates are applied as a single CodeMirror transaction using changed spans, which preserves undo history and keeps the cursor and scroll position anchored where possible. The source-text comparison prevents an in-flight formatting operation from overwriting newer user edits.
 
 ## Diff preview
 
-When the `showDiffPreview` setting is on, the command opens a modal dialog between formatting and write-back, and only writes if the user clicks Apply. The dialog view is created once in `onStart` (view registration belongs there) and its HTML is replaced per invocation.
+The optional preview remains separate from the formatter:
 
-[lineDiff.ts](../src/diffPreview/lineDiff.ts) runs diff-match-patch in line mode (`diffLinesToChars` → `diffMain` → `diffCharsToLines`) and groups changed lines into unified-diff hunks with three lines of context, merging changes that are closer than twice the context so their context blocks do not overlap. Each run of removed lines is then aligned against the added lines that follow it, and paired lines are diffed at the character level so the changed spans can be highlighted inside the line — most edits here are a single character, which a plain line diff renders as an indistinguishable remove/add pair. The runs are usually different lengths (the spacing rules insert blank lines among rewritten ones), so the alignment walks both sides in order and pairs by similarity, with one lookahead step to skip a line that has no counterpart; index-matching would drift after the first insertion. A pair sharing less than 30% of the longer line stays unpaired rather than being shredded into per-character noise.
+- [`lineDiff.ts`](../src/diffPreview/lineDiff.ts) creates contextual line hunks and character-level highlights.
+- [`render.ts`](../src/diffPreview/render.ts) renders static HTML.
+- [`dialog.ts`](../src/diffPreview/dialog.ts) is the Joplin-facing dialog adapter.
 
-[render.ts](../src/diffPreview/render.ts) turns hunks into static HTML — no scripts in the webview; the Apply/Cancel buttons are Joplin's. Both modules are pure and unit-tested; only `dialog.ts` imports the Joplin API.
+Applying a previewed change uses the same guarded CodeMirror write path as formatting without a preview.
 
-Nothing about the safety of the write changes: the preview runs before the same content-script write-back, which still refuses to apply if the editor text has drifted from what was formatted.
+## Configuration
+
+Joplin setting keys match the properties of `FormatterOptions`. [`loadFormatterOptions`](../src/settings.ts) merges saved values with `DEFAULT_OPTIONS` on every command invocation, so setting changes take effect immediately.
+
+Rule-specific behavior and defaults belong with the option types, settings definitions, rule implementations, and user-facing documentation. The architecture depends only on every rule exposing `name`, `isEnabled`, and `apply`.
+
+## Testing and packaging
+
+The formatter and diff engine are pure modules and are tested without Joplin. Formatter fixtures under [`src/formatter/fixtures/`](../src/formatter/fixtures/) assert both expected output and idempotency; focused unit tests cover edit validation, structural verification, individual rules, editor integration, and diff rendering.
+
+The generated Joplin webpack setup builds the plugin and copies runtime assets from `src/`. [`webpack.config.override.js`](../webpack.config.override.js) excludes test files and fixtures from the packaged plugin.
+
+## Adding a formatter rule
+
+New rules should remain focused and source-edit based:
+
+1. Add a module under [`src/formatter/rules/`](../src/formatter/rules/).
+2. Implement the `Rule` interface and register it in the intended execution order.
+3. Protect literal or structurally ambiguous regions rather than guessing.
+4. Extend structural verification only for semantic differences the rule intentionally permits.
+5. Add fixtures for expected output, preservation, and idempotency.
