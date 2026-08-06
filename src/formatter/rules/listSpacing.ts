@@ -5,24 +5,6 @@ import { walkWithAncestors } from '../walk';
 import { computeLineStarts, isBlankLine, lineIndexOfOffset } from '../lines';
 
 /**
- * Force lists tight (no blank lines between items) or loose (one blank line
- * between items). Each list node is handled independently, so nested lists
- * are normalized too.
- *
- * Semantic mode keeps each list's authored meaning: per CommonMark a list is
- * loose when any blank line separates two items or two blocks within an item,
- * and it then renders loose everywhere. So a loose list with mixed spacing is
- * made consistently loose, and a tight list is left untouched — no edit ever
- * changes how the list renders.
- *
- * Tightening is skipped for a whole list when any item holds multi-block
- * content (e.g. a second paragraph) — such content needs its blank lines and
- * the list renders loose regardless. A trailing nested list inside an item
- * is fine; the gap before it is closed as well.
- *
- * Lists inside blockquotes are skipped: their blank lines need `>` prefixes.
- */
-/**
  * The gap between each pair of adjacent nodes, as `[endOffset, startOffset]`.
  * Pairs where either position is missing are skipped.
  */
@@ -51,6 +33,24 @@ function isTightable(items: readonly ListItem[]): boolean {
     return items.every((item) => item.children.every((child, index) => index === 0 || child.type === 'list'));
 }
 
+/**
+ * Force lists tight (no blank lines between items) or loose (one blank line
+ * between items). Each list node is handled independently, so nested lists
+ * are normalized too.
+ *
+ * Semantic mode keeps each list's authored meaning: per CommonMark a list is
+ * loose when any blank line separates two items or two blocks within an item,
+ * and it then renders loose everywhere. So a loose list with mixed spacing is
+ * made consistently loose, and a tight list is left untouched — no edit ever
+ * changes how the list renders.
+ *
+ * Tightening is skipped for a whole list when any item holds multi-block
+ * content (e.g. a second paragraph) — such content needs its blank lines and
+ * the list renders loose regardless. A trailing nested list inside an item
+ * is fine; the gap before it is closed as well.
+ *
+ * Lists inside blockquotes are skipped: their blank lines need `>` prefixes.
+ */
 export const listSpacing: Rule = {
     name: 'listSpacing',
 
