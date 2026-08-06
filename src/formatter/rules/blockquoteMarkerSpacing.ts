@@ -88,6 +88,49 @@ interface MarkerSpan {
     end: number;
 }
 
+/** A position within a line, paired with the column it renders at. */
+interface Cursor {
+    pos: number;
+    col: number;
+}
+
+/** Column reached after `ch` at column `col`, advancing tabs to the next tab stop. */
+function advanceColumn(ch: string, col: number): number {
+    return ch === '\t' ? (Math.floor(col / TAB_SIZE) + 1) * TAB_SIZE : col + 1;
+}
+
+/**
+ * Skip the 0 to `TAB_SIZE - 1` columns of space/tab indentation a block quote
+ * level may have before its `>`. Stops before the character that would exceed
+ * that budget, so the caller sees a non-`>` and ends the marker chain.
+ */
+function skipLevelIndent(text: string, cursor: Cursor, lineEnd: number): Cursor {
+    const startCol = cursor.col;
+    let { pos, col } = cursor;
+
+    while (pos < lineEnd) {
+        const ch = text[pos];
+        if (ch !== ' ' && ch !== '\t') break;
+        const nextCol = advanceColumn(ch, col);
+        if (nextCol - startCol > TAB_SIZE - 1) break;
+        col = nextCol;
+        pos++;
+    }
+
+    return { pos, col };
+}
+
+/**
+ * Consume the one space/tab a level optionally claims as its own after the
+ * `>`. Exactly one character, regardless of how many columns a tab spans.
+ */
+function consumeMarkerSpace(text: string, cursor: Cursor, lineEnd: number): Cursor {
+    if (cursor.pos >= lineEnd) return cursor;
+    const ch = text[cursor.pos];
+    if (ch !== ' ' && ch !== '\t') return cursor;
+    return { pos: cursor.pos + 1, col: advanceColumn(ch, cursor.col) };
+}
+
 /**
  * Find every `>` marker in a (possibly nested) blockquote prefix, replicating
  * micromark's container matching (see
@@ -100,37 +143,16 @@ interface MarkerSpan {
  */
 function matchMarkerPrefix(text: string, lineStart: number, lineEnd: number): MarkerSpan[] {
     const markers: MarkerSpan[] = [];
-    let pos = lineStart;
-    let col = 0;
+    let cursor: Cursor = { pos: lineStart, col: 0 };
 
     for (;;) {
-        const levelStartCol = col;
-        let p = pos;
-        let c = col;
-        while (p < lineEnd) {
-            const ch = text[p];
-            if (ch !== ' ' && ch !== '\t') break;
-            const nextCol = ch === '\t' ? (Math.floor(c / TAB_SIZE) + 1) * TAB_SIZE : c + 1;
-            if (nextCol - levelStartCol > TAB_SIZE - 1) break;
-            c = nextCol;
-            p++;
-        }
-        if (p >= lineEnd || text[p] !== '>') break;
+        const afterIndent = skipLevelIndent(text, cursor, lineEnd);
+        if (afterIndent.pos >= lineEnd || text[afterIndent.pos] !== '>') break;
 
-        const markerStart = p;
-        p++;
-        c++;
-        markers.push({ start: markerStart, end: p });
-        pos = p;
-        col = c;
-
-        if (pos < lineEnd) {
-            const ch = text[pos];
-            if (ch === ' ' || ch === '\t') {
-                pos++;
-                col = ch === '\t' ? (Math.floor(col / TAB_SIZE) + 1) * TAB_SIZE : col + 1;
-            }
-        }
+        const markerStart = afterIndent.pos;
+        cursor = { pos: markerStart + 1, col: afterIndent.col + 1 };
+        markers.push({ start: markerStart, end: cursor.pos });
+        cursor = consumeMarkerSpace(text, cursor, lineEnd);
     }
 
     return markers;
