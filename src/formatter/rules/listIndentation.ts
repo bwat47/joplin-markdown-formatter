@@ -16,6 +16,8 @@ interface ShiftAction {
     kind: 'shift';
     oldContentCol: number;
     newContentCol: number;
+    /** True when the line's leading whitespace is container indentation end to end. */
+    structuralIndent: boolean;
 }
 
 type LineAction = MarkerAction | ShiftAction;
@@ -25,7 +27,8 @@ interface ItemLayout {
     markerLine: number;
     lastLine: number;
     marker: MarkerAction;
-    shift: ShiftAction;
+    /** Item-wide part of every continuation line's shift; the per-line flag is added in `processList`. */
+    shift: Omit<ShiftAction, 'structuralIndent'>;
     /** Content column of the rewritten item, i.e. where a nested list may start. */
     newContentCol: number;
 }
@@ -49,8 +52,10 @@ interface ListContext {
  * old and new content column (tab stop = 4). The marker line gets its prefix
  * rewritten to `indent + marker + ' '`; every continuation line belonging to
  * the item (later paragraphs, fenced code, ...) has its leading whitespace
- * shifted to the new content column, with columns beyond the old content
- * column preserved verbatim so content-internal indentation survives.
+ * shifted to the new content column. Where that whitespace is structural
+ * (see {@link STRUCTURAL_INDENT_BLOCKS}) the whole prefix is re-rendered in
+ * the configured style; literal-content blocks keep the columns beyond the
+ * old content column verbatim so content-internal indentation survives.
  *
  * CommonMark guard: a child list's marker must sit at or beyond the parent
  * item's content column to stay nested (a 2-space unit under a `10. ` marker
@@ -58,7 +63,10 @@ interface ListContext {
  *
  * Limitations (documented in ARCHITECTURE.md): lists inside blockquotes or
  * footnote definitions are left untouched — only lists at the document root
- * are processed.
+ * are processed. In tabs mode a literal-content block under a marker whose
+ * content column is narrower than the tab width keeps whichever characters
+ * the author used, so such a document can hold tab-indented paragraphs beside
+ * a space-indented code fence.
  */
 export const listIndentation: Rule = {
     name: 'listIndentation',
@@ -110,8 +118,9 @@ function processList(ctx: ListContext, list: List, depth: number, parentContentC
         if (!layout) continue;
 
         ctx.actions.set(layout.markerLine, layout.marker);
+        const structuralLines = structuralIndentLines(ctx.lineStarts, item);
         for (let line = layout.markerLine + 1; line <= layout.lastLine; line++) {
-            ctx.actions.set(line, layout.shift);
+            ctx.actions.set(line, { ...layout.shift, structuralIndent: structuralLines.has(line) });
         }
 
         for (const child of item.children) {
@@ -155,6 +164,34 @@ function measureItem(ctx: ListContext, list: List, item: ListItem, indentCols: n
     };
 }
 
+/**
+ * Blocks whose every line begins with container indentation and nothing else,
+ * so the whole leading whitespace run can be re-rendered in the configured
+ * style. Literal-content blocks (`code`, `html`, `math` — the block types
+ * {@link getProtectedRanges} guards elsewhere) are deliberately absent: their
+ * body lines carry indentation that renders verbatim, and re-rendering a
+ * prefix that reaches into it would turn four spaces of code into a tab.
+ * Nested lists are absent too — recursion rewrites the ones it can, and the
+ * rest are meant to stay exactly as written.
+ */
+const STRUCTURAL_INDENT_BLOCKS = new Set(['paragraph', 'blockquote', 'heading', 'table', 'thematicBreak']);
+
+/** Lines of blocks in this item whose leading whitespace is purely structural. */
+function structuralIndentLines(lineStarts: number[], item: ListItem): Set<number> {
+    const lines = new Set<number>();
+    for (const child of item.children) {
+        if (!STRUCTURAL_INDENT_BLOCKS.has(child.type)) continue;
+        const startOffset = child.position?.start?.offset;
+        const endOffset = child.position?.end?.offset;
+        if (startOffset === undefined || endOffset === undefined) continue;
+
+        const firstLine = lineIndexOfOffset(lineStarts, startOffset);
+        const lastLine = lineIndexOfOffset(lineStarts, Math.max(endOffset - 1, startOffset));
+        for (let line = firstLine; line <= lastLine; line++) lines.add(line);
+    }
+    return lines;
+}
+
 /** The item's list marker (`-`, `1.`, `2)`, ...) at `startOffset`, or null. */
 function matchMarker(text: string, list: List, startOffset: number): string | null {
     const match = list.ordered
@@ -181,10 +218,21 @@ function markerEdit(text: string, start: number, action: MarkerAction, style: In
 /** Shift a continuation line's leading whitespace to the new content column. */
 function shiftEdit(text: string, start: number, end: number, action: ShiftAction, style: Indentation): Edit | null {
     if (isBlankLine(text, start, end)) return null;
+    // A literal-content line keeps the prefix it was written with when its
+    // container column did not move: a content column narrower than the tab
+    // width cannot be re-rendered as a tab without swallowing columns that may
+    // belong to the block's own content.
+    if (style === 'tabs' && action.oldContentCol === action.newContentCol && !action.structuralIndent) return null;
     const ws = /^[ \t]*/.exec(text.slice(start, end))![0];
+    const wsCols = columnWidth(ws);
     // Lazy continuation lines (indented less than the content column) stay as written.
-    if (columnWidth(ws) < action.oldContentCol) return null;
-    const newWs = makeIndent(action.newContentCol, style) + indentBeyondColumn(ws, action.oldContentCol);
+    if (wsCols < action.oldContentCol) return null;
+    // A structural prefix is indentation end to end, so re-render its shifted
+    // display width in the configured style. Literal-content blocks instead
+    // keep the tail beyond the old content column verbatim.
+    const newWs = action.structuralIndent
+        ? makeIndent(wsCols - action.oldContentCol + action.newContentCol, style)
+        : makeIndent(action.newContentCol, style) + indentBeyondColumn(ws, action.oldContentCol);
     if (newWs === ws) return null;
     return { start, end: start + ws.length, replacement: newWs };
 }

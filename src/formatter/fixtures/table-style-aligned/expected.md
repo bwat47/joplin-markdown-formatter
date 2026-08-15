@@ -12,9 +12,9 @@ No outer pipes:
 In a list:
 
 - item
-    | h   | k   |
-    | --- | --- |
-    | 1   | 2   |
+	| h   | k   |
+	| --- | --- |
+	| 1   | 2   |
 
 Wide characters:
 

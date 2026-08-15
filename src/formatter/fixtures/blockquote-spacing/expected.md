@@ -33,8 +33,8 @@ TestAbove
 
 - List item
 
-    > Quoted in list
-    Trailing list paragraph
+	> Quoted in list
+	Trailing list paragraph
 
 > Outer quote
 > > Nested quote is left alone
