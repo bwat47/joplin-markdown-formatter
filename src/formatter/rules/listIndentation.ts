@@ -234,7 +234,14 @@ function isFenced(text: string, startOffset: number): boolean {
  * Nested lists are absent too — recursion rewrites the ones it can, and the
  * rest are meant to stay exactly as written.
  */
-const STRUCTURAL_INDENT_BLOCKS = new Set(['paragraph', 'blockquote', 'heading', 'table', 'thematicBreak']);
+const STRUCTURAL_INDENT_BLOCKS = new Set([
+    'paragraph',
+    'blockquote',
+    'heading',
+    'table',
+    'thematicBreak',
+    'definition',
+]);
 
 /** Lines of blocks in this item whose leading whitespace is purely structural. */
 function structuralIndentLines(lineStarts: number[], item: ListItem): Set<number> {

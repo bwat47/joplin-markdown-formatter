@@ -1,8 +1,11 @@
 import { formatMarkdown } from '../pipeline';
 import type { Indentation } from '../types';
 
-const format = (input: string, indentation: Indentation): string =>
-    formatMarkdown(input, { indentation, ensureFinalNewline: false }).text;
+const format = (input: string, indentation: Indentation): string => {
+    const result = formatMarkdown(input, { indentation, ensureFinalNewline: false });
+    expect(result.skippedRules).toEqual([]);
+    return result.text;
+};
 
 interface Case {
     name: string;
@@ -70,6 +73,18 @@ const cases: Case[] = [
         indentation: 'tabs',
         input: '- item\n\n    # heading',
         expected: '- item\n\n\t# heading',
+    },
+    {
+        name: 'normalizes a space-indented link definition in a list item when configured for tabs',
+        indentation: 'tabs',
+        input: '- item\n\n    [ref]: /url',
+        expected: '- item\n\n\t[ref]: /url',
+    },
+    {
+        name: 'normalizes every line of a multiline link definition without changing its title',
+        indentation: 'tabs',
+        input: '- item\n\n    [ref]: /url\n      "title"',
+        expected: '- item\n\n\t[ref]: /url\n\t"title"',
     },
     {
         name: 'normalizes a tab-indented blockquote in a list item when configured for four spaces',
