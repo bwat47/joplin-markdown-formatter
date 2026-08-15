@@ -68,7 +68,9 @@ interface ListContext {
  * so rarely lands on a tab stop, which would leave every continuation line
  * prefixed with a tab plus leftover spaces. The target column is rounded up
  * to the next tab stop when the item's blocks can take it (see
- * {@link canRoundToTabStop}), making those prefixes whole tabs.
+ * {@link canRoundToTabStop}), making those prefixes whole tabs. A nested
+ * list's own indent rounds the same way ({@link listIndentCols}), so an
+ * item's blocks share a column however wide its marker is.
  *
  * CommonMark guard: a child list's marker must sit at or beyond the parent
  * item's content column to stay nested (a 2-space unit under a `10. ` marker
@@ -76,10 +78,10 @@ interface ListContext {
  *
  * Limitations (documented in ARCHITECTURE.md): lists inside blockquotes or
  * footnote definitions are left untouched — only lists at the document root
- * are processed. An item holding an indented code block or raw HTML cannot be
- * rounded, so in tabs mode its continuation prefixes keep whichever characters
- * put them on the content column, mixing tabs and spaces where that column is
- * not a tab stop.
+ * are processed. An item whose blocks cannot take the rounding (an indented
+ * code block or raw HTML, among the cases in {@link canRoundToTabStop}) keeps
+ * the exact content column, so in tabs mode its continuation prefixes mix tabs
+ * and spaces where that column is not a tab stop.
  */
 export const listIndentation: Rule = {
     name: 'listIndentation',
@@ -131,7 +133,7 @@ function processList(ctx: ListContext, list: List, depth: number, parentContentC
     // aligned relative to the parent's content column.
     if (startsMidLine(ctx.text, ctx.lineStarts, list)) return;
 
-    const indentCols = depth === 0 ? 0 : Math.max(ctx.unitCols * depth, parentContentCol);
+    const indentCols = listIndentCols(ctx, depth, parentContentCol);
 
     for (const item of list.children as ListItem[]) {
         const layout = measureItem(ctx, list, item, indentCols);
@@ -147,6 +149,22 @@ function processList(ctx: ListContext, list: List, depth: number, parentContentC
             if (child.type === 'list') processList(ctx, child, depth + 1, layout.newContentCol);
         }
     }
+}
+
+/**
+ * Columns of indentation for a list at `depth`, bumped up to the parent item's
+ * content column when the configured unit alone would break the nesting, and
+ * in tabs mode on to the next tab stop so the indent is whole tabs.
+ *
+ * Rounding here is what lets an item's continuation blocks round too: both
+ * land on the same stop, whatever the marker's width. It never breaks the
+ * nesting, since the bumped indent is at most two columns past the parent's
+ * content column and the stop at most three.
+ */
+function listIndentCols(ctx: ListContext, depth: number, parentContentCol: number): number {
+    if (depth === 0) return 0;
+    const cols = Math.max(ctx.unitCols * depth, parentContentCol);
+    return ctx.style === 'tabs' ? Math.ceil(cols / TAB_COLS) * TAB_COLS : cols;
 }
 
 /**
@@ -223,7 +241,9 @@ function canRoundToTabStop(ctx: ListContext, item: ListItem, oldContentCol: numb
         const lineStart = ctx.lineStarts[lineIndexOfOffset(ctx.lineStarts, startOffset)];
         if (columnWidth(ctx.text.slice(lineStart, startOffset)) !== oldContentCol) return false;
 
-        // A nested list is rewritten by recursion; the ones recursion leaves
+        // A nested list is re-indented by recursion, which rounds to the same
+        // stop ({@link listIndentCols}), so it lands where the item's other
+        // blocks do whatever the marker's width. The ones recursion leaves
         // alone only move by the rounding, which cannot break them out.
         return child.type === 'list' || isFenced(ctx.text, startOffset);
     });

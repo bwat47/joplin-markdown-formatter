@@ -178,6 +178,38 @@ const markerLineCases: Case[] = [
     },
 ];
 
+/**
+ * Markers four or more characters wide, whose content column sits past the
+ * tab stop a shorter marker would land on. A nested list rounds up to the same
+ * stop as the item's other blocks, so the item's indentation stays whole tabs.
+ */
+const wideMarkerCases: Case[] = [
+    {
+        name: 'rounds a wide-marker item holding no nested list',
+        indentation: 'tabs',
+        input: '100. item\n\n     para',
+        expected: '100. item\n\n\t\tpara',
+    },
+    {
+        name: 'rounds a wide-marker item and its nested list to the same stop',
+        indentation: 'tabs',
+        input: '100. item\n\n     para\n\n     - nested',
+        expected: '100. item\n\n\t\tpara\n\n\t\t- nested',
+    },
+    {
+        name: 'rounds the blocks of an item nested under a wide marker',
+        indentation: 'tabs',
+        input: '100. item\n\n     - nested\n\n       para',
+        expected: '100. item\n\n\t\t- nested\n\n\t\t\tpara',
+    },
+    {
+        name: 'leaves a wide-marker item alone when configured for four spaces',
+        indentation: 'spaces4',
+        input: '100. item\n\n     para\n\n     - nested',
+        expected: '100. item\n\n     para\n\n     - nested',
+    },
+];
+
 describe('list indentation', () => {
     test.each(cases)('$name', ({ indentation, input, expected }) => {
         expect(format(input, indentation)).toBe(expected);
@@ -188,6 +220,10 @@ describe('list indentation', () => {
     });
 
     test.each(markerLineCases)('$name', ({ indentation, input, expected }) => {
+        expect(format(input, indentation)).toBe(expected);
+    });
+
+    test.each(wideMarkerCases)('$name', ({ indentation, input, expected }) => {
         expect(format(input, indentation)).toBe(expected);
     });
 
