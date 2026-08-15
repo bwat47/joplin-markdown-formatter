@@ -27,7 +27,8 @@ interface ItemLayout {
     markerLine: number;
     lastLine: number;
     marker: MarkerAction;
-    shift: ShiftAction;
+    /** Item-wide part of every continuation line's shift; the per-line flag is added in `processList`. */
+    shift: Omit<ShiftAction, 'normalizeWholePrefix'>;
     /** Content column of the rewritten item, i.e. where a nested list may start. */
     newContentCol: number;
 }
@@ -154,7 +155,7 @@ function measureItem(ctx: ListContext, list: List, item: ListItem, indentCols: n
         markerLine,
         lastLine: lineIndexOfOffset(lineStarts, Math.max(endOffset - 1, startOffset)),
         marker: { kind: 'marker', contentOffset, marker, indentCols, emptyItem },
-        shift: { kind: 'shift', oldContentCol, newContentCol, normalizeWholePrefix: false },
+        shift: { kind: 'shift', oldContentCol, newContentCol },
         newContentCol,
     };
 }
