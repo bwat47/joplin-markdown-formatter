@@ -4,37 +4,83 @@ import type { Indentation } from '../types';
 const format = (input: string, indentation: Indentation): string =>
     formatMarkdown(input, { indentation, ensureFinalNewline: false }).text;
 
+interface Case {
+    name: string;
+    indentation: Indentation;
+    input: string;
+    expected: string;
+}
+
+/**
+ * Continuation lines of a list item, whose leading whitespace is structural
+ * and therefore re-rendered in the configured style once shifted to the
+ * item's new content column.
+ */
+const cases: Case[] = [
+    {
+        name: 'preserves a tab-indented ordered-list continuation when the content column is unchanged',
+        indentation: 'tabs',
+        input: '1. item\n\tcontinued',
+        expected: '1. item\n\tcontinued',
+    },
+    {
+        name: 'preserves a tab-indented later paragraph when the content column is unchanged',
+        indentation: 'tabs',
+        input: '- item\n\n\tlater paragraph',
+        expected: '- item\n\n\tlater paragraph',
+    },
+    {
+        name: 'normalizes a four-space continuation to a tab when configured for tabs',
+        indentation: 'tabs',
+        input: '1. item\n    continued',
+        expected: '1. item\n\tcontinued',
+    },
+    {
+        name: 'normalizes a tab-indented continuation when configured for four spaces',
+        indentation: 'spaces4',
+        input: '1. item\n\tcontinued',
+        expected: '1. item\n    continued',
+    },
+    {
+        name: 'still shifts tab-indented continuation content when marker spacing changes its column',
+        indentation: 'tabs',
+        input: '1.  item\n\tcontinued',
+        expected: '1. item\n   continued',
+    },
+    {
+        name: 'normalizes a space-indented blockquote in a list item when configured for tabs',
+        indentation: 'tabs',
+        input: '- item\n\n    > quoted',
+        expected: '- item\n\n\t> quoted',
+    },
+    {
+        name: 'normalizes a space-indented table in a list item when configured for tabs',
+        indentation: 'tabs',
+        input: '- item\n\n    | a | b |\n    | - | - |',
+        expected: '- item\n\n\t| a | b |\n\t| - | - |',
+    },
+    {
+        name: 'normalizes a space-indented heading in a list item when configured for tabs',
+        indentation: 'tabs',
+        input: '- item\n\n    # heading',
+        expected: '- item\n\n\t# heading',
+    },
+    {
+        name: 'normalizes a tab-indented blockquote in a list item when configured for four spaces',
+        indentation: 'spaces4',
+        input: '- item\n\n\t> quoted',
+        expected: '- item\n\n    > quoted',
+    },
+    {
+        name: 'normalizes the prefix of a quoted code fence without touching the quoted content',
+        indentation: 'tabs',
+        input: '- item\n\n    > ```\n    > code\n    > ```',
+        expected: '- item\n\n\t> ```\n\t> code\n\t> ```',
+    },
+];
+
 describe('list indentation', () => {
-    test('preserves a tab-indented ordered-list continuation when the content column is unchanged', () => {
-        const input = '1. item\n\tcontinued';
-
-        expect(format(input, 'tabs')).toBe(input);
-    });
-
-    test('preserves a tab-indented later paragraph when the content column is unchanged', () => {
-        const input = '- item\n\n\tlater paragraph';
-
-        expect(format(input, 'tabs')).toBe(input);
-    });
-
-    test('normalizes a four-space continuation to a tab when configured for tabs', () => {
-        const input = '1. item\n    continued';
-        const expected = '1. item\n\tcontinued';
-
-        expect(format(input, 'tabs')).toBe(expected);
-    });
-
-    test('normalizes a tab-indented continuation when configured for four spaces', () => {
-        const input = '1. item\n\tcontinued';
-        const expected = '1. item\n    continued';
-
-        expect(format(input, 'spaces4')).toBe(expected);
-    });
-
-    test('still shifts tab-indented continuation content when marker spacing changes its column', () => {
-        const input = '1.  item\n\tcontinued';
-        const expected = '1. item\n   continued';
-
-        expect(format(input, 'tabs')).toBe(expected);
+    test.each(cases)('$name', ({ indentation, input, expected }) => {
+        expect(format(input, indentation)).toBe(expected);
     });
 });
