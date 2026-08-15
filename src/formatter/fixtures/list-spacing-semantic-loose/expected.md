@@ -10,7 +10,7 @@ A blank line inside an item makes the whole list loose:
 
 - para one
 
-  para two
+	para two
 
 - item
 

@@ -42,8 +42,14 @@ const cases: Case[] = [
         expected: '1. item\n    continued',
     },
     {
-        name: 'still shifts tab-indented continuation content when marker spacing changes its column',
+        name: 'snaps a continuation to the tab stop when marker spacing changes its column',
         indentation: 'tabs',
+        input: '1.  item\n\tcontinued',
+        expected: '1. item\n\tcontinued',
+    },
+    {
+        name: 'shifts a continuation to the exact content column when configured for four spaces',
+        indentation: 'spaces4',
         input: '1.  item\n\tcontinued',
         expected: '1. item\n   continued',
     },
@@ -107,7 +113,13 @@ const literalContentCases: Case[] = [
         name: 'preserves indentation inside a code block when the content column moves',
         indentation: 'tabs',
         input: '1.  item\n\n    ```\n    def f():\n        return 1\n    ```',
-        expected: '1. item\n\n   ```\n   def f():\n       return 1\n   ```',
+        expected: '1. item\n\n\t```\n\tdef f():\n\t    return 1\n\t```',
+    },
+    {
+        name: 'declines to round when a fence sits past the content column, keeping the item aligned',
+        indentation: 'tabs',
+        input: '- item\n\n\tpara\n\n\t```\n\tcode\n\t```',
+        expected: '- item\n\n\tpara\n\n\t```\n\tcode\n\t```',
     },
 ];
 

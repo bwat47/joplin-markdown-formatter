@@ -11,9 +11,9 @@ Subtitle
 
 - List intro
 
-  ### Nested heading
+	### Nested heading
 
-  Nested body.
+	Nested body.
 
 > Quoted intro
 > ### Quoted heading

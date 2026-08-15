@@ -8,6 +8,6 @@ Multi-block list stays loose:
 
 - para one
 
-  para two
+	para two
 
 - item
