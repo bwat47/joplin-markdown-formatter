@@ -27,10 +27,10 @@ Pipeless line is still a table row
 
 - List item
 
-    | g | h |
-    | - | - |
-    | 7 | 8 |
-    Trailing list paragraph
+	| g | h |
+	| - | - |
+	| 7 | 8 |
+	Trailing list paragraph
 
 > Quoted before
 > | q | r |

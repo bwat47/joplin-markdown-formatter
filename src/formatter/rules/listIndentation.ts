@@ -181,6 +181,10 @@ function markerEdit(text: string, start: number, action: MarkerAction, style: In
 /** Shift a continuation line's leading whitespace to the new content column. */
 function shiftEdit(text: string, start: number, end: number, action: ShiftAction, style: Indentation): Edit | null {
     if (isBlankLine(text, start, end)) return null;
+    // Continuation indentation only needs rewriting when the item's content
+    // column moved. Rebuilding an unchanged prefix can expand a tab that
+    // straddles the content column into spaces (e.g. a tab below `1. `).
+    if (action.oldContentCol === action.newContentCol) return null;
     const ws = /^[ \t]*/.exec(text.slice(start, end))![0];
     // Lazy continuation lines (indented less than the content column) stay as written.
     if (columnWidth(ws) < action.oldContentCol) return null;
