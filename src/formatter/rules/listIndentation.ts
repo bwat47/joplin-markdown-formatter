@@ -16,6 +16,8 @@ interface ShiftAction {
     kind: 'shift';
     oldContentCol: number;
     newContentCol: number;
+    /** Paragraph indentation is formatting, unlike content-internal indentation in other blocks. */
+    normalizeWholePrefix: boolean;
 }
 
 type LineAction = MarkerAction | ShiftAction;
@@ -49,8 +51,9 @@ interface ListContext {
  * old and new content column (tab stop = 4). The marker line gets its prefix
  * rewritten to `indent + marker + ' '`; every continuation line belonging to
  * the item (later paragraphs, fenced code, ...) has its leading whitespace
- * shifted to the new content column, with columns beyond the old content
- * column preserved verbatim so content-internal indentation survives.
+ * shifted to the new content column. Paragraph prefixes are normalized to the
+ * configured style, while other blocks preserve columns beyond the old
+ * content column verbatim so content-internal indentation survives.
  *
  * CommonMark guard: a child list's marker must sit at or beyond the parent
  * item's content column to stay nested (a 2-space unit under a `10. ` marker
@@ -110,8 +113,9 @@ function processList(ctx: ListContext, list: List, depth: number, parentContentC
         if (!layout) continue;
 
         ctx.actions.set(layout.markerLine, layout.marker);
+        const paragraphLines = directParagraphLines(ctx.lineStarts, item);
         for (let line = layout.markerLine + 1; line <= layout.lastLine; line++) {
-            ctx.actions.set(line, layout.shift);
+            ctx.actions.set(line, { ...layout.shift, normalizeWholePrefix: paragraphLines.has(line) });
         }
 
         for (const child of item.children) {
@@ -150,9 +154,25 @@ function measureItem(ctx: ListContext, list: List, item: ListItem, indentCols: n
         markerLine,
         lastLine: lineIndexOfOffset(lineStarts, Math.max(endOffset - 1, startOffset)),
         marker: { kind: 'marker', contentOffset, marker, indentCols, emptyItem },
-        shift: { kind: 'shift', oldContentCol, newContentCol },
+        shift: { kind: 'shift', oldContentCol, newContentCol, normalizeWholePrefix: false },
         newContentCol,
     };
+}
+
+/** Lines belonging to paragraphs directly contained by this list item. */
+function directParagraphLines(lineStarts: number[], item: ListItem): Set<number> {
+    const lines = new Set<number>();
+    for (const child of item.children) {
+        if (child.type !== 'paragraph') continue;
+        const startOffset = child.position?.start?.offset;
+        const endOffset = child.position?.end?.offset;
+        if (startOffset === undefined || endOffset === undefined) continue;
+
+        const firstLine = lineIndexOfOffset(lineStarts, startOffset);
+        const lastLine = lineIndexOfOffset(lineStarts, Math.max(endOffset - 1, startOffset));
+        for (let line = firstLine; line <= lastLine; line++) lines.add(line);
+    }
+    return lines;
 }
 
 /** The item's list marker (`-`, `1.`, `2)`, ...) at `startOffset`, or null. */
@@ -181,15 +201,18 @@ function markerEdit(text: string, start: number, action: MarkerAction, style: In
 /** Shift a continuation line's leading whitespace to the new content column. */
 function shiftEdit(text: string, start: number, end: number, action: ShiftAction, style: Indentation): Edit | null {
     if (isBlankLine(text, start, end)) return null;
-    // In tabs mode, continuation indentation only needs rewriting when the
-    // item's content column moved. Rebuilding an unchanged prefix can expand
-    // a tab that straddles the content column into spaces (e.g. below `1. `).
-    // Space modes still rebuild the prefix so authored tabs are normalized.
-    if (style === 'tabs' && action.oldContentCol === action.newContentCol) return null;
+    // Non-paragraph blocks can contain indentation that must remain verbatim.
+    // When their container column did not move, tabs mode has nothing to do.
+    if (style === 'tabs' && action.oldContentCol === action.newContentCol && !action.normalizeWholePrefix) return null;
     const ws = /^[ \t]*/.exec(text.slice(start, end))![0];
+    const wsCols = columnWidth(ws);
     // Lazy continuation lines (indented less than the content column) stay as written.
-    if (columnWidth(ws) < action.oldContentCol) return null;
-    const newWs = makeIndent(action.newContentCol, style) + indentBeyondColumn(ws, action.oldContentCol);
+    if (wsCols < action.oldContentCol) return null;
+    // Paragraph leading whitespace is entirely indentation, so normalize its
+    // shifted display width. Other blocks keep their content-internal tail.
+    const newWs = action.normalizeWholePrefix
+        ? makeIndent(wsCols - action.oldContentCol + action.newContentCol, style)
+        : makeIndent(action.newContentCol, style) + indentBeyondColumn(ws, action.oldContentCol);
     if (newWs === ws) return null;
     return { start, end: start + ws.length, replacement: newWs };
 }

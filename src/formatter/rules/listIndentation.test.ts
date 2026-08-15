@@ -13,6 +13,13 @@ describe('list indentation', () => {
         expect(formatMarkdown(input, { indentation: 'tabs', ensureFinalNewline: false }).text).toBe(input);
     });
 
+    test('normalizes a four-space continuation to a tab when configured for tabs', () => {
+        const input = '1. item\n    continued';
+        const expected = '1. item\n\tcontinued';
+
+        expect(formatMarkdown(input, { indentation: 'tabs', ensureFinalNewline: false }).text).toBe(expected);
+    });
+
     test('normalizes a tab-indented continuation when configured for four spaces', () => {
         const input = '1. item\n\tcontinued';
         const expected = '1. item\n    continued';
