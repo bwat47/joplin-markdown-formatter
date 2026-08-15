@@ -63,7 +63,7 @@ If structural verification fails, that rule's changes are discarded and its name
 
 Literal content such as code, inline code, front matter, HTML, and math is represented by protected source ranges. Whitespace-oriented rules do not edit those ranges.
 
-Some valid Markdown constructs are intentionally left unchanged when their whitespace carries structural meaning or cannot be rewritten safely in isolation. Examples include much of the content inside blockquotes, lists inside footnotes, same-line nested list markers, ragged table rows, setext heading markers, and ambiguous emphasis or quote delimiters. These constraints are enforced near the relevant rules and covered by fixtures and unit tests rather than duplicated here in implementation-level detail.
+Some valid Markdown constructs are intentionally left unchanged when their whitespace carries structural meaning or cannot be rewritten safely in isolation. Examples include much of the content inside blockquotes, lists inside footnotes, same-line nested list markers, ragged table rows, setext heading markers, ambiguous emphasis or quote delimiters, and the indentation characters of list items holding an indented code block or raw HTML. These constraints are enforced near the relevant rules and covered by fixtures and unit tests rather than duplicated here in implementation-level detail.
 
 ## Joplin integration
 

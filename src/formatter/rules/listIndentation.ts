@@ -15,12 +15,18 @@ interface MarkerAction {
 interface ShiftAction {
     kind: 'shift';
     oldContentCol: number;
-    newContentCol: number;
+    /** Column the line's container indentation is rewritten to. */
+    targetCol: number;
+    /** True when `targetCol` was rounded up to a tab stop, so the prefix is whole tabs. */
+    snapToTarget: boolean;
     /** True when the line's leading whitespace is container indentation end to end. */
     structuralIndent: boolean;
 }
 
 type LineAction = MarkerAction | ShiftAction;
+
+/** Columns a tab spans; CommonMark's tab stop, and what `columnWidth` assumes. */
+const TAB_COLS = 4;
 
 /** What one item's marker line and continuation lines need, once measured. */
 interface ItemLayout {
@@ -38,6 +44,7 @@ interface ListContext {
     lineStarts: number[];
     /** Columns of indentation per nesting level. */
     unitCols: number;
+    style: Indentation;
     // Innermost assignment wins: parents fill their whole span first,
     // then recursion into nested lists overwrites the nested lines.
     actions: Map<number, LineAction>;
@@ -57,16 +64,22 @@ interface ListContext {
  * the configured style; literal-content blocks keep the columns beyond the
  * old content column verbatim so content-internal indentation survives.
  *
+ * Tabs mode aims one step further: a content column is `marker + 1` wide and
+ * so rarely lands on a tab stop, which would leave every continuation line
+ * prefixed with a tab plus leftover spaces. The target column is rounded up
+ * to the next tab stop when the item's blocks can take it (see
+ * {@link canRoundToTabStop}), making those prefixes whole tabs.
+ *
  * CommonMark guard: a child list's marker must sit at or beyond the parent
  * item's content column to stay nested (a 2-space unit under a `10. ` marker
  * would break out), so the computed indent is bumped up when needed.
  *
  * Limitations (documented in ARCHITECTURE.md): lists inside blockquotes or
  * footnote definitions are left untouched — only lists at the document root
- * are processed. In tabs mode a literal-content block under a marker whose
- * content column is narrower than the tab width keeps whichever characters
- * the author used, so such a document can hold tab-indented paragraphs beside
- * a space-indented code fence.
+ * are processed. An item holding an indented code block or raw HTML cannot be
+ * rounded, so in tabs mode its continuation prefixes keep whichever characters
+ * put them on the content column, mixing tabs and spaces where that column is
+ * not a tab stop.
  */
 export const listIndentation: Rule = {
     name: 'listIndentation',
@@ -77,7 +90,8 @@ export const listIndentation: Rule = {
 
     apply({ text, tree, options }: RuleContext): Edit[] {
         const lineStarts = computeLineStarts(text);
-        const actions = collectActions(text, lineStarts, tree, options.indentation === 'spaces2' ? 2 : 4);
+        const unitCols = options.indentation === 'spaces2' ? 2 : 4;
+        const actions = collectActions(text, lineStarts, tree, unitCols, options.indentation);
 
         const edits: Edit[] = [];
         for (const [line, action] of actions) {
@@ -94,8 +108,14 @@ export const listIndentation: Rule = {
 };
 
 /** Map every line of every root-level list to the rewrite it needs. */
-function collectActions(text: string, lineStarts: number[], tree: Root, unitCols: number): Map<number, LineAction> {
-    const ctx: ListContext = { text, lineStarts, unitCols, actions: new Map() };
+function collectActions(
+    text: string,
+    lineStarts: number[],
+    tree: Root,
+    unitCols: number,
+    style: Indentation
+): Map<number, LineAction> {
+    const ctx: ListContext = { text, lineStarts, unitCols, style, actions: new Map() };
     for (const child of tree.children) {
         if (child.type === 'list') processList(ctx, child, 0, 0);
     }
@@ -154,14 +174,54 @@ function measureItem(ctx: ListContext, list: List, item: ListItem, indentCols: n
     // indented code; collapsing that spacing would change meaning.
     if (!emptyItem && oldContentCol - markerEndCol > 4) return null;
     const newContentCol = indentCols + marker.length + 1;
+    // Tabs mode indents continuation blocks to the next tab stop, so their
+    // prefix is whole tabs instead of a tab plus the columns a marker-width
+    // content column leaves over.
+    const snapToTarget =
+        ctx.style === 'tabs' && newContentCol % TAB_COLS !== 0 && canRoundToTabStop(ctx, item, oldContentCol);
+    const targetCol = snapToTarget ? Math.ceil(newContentCol / TAB_COLS) * TAB_COLS : newContentCol;
 
     return {
         markerLine,
         lastLine: lineIndexOfOffset(lineStarts, Math.max(endOffset - 1, startOffset)),
         marker: { kind: 'marker', contentOffset, marker, indentCols, emptyItem },
-        shift: { kind: 'shift', oldContentCol, newContentCol },
+        shift: { kind: 'shift', oldContentCol, targetCol, snapToTarget },
         newContentCol,
     };
+}
+
+/**
+ * True when every block in the item can absorb the columns that rounding the
+ * continuation column up to a tab stop adds.
+ *
+ * Structural blocks always can: they are snapped onto the tab stop itself,
+ * which sits less than one tab width past the content column, so a paragraph
+ * can never drift far enough right to read as indented code. Everything else
+ * is shifted bodily, which a fenced block survives — it strips its own
+ * indentation from each of its lines, so a uniform shift leaves its content
+ * identical — but which would add columns to the value of an indented code
+ * block or an HTML block. One such block puts the whole item back on the exact
+ * content column, so its blocks stay aligned with each other.
+ */
+function canRoundToTabStop(ctx: ListContext, item: ListItem, oldContentCol: number): boolean {
+    return item.children.every((child) => {
+        if (STRUCTURAL_INDENT_BLOCKS.has(child.type)) return true;
+
+        const startOffset = child.position?.start?.offset;
+        if (startOffset === undefined) return false;
+        // Only a block sitting exactly on the content column shifts predictably.
+        const lineStart = ctx.lineStarts[lineIndexOfOffset(ctx.lineStarts, startOffset)];
+        if (columnWidth(ctx.text.slice(lineStart, startOffset)) !== oldContentCol) return false;
+
+        // A nested list is rewritten by recursion; the ones recursion leaves
+        // alone only move by the rounding, which cannot break them out.
+        return child.type === 'list' || isFenced(ctx.text, startOffset);
+    });
+}
+
+/** True when a block opens with a fence, whose content is stripped relative to the fence itself. */
+function isFenced(text: string, startOffset: number): boolean {
+    return /^(?:```|~~~|\$\$)/.test(text.slice(startOffset, startOffset + 3));
 }
 
 /**
@@ -219,20 +279,28 @@ function markerEdit(text: string, start: number, action: MarkerAction, style: In
 function shiftEdit(text: string, start: number, end: number, action: ShiftAction, style: Indentation): Edit | null {
     if (isBlankLine(text, start, end)) return null;
     // A literal-content line keeps the prefix it was written with when its
-    // container column did not move: a content column narrower than the tab
-    // width cannot be re-rendered as a tab without swallowing columns that may
-    // belong to the block's own content.
-    if (style === 'tabs' && action.oldContentCol === action.newContentCol && !action.structuralIndent) return null;
+    // column does not move and that column is off the tab stops: re-rendering
+    // it would spend spaces where the author wrote a tab.
+    if (
+        style === 'tabs' &&
+        action.oldContentCol === action.targetCol &&
+        action.targetCol % TAB_COLS !== 0 &&
+        !action.structuralIndent
+    ) {
+        return null;
+    }
     const ws = /^[ \t]*/.exec(text.slice(start, end))![0];
     const wsCols = columnWidth(ws);
     // Lazy continuation lines (indented less than the content column) stay as written.
     if (wsCols < action.oldContentCol) return null;
-    // A structural prefix is indentation end to end, so re-render its shifted
-    // display width in the configured style. Literal-content blocks instead
-    // keep the tail beyond the old content column verbatim.
+    // A structural prefix is indentation end to end: snapped onto the target
+    // when that is a tab stop, otherwise shifted with its extra columns intact.
+    // Literal-content blocks always keep the tail beyond the old content
+    // column verbatim, so the block's own indentation survives.
+    const structuralCols = action.snapToTarget ? action.targetCol : wsCols - action.oldContentCol + action.targetCol;
     const newWs = action.structuralIndent
-        ? makeIndent(wsCols - action.oldContentCol + action.newContentCol, style)
-        : makeIndent(action.newContentCol, style) + indentBeyondColumn(ws, action.oldContentCol);
+        ? makeIndent(structuralCols, style)
+        : makeIndent(action.targetCol, style) + indentBeyondColumn(ws, action.oldContentCol);
     if (newWs === ws) return null;
     return { start, end: start + ws.length, replacement: newWs };
 }
@@ -257,7 +325,7 @@ function startsMidLine(text: string, lineStarts: number[], list: List): boolean 
  */
 function makeIndent(columns: number, style: Indentation): string {
     if (style === 'tabs') {
-        return '\t'.repeat(Math.floor(columns / 4)) + ' '.repeat(columns % 4);
+        return '\t'.repeat(Math.floor(columns / TAB_COLS)) + ' '.repeat(columns % TAB_COLS);
     }
     return ' '.repeat(columns);
 }
