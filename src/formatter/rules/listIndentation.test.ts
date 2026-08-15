@@ -79,8 +79,55 @@ const cases: Case[] = [
     },
 ];
 
+/**
+ * Literal-content blocks, whose body lines carry indentation that renders
+ * verbatim. Their prefix is shifted when the item's content column moves, but
+ * the columns beyond it are never re-rendered.
+ */
+const literalContentCases: Case[] = [
+    {
+        name: 'leaves a tab-indented code fence alone when the content column is unchanged',
+        indentation: 'tabs',
+        input: '- item\n\n\t```\n\tcode\n\t```',
+        expected: '- item\n\n\t```\n\tcode\n\t```',
+    },
+    {
+        name: 'leaves a space-indented code fence alone in tabs mode when the content column is unchanged',
+        indentation: 'tabs',
+        input: '- item\n\n    ```\n    code\n    ```',
+        expected: '- item\n\n    ```\n    code\n    ```',
+    },
+    {
+        name: 'leaves a space-indented HTML block alone in tabs mode when the content column is unchanged',
+        indentation: 'tabs',
+        input: '- item\n\n    <div>\n    x\n    </div>',
+        expected: '- item\n\n    <div>\n    x\n    </div>',
+    },
+    {
+        name: 'preserves indentation inside a code block when the content column moves',
+        indentation: 'tabs',
+        input: '1.  item\n\n    ```\n    def f():\n        return 1\n    ```',
+        expected: '1. item\n\n   ```\n   def f():\n       return 1\n   ```',
+    },
+];
+
 describe('list indentation', () => {
     test.each(cases)('$name', ({ indentation, input, expected }) => {
         expect(format(input, indentation)).toBe(expected);
+    });
+
+    test.each(literalContentCases)('$name', ({ indentation, input, expected }) => {
+        expect(format(input, indentation)).toBe(expected);
+    });
+
+    // A code fence under a `- ` marker cannot be re-rendered as a tab: the
+    // content column is narrower than the tab width, and the columns past it
+    // may belong to the code. Everything structural does make the trip back.
+    test('restores the indentation style of structural blocks across a tabs/spaces round trip', () => {
+        const original = '- item\n\n\t> quoted\n\n\t```\n\tcode\n\t```\n\n\tparagraph';
+        const asSpaces = '- item\n\n    > quoted\n\n    ```\n    code\n    ```\n\n    paragraph';
+
+        expect(format(original, 'spaces4')).toBe(asSpaces);
+        expect(format(asSpaces, 'tabs')).toBe('- item\n\n\t> quoted\n\n    ```\n    code\n    ```\n\n\tparagraph');
     });
 });
