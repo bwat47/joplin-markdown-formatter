@@ -178,7 +178,9 @@ function measureItem(ctx: ListContext, list: List, item: ListItem, indentCols: n
     // prefix is whole tabs instead of a tab plus the columns a marker-width
     // content column leaves over.
     const snapToTarget =
-        ctx.style === 'tabs' && newContentCol % TAB_COLS !== 0 && canRoundToTabStop(ctx, item, oldContentCol);
+        ctx.style === 'tabs' &&
+        newContentCol % TAB_COLS !== 0 &&
+        canRoundToTabStop(ctx, item, oldContentCol, markerLine);
     const targetCol = snapToTarget ? Math.ceil(newContentCol / TAB_COLS) * TAB_COLS : newContentCol;
 
     return {
@@ -202,13 +204,21 @@ function measureItem(ctx: ListContext, list: List, item: ListItem, indentCols: n
  * identical — but which would add columns to the value of an indented code
  * block or an HTML block. One such block puts the whole item back on the exact
  * content column, so its blocks stay aligned with each other.
+ *
+ * A block opening on the marker line is excluded for the same reason: the
+ * marker line is rewritten to the content column rather than the rounded one,
+ * so rounding would move the block's later lines away from its first. That
+ * shifts a fence's body relative to its opening (changing the code's value),
+ * and it re-applies on every run to a same-line nested list, whose start
+ * column never moves.
  */
-function canRoundToTabStop(ctx: ListContext, item: ListItem, oldContentCol: number): boolean {
+function canRoundToTabStop(ctx: ListContext, item: ListItem, oldContentCol: number, markerLine: number): boolean {
     return item.children.every((child) => {
         if (STRUCTURAL_INDENT_BLOCKS.has(child.type)) return true;
 
         const startOffset = child.position?.start?.offset;
         if (startOffset === undefined) return false;
+        if (lineIndexOfOffset(ctx.lineStarts, startOffset) === markerLine) return false;
         // Only a block sitting exactly on the content column shifts predictably.
         const lineStart = ctx.lineStarts[lineIndexOfOffset(ctx.lineStarts, startOffset)];
         if (columnWidth(ctx.text.slice(lineStart, startOffset)) !== oldContentCol) return false;

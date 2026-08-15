@@ -4,6 +4,8 @@ import type { Indentation } from '../types';
 const format = (input: string, indentation: Indentation): string => {
     const result = formatMarkdown(input, { indentation, ensureFinalNewline: false });
     expect(result.skippedRules).toEqual([]);
+    // Formatting the output again must be a no-op, or notes churn on every run.
+    expect(formatMarkdown(result.text, { indentation, ensureFinalNewline: false }).text).toBe(result.text);
     return result.text;
 };
 
@@ -138,12 +140,54 @@ const literalContentCases: Case[] = [
     },
 ];
 
+/**
+ * Blocks opening on the marker line, which keeps the exact content column
+ * while the item's later lines would be rounded. Rounding is declined for the
+ * item so the block's lines stay aligned with its first.
+ */
+const markerLineCases: Case[] = [
+    {
+        name: 'leaves a code fence opening on the marker line untouched',
+        indentation: 'tabs',
+        input: '- ```js\n  code\n  ```',
+        expected: '- ```js\n  code\n  ```',
+    },
+    {
+        name: 'leaves a code fence opening on an ordered marker line untouched',
+        indentation: 'tabs',
+        input: '1. ```js\n   code\n   ```',
+        expected: '1. ```js\n   code\n   ```',
+    },
+    {
+        name: 'leaves a math block opening on the marker line untouched',
+        indentation: 'tabs',
+        input: '- $$\n  x\n  $$',
+        expected: '- $$\n  x\n  $$',
+    },
+    {
+        name: 'leaves a continuation under same-line nested markers where it was written',
+        indentation: 'tabs',
+        input: '- - a\n\n    para',
+        expected: '- - a\n\n    para',
+    },
+    {
+        name: 'leaves a continuation under doubly nested same-line markers where it was written',
+        indentation: 'tabs',
+        input: '1. - - a\n\n       para',
+        expected: '1. - - a\n\n       para',
+    },
+];
+
 describe('list indentation', () => {
     test.each(cases)('$name', ({ indentation, input, expected }) => {
         expect(format(input, indentation)).toBe(expected);
     });
 
     test.each(literalContentCases)('$name', ({ indentation, input, expected }) => {
+        expect(format(input, indentation)).toBe(expected);
+    });
+
+    test.each(markerLineCases)('$name', ({ indentation, input, expected }) => {
         expect(format(input, indentation)).toBe(expected);
     });
 
