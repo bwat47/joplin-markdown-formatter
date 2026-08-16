@@ -318,14 +318,16 @@ function buildAlignmentChoices(
     removedCount: number,
     addedCount: number,
     getComparison: PairComparisonGetter
-): Array<Array<AlignmentChoice | null>> {
+): AlignmentChoice[][] {
     const scores = Array.from({ length: removedCount + 1 }, () => Array<number>(addedCount + 1).fill(0));
+    // Seeded with the boundary moves, where only one side is left to consume:
+    // row 0 can only skip added lines, column 0 only removed ones. Every
+    // interior cell is overwritten below, and [0][0] is never read because the
+    // traceback stops there.
     const choices = Array.from({ length: removedCount + 1 }, () =>
-        Array<AlignmentChoice | null>(addedCount + 1).fill(null)
+        Array<AlignmentChoice>(addedCount + 1).fill('skipAdded')
     );
-
     for (let i = 1; i <= removedCount; i += 1) choices[i][0] = 'skipRemoved';
-    for (let j = 1; j <= addedCount; j += 1) choices[0][j] = 'skipAdded';
 
     for (let i = 1; i <= removedCount; i += 1) {
         for (let j = 1; j <= addedCount; j += 1) {
@@ -358,11 +360,7 @@ function buildAlignmentChoices(
 }
 
 /** Walks the completed matrix backwards and returns the chosen pairs in source order. */
-function traceAlignedPairs(
-    choices: Array<Array<AlignmentChoice | null>>,
-    removedCount: number,
-    addedCount: number
-): AlignedPair[] {
+function traceAlignedPairs(choices: AlignmentChoice[][], removedCount: number, addedCount: number): AlignedPair[] {
     let i = removedCount;
     let j = addedCount;
     const pairs: AlignedPair[] = [];
