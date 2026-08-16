@@ -98,7 +98,7 @@ describe('computeLineDiff', () => {
         expect(hunk.lines.map(changedSpans)).toEqual([['*'], ['*'], ['*'], ['-'], [], ['-'], ['-']]);
     });
 
-    test('retains highlighting when a replacement run exceeds the global alignment budget', () => {
+    test('retains highlighting when a replacement run exceeds the alignment cell budget', () => {
         const oldText = Array.from({ length: 65 }, (_, index) => `Old item ${index}`).join('\n') + '\n';
         const newText = Array.from({ length: 65 }, (_, index) => `New item ${index}`).join('\n') + '\n';
 
@@ -107,6 +107,24 @@ describe('computeLineDiff', () => {
         expect(hunk.lines).toHaveLength(130);
         expect(changedSpans(hunk.lines[0])).toEqual(['Old']);
         expect(changedSpans(hunk.lines[65])).toEqual(['New']);
+    });
+
+    test('retains highlighting when few but long lines exceed the alignment work budget', () => {
+        // Only 400 pairs, well inside the cell budget, but each line is long
+        // enough that diffing every pair would dominate preview generation.
+        const body = 'lorem ipsum dolor sit amet '.repeat(30);
+        const oldText = Array.from({ length: 20 }, (_, index) => `* ${body}${index}`).join('\n') + '\n';
+        const newText = Array.from({ length: 20 }, (_, index) => `- ${body}${index}`).join('\n') + '\n';
+
+        const started = Date.now();
+        const [hunk] = computeLineDiff(oldText, newText);
+        const elapsed = Date.now() - started;
+
+        expect(hunk.lines).toHaveLength(40);
+        expect(changedSpans(hunk.lines[0])).toEqual(['*']);
+        expect(changedSpans(hunk.lines[20])).toEqual(['-']);
+        // The global matrix takes seconds on this input; the fallback is instant.
+        expect(elapsed).toBeLessThan(1000);
     });
 
     test('leaves a line with no counterpart unpaired', () => {

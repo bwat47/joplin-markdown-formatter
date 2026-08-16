@@ -62,11 +62,25 @@ const DEFAULT_CONTEXT_LINES = 3;
 const MIN_LINE_SIMILARITY = 0.3;
 
 /**
- * Global alignment compares every removed line with every added line. Keep the
- * matrix bounded so a pathological replacement cannot turn preview generation
- * into thousands of character-level diffs.
+ * Global alignment compares every removed line with every added line, so both
+ * the number of comparisons and their cost have to stay bounded: the preview is
+ * built synchronously while the user waits for the dialog.
+ *
+ * Cells cover the per-comparison overhead that a run of very short lines would
+ * otherwise multiply out.
  */
 const MAX_GLOBAL_ALIGNMENT_CELLS = 4096;
+
+/**
+ * Work covers the length-dependent half. One character diff costs roughly the
+ * product of the two line lengths, so a run's total is the product of each
+ * side's character count. The worst case is a run whose lines are all mutually
+ * dissimilar, since that is where `diffMain` does the most work; measured at
+ * this budget it stays under 200ms, and beyond it the greedy fallback stays
+ * linear. Without the bound, a 64-line replacement of 300-character paragraphs
+ * spends over five seconds diffing 4,032 pairs it will never use.
+ */
+const MAX_GLOBAL_ALIGNMENT_WORK = 4_000_000;
 
 /** Small preference for pairing a threshold-level match instead of leaving both lines unmatched. */
 const PAIRING_BONUS = 0.001;
@@ -260,12 +274,26 @@ function highlightReplacedLines(lines: DiffLine[]): void {
 
 function alignRuns(removed: DiffLine[], added: DiffLine[]): void {
     const getComparison = createPairComparisonGetter(removed, added);
-    if (removed.length * added.length > MAX_GLOBAL_ALIGNMENT_CELLS) {
-        alignRunsGreedily(removed, added, getComparison);
+    if (affordsGlobalAlignment(removed, added)) {
+        alignRunsGlobally(removed, added, getComparison);
         return;
     }
 
-    alignRunsGlobally(removed, added, getComparison);
+    alignRunsGreedily(removed, added, getComparison);
+}
+
+/** True when the full matrix fits both alignment budgets. */
+function affordsGlobalAlignment(removed: DiffLine[], added: DiffLine[]): boolean {
+    if (removed.length * added.length > MAX_GLOBAL_ALIGNMENT_CELLS) return false;
+    return totalTextLength(removed) * totalTextLength(added) <= MAX_GLOBAL_ALIGNMENT_WORK;
+}
+
+function totalTextLength(lines: DiffLine[]): number {
+    let total = 0;
+    for (const line of lines) {
+        for (const segment of line.segments) total += segment.text.length;
+    }
+    return total;
 }
 
 /**
@@ -415,13 +443,29 @@ function createPairComparisonGetter(removed: DiffLine[], added: DiffLine[]): Pai
 function comparePair(removeLine: DiffLine, addLine: DiffLine): PairComparison {
     const oldText = lineText(removeLine);
     const newText = lineText(addLine);
+
+    const longest = Math.max(oldText.length, newText.length);
+    if (longest === 0) return { diffs: [], score: 1 };
+
+    // No more than the shorter line can survive, so a pair whose lengths are
+    // too lopsided cannot reach the threshold and needs no character diff. The
+    // reported score is 0 rather than the true sub-threshold value, which every
+    // caller treats identically; the diff is the trivial one, and nothing reads
+    // it below the threshold.
+    if (Math.min(oldText.length, newText.length) / longest < MIN_LINE_SIMILARITY) {
+        return {
+            diffs: [
+                [DIFF_DELETE, oldText],
+                [DIFF_INSERT, newText],
+            ],
+            score: 0,
+        };
+    }
+
     const diffs = diffMain(oldText, newText);
     // Also drops coincidental equalities between unrelated lines, which would
     // otherwise inflate the score.
     diffCleanupSemantic(diffs);
-
-    const longest = Math.max(oldText.length, newText.length);
-    if (longest === 0) return { diffs, score: 1 };
 
     let equal = 0;
     for (const [op, text] of diffs) {
