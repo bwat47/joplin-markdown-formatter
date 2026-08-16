@@ -64,6 +64,51 @@ describe('computeLineDiff', () => {
         expect(changedSpans(hunk.lines[4])).toEqual(['  ', '  ']);
     });
 
+    test('skips multiple inserted lines before highlighting a later counterpart', () => {
+        const [hunk] = computeLineDiff(
+            'Target line before formatting\n',
+            'First unrelated insertion\nSecond unrelated insertion\nTarget line after formatting\n'
+        );
+
+        expect(changedSpans(hunk.lines[0])).toEqual(['before']);
+        expect(changedSpans(hunk.lines[1])).toEqual([]);
+        expect(changedSpans(hunk.lines[2])).toEqual([]);
+        expect(changedSpans(hunk.lines[3])).toEqual(['after']);
+    });
+
+    test('prefers a globally stronger alignment over an acceptable early match', () => {
+        const [hunk] = computeLineDiff(
+            'Item one value\nItem two value\n',
+            'Item zero value\nItem one value!\nItem two value!\n'
+        );
+
+        expect(changedSpans(hunk.lines[0])).toEqual([]);
+        expect(changedSpans(hunk.lines[1])).toEqual([]);
+        expect(changedSpans(hunk.lines[2])).toEqual([]);
+        expect(changedSpans(hunk.lines[3])).toEqual(['!']);
+        expect(changedSpans(hunk.lines[4])).toEqual(['!']);
+    });
+
+    test('preserves order when similar Markdown lines repeat', () => {
+        const [hunk] = computeLineDiff(
+            '* Repeated\n* Middle\n* Repeated\n',
+            '- Repeated\nInserted explanation\n- Middle\n- Repeated\n'
+        );
+
+        expect(hunk.lines.map(changedSpans)).toEqual([['*'], ['*'], ['*'], ['-'], [], ['-'], ['-']]);
+    });
+
+    test('retains highlighting when a replacement run exceeds the global alignment budget', () => {
+        const oldText = Array.from({ length: 65 }, (_, index) => `Old item ${index}`).join('\n') + '\n';
+        const newText = Array.from({ length: 65 }, (_, index) => `New item ${index}`).join('\n') + '\n';
+
+        const [hunk] = computeLineDiff(oldText, newText);
+
+        expect(hunk.lines).toHaveLength(130);
+        expect(changedSpans(hunk.lines[0])).toEqual(['Old']);
+        expect(changedSpans(hunk.lines[65])).toEqual(['New']);
+    });
+
     test('leaves a line with no counterpart unpaired', () => {
         const [hunk] = computeLineDiff('keep me\n', 'keep me\nbrand new line\n');
 

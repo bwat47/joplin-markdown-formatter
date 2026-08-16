@@ -61,10 +61,33 @@ const DEFAULT_CONTEXT_LINES = 3;
  */
 const MIN_LINE_SIMILARITY = 0.3;
 
+/**
+ * Global alignment compares every removed line with every added line. Keep the
+ * matrix bounded so a pathological replacement cannot turn preview generation
+ * into thousands of character-level diffs.
+ */
+const MAX_GLOBAL_ALIGNMENT_CELLS = 4096;
+
+/** Small preference for pairing a threshold-level match instead of leaving both lines unmatched. */
+const PAIRING_BONUS = 0.001;
+
 /** A diff line plus the position it occupies on the side that does not number it. */
 interface AnchoredLine extends DiffLine {
     oldAnchor: number;
     newAnchor: number;
+}
+
+interface PairComparison {
+    diffs: Diff[];
+    score: number;
+}
+
+type PairComparisonGetter = (removedIndex: number, addedIndex: number) => PairComparison;
+type AlignmentChoice = 'pair' | 'skipRemoved' | 'skipAdded';
+
+interface AlignedPair {
+    removedIndex: number;
+    addedIndex: number;
 }
 
 export function computeLineDiff(
@@ -235,17 +258,119 @@ function highlightReplacedLines(lines: DiffLine[]): void {
     }
 }
 
-/**
- * Walks both runs in order, pairing lines that look like edits of one another.
- * When the line under each cursor does not match, one lookahead step decides
- * which side to skip, so an inserted or deleted line does not push everything
- * after it out of alignment.
- */
 function alignRuns(removed: DiffLine[], added: DiffLine[]): void {
+    const getComparison = createPairComparisonGetter(removed, added);
+    if (removed.length * added.length > MAX_GLOBAL_ALIGNMENT_CELLS) {
+        alignRunsGreedily(removed, added, getComparison);
+        return;
+    }
+
+    alignRunsGlobally(removed, added, getComparison);
+}
+
+/**
+ * Finds the highest-confidence order-preserving set of line pairs across both
+ * runs. This avoids committing to an early weak match when a stronger match is
+ * available later, and can skip any number of inserted or deleted lines.
+ */
+function alignRunsGlobally(removed: DiffLine[], added: DiffLine[], getComparison: PairComparisonGetter): void {
+    const choices = buildAlignmentChoices(removed.length, added.length, getComparison);
+    const pairs = traceAlignedPairs(choices, removed.length, added.length);
+    for (const pair of pairs) {
+        applySegments(
+            removed[pair.removedIndex],
+            added[pair.addedIndex],
+            getComparison(pair.removedIndex, pair.addedIndex).diffs
+        );
+    }
+}
+
+/** Builds the dynamic-programming matrix used to select non-crossing pairs. */
+function buildAlignmentChoices(
+    removedCount: number,
+    addedCount: number,
+    getComparison: PairComparisonGetter
+): Array<Array<AlignmentChoice | null>> {
+    const scores = Array.from({ length: removedCount + 1 }, () => Array<number>(addedCount + 1).fill(0));
+    const choices = Array.from({ length: removedCount + 1 }, () =>
+        Array<AlignmentChoice | null>(addedCount + 1).fill(null)
+    );
+
+    for (let i = 1; i <= removedCount; i += 1) choices[i][0] = 'skipRemoved';
+    for (let j = 1; j <= addedCount; j += 1) choices[0][j] = 'skipAdded';
+
+    for (let i = 1; i <= removedCount; i += 1) {
+        for (let j = 1; j <= addedCount; j += 1) {
+            let bestScore = scores[i - 1][j];
+            let choice: AlignmentChoice = 'skipRemoved';
+
+            if (scores[i][j - 1] > bestScore) {
+                bestScore = scores[i][j - 1];
+                choice = 'skipAdded';
+            }
+
+            const comparison = getComparison(i - 1, j - 1);
+            const weight = pairingWeight(comparison.score);
+            if (weight !== null) {
+                const pairedScore = scores[i - 1][j - 1] + weight;
+                // Prefer a pair on a tie so equally good alignments retain the
+                // most useful character-level highlighting.
+                if (pairedScore >= bestScore) {
+                    bestScore = pairedScore;
+                    choice = 'pair';
+                }
+            }
+
+            scores[i][j] = bestScore;
+            choices[i][j] = choice;
+        }
+    }
+
+    return choices;
+}
+
+/** Walks the completed matrix backwards and returns the chosen pairs in source order. */
+function traceAlignedPairs(
+    choices: Array<Array<AlignmentChoice | null>>,
+    removedCount: number,
+    addedCount: number
+): AlignedPair[] {
+    let i = removedCount;
+    let j = addedCount;
+    const pairs: AlignedPair[] = [];
+    while (i > 0 || j > 0) {
+        const choice = choices[i][j];
+        if (choice === 'pair') {
+            pairs.push({ removedIndex: i - 1, addedIndex: j - 1 });
+            i -= 1;
+            j -= 1;
+        } else if (choice === 'skipRemoved') {
+            i -= 1;
+        } else {
+            j -= 1;
+        }
+    }
+
+    return pairs.reverse();
+}
+
+/**
+ * Strong matches are deliberately worth much more than marginal ones. This
+ * keeps several coincidental weak similarities from displacing an obvious
+ * counterpart later in the run.
+ */
+function pairingWeight(score: number): number | null {
+    if (score < MIN_LINE_SIMILARITY) return null;
+    const confidence = (score - MIN_LINE_SIMILARITY) / (1 - MIN_LINE_SIMILARITY);
+    return confidence * confidence + PAIRING_BONUS;
+}
+
+/** Linear fallback for replacement runs too large for the global matrix. */
+function alignRunsGreedily(removed: DiffLine[], added: DiffLine[], getComparison: PairComparisonGetter): void {
     let i = 0;
     let j = 0;
     while (i < removed.length && j < added.length) {
-        const pair = comparePair(removed[i], added[j]);
+        const pair = getComparison(i, j);
         if (pair.score >= MIN_LINE_SIMILARITY) {
             applySegments(removed[i], added[j], pair.diffs);
             i += 1;
@@ -253,8 +378,8 @@ function alignRuns(removed: DiffLine[], added: DiffLine[]): void {
             continue;
         }
 
-        const skipAdded = j + 1 < added.length ? comparePair(removed[i], added[j + 1]).score : 0;
-        const skipRemoved = i + 1 < removed.length ? comparePair(removed[i + 1], added[j]).score : 0;
+        const skipAdded = j + 1 < added.length ? getComparison(i, j + 1).score : 0;
+        const skipRemoved = i + 1 < removed.length ? getComparison(i + 1, j).score : 0;
         if (skipAdded >= MIN_LINE_SIMILARITY && skipAdded >= skipRemoved) {
             j += 1; // added[j] is a genuinely new line.
         } else if (skipRemoved >= MIN_LINE_SIMILARITY) {
@@ -266,12 +391,28 @@ function alignRuns(removed: DiffLine[], added: DiffLine[]): void {
     }
 }
 
+/** Memoizes character diffs because both alignment strategies may revisit a candidate pair. */
+function createPairComparisonGetter(removed: DiffLine[], added: DiffLine[]): PairComparisonGetter {
+    // Keep this sparse: the large-run fallback visits only a linear number of
+    // candidates and must not allocate the global matrix it is meant to avoid.
+    const cache = new Map<string, PairComparison>();
+    return (removedIndex: number, addedIndex: number): PairComparison => {
+        const key = `${removedIndex}:${addedIndex}`;
+        const cached = cache.get(key);
+        if (cached) return cached;
+
+        const comparison = comparePair(removed[removedIndex], added[addedIndex]);
+        cache.set(key, comparison);
+        return comparison;
+    };
+}
+
 /**
  * Diffs two lines and scores how much of the longer one survived unchanged.
  * The diff is returned alongside the score so an accepted pair does not have to
  * be diffed a second time.
  */
-function comparePair(removeLine: DiffLine, addLine: DiffLine): { diffs: Diff[]; score: number } {
+function comparePair(removeLine: DiffLine, addLine: DiffLine): PairComparison {
     const oldText = lineText(removeLine);
     const newText = lineText(addLine);
     const diffs = diffMain(oldText, newText);
