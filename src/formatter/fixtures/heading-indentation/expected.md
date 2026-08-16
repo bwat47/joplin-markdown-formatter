@@ -8,7 +8,7 @@
 
 - List item
 
-  # Heading inside a list
+	# Heading inside a list
 
 > ## Heading inside a blockquote
 
