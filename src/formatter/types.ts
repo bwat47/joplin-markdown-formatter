@@ -25,7 +25,7 @@ export interface FormatterOptions {
     collapseBlankLines: boolean;
     /** Trim trailing spaces/tabs outside protected ranges, preserving two-space hard line breaks. */
     trimTrailingWhitespace: boolean;
-    /** Ensure headings have one blank line before and after neighboring content. */
+    /** Ensure root-level headings have one blank line before and after neighboring content. */
     ensureHeadingBlankLines: boolean;
     /** Normalize whitespace between ATX heading markers and heading text to one space. */
     normalizeHeadingMarkerSpacing: boolean;
@@ -35,17 +35,17 @@ export interface FormatterOptions {
     removeHeadingIndentation: boolean;
     /** Ensure root-level paragraphs have one blank line before and after neighboring content. */
     ensureParagraphBlankLines: boolean;
-    /** Ensure code blocks have one blank line before and after neighboring content. */
+    /** Ensure root-level code blocks have one blank line before and after neighboring content. */
     ensureCodeBlockBlankLines: boolean;
     /** Add the configured default language to fenced code blocks that do not specify one. */
     setDefaultCodeBlockLanguage: boolean;
     /** Language identifier used when setDefaultCodeBlockLanguage is enabled. */
     defaultCodeBlockLanguage: string;
-    /** Ensure math blocks have one blank line before and after neighboring content. */
+    /** Ensure root-level math blocks have one blank line before and after neighboring content. */
     ensureMathBlockBlankLines: boolean;
-    /** Ensure tables have one blank line before and after neighboring content. */
+    /** Ensure root-level tables have one blank line before and after neighboring content. */
     ensureTableBlankLines: boolean;
-    /** Ensure blockquotes have one blank line before and after neighboring content. */
+    /** Ensure root-level blockquotes have one blank line before and after neighboring content. */
     ensureBlockquoteBlankLines: boolean;
     /** Ensure root-level lists have one blank line before and after neighboring content. */
     ensureListBlankLines: boolean;
@@ -63,6 +63,7 @@ export interface FormatterOptions {
     /**
      * Force lists tight or loose, keep each list's authored tight/loose
      * meaning while fixing mixed spacing (semantic), or leave spacing alone.
+     * This option also owns spacing between blocks inside list items.
      */
     listSpacing: ListSpacing;
     /** Indentation unit for nested list content. */
