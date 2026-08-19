@@ -30,6 +30,11 @@ interface CodeMirrorControlLike {
     registerCommand?(name: string, callback: (...args: unknown[]) => unknown): void;
 }
 
+/** Shape Joplin expects from a CodeMirror content script's default export. */
+export interface CodeMirrorContentScriptModule {
+    plugin: (codeMirror: CodeMirrorControlLike) => void;
+}
+
 /**
  * Diffs `oldText` against `newText` and returns one change span per edited
  * region, with `from`/`to` addressed in `oldText` coordinates — the shape
@@ -68,7 +73,7 @@ export function computeChanges(oldText: string, newText: string): ChangeSpec[] {
     return changes;
 }
 
-export default () => {
+export default (): CodeMirrorContentScriptModule => {
     return {
         plugin: (codeMirror: CodeMirrorControlLike) => {
             // The legacy CodeMirror 5 editor passes a different wrapper; skip it.
