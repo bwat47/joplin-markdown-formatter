@@ -53,15 +53,15 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Link text spacing | All | Collapse excess internal whitespace and trim leading/trailing spaces inside link text, including reference links. `All` also turns line breaks (soft and hard) into a space so labels stay on one line; `spaces` removes excess whitespace but preserves line breaks; `preserve` leaves link text unchanged. Inline code inside link text and image alt text are never changed. |
 | Set default language on unlabeled code blocks | Off | Add the configured default language to fenced code blocks with no language. Indented code blocks are left unchanged. |
 | Default code block language | `txt` | Language identifier to add when the default code block language rule is enabled. |
-| List spacing | Semantic | `Semantic` keeps each list tight or loose as authored and only fixes mixed spacing, so rendering never changes. `Preserve`, `tight`, and `loose` are also available. |
+| List spacing | Semantic | `Semantic` keeps each list tight or loose as authored and only fixes mixed spacing, so rendering never changes. This setting also controls spacing between blocks inside list items; the individual block-spacing settings only affect root-level blocks. `Preserve`, `tight`, and `loose` are also available. |
 | List indentation | Tabs | Indentation used before nested list markers (tabs, 2 spaces, 4 spaces). |
 | Table style | Preserve | `Compact` rebuilds cells with one space of padding; `aligned` pads cells so pipes line up. `Preserve` leaves tables unchanged. |
-| Ensure blank lines around headings | On | Add one blank line before and after headings with neighboring content. |
+| Ensure blank lines around headings | On | Add one blank line before and after root-level headings with neighboring content. |
 | Ensure blank lines around paragraphs | On | Add one blank line before and after root-level paragraphs with neighboring content. |
-| Ensure blank lines around code blocks | On | Add one blank line before and after code blocks with neighboring content. |
-| Ensure blank lines around math blocks | On | Add one blank line before and after math blocks with neighboring content. |
-| Ensure blank lines around tables | On | Add one blank line before and after tables with neighboring content. |
-| Ensure blank lines around blockquotes | On | Add one blank line before and after blockquotes with neighboring content. Quote interiors are never rewritten. |
+| Ensure blank lines around code blocks | On | Add one blank line before and after root-level code blocks with neighboring content. |
+| Ensure blank lines around math blocks | On | Add one blank line before and after root-level math blocks with neighboring content. |
+| Ensure blank lines around tables | On | Add one blank line before and after root-level tables with neighboring content. |
+| Ensure blank lines around blockquotes | On | Add one blank line before and after root-level blockquotes with neighboring content. Quote interiors are never rewritten. |
 | Normalize blockquote marker spacing | On | Use one space between blockquote `>` markers and quoted content, and between markers in nested quotes (`>>` becomes `> >`). Content requiring exact indentation (e.g. code inside the quote) and lists inside blockquotes are left unchanged. |
 | Ensure blank lines around lists | On | Add one blank line before and after root-level lists when neighboring content exists. |
 | Ensure blank line after front matter | On | Add one blank line between YAML front matter and following content. |

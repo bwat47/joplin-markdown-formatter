@@ -1,9 +1,10 @@
 import { createBlockSpacingRule } from './blockSpacing';
 
 /**
- * Ensure tables have exactly one blank line around them when neighboring
- * content exists. Blockquote tables are left alone because ordinary blank
- * lines split the quote.
+ * Ensure root-level tables have exactly one blank line around them when
+ * neighboring content exists. Tables inside lists and blockquotes are left to
+ * listSpacing and to the author, because a blank line there changes rendering
+ * rather than just layout.
  *
  * Per GFM, a pipeless text line directly below a table is still a table row
  * (only a blank line or a new block construct ends the table), and the parsed

@@ -32,7 +32,6 @@ TestAbove
 > Quote two stays separate
 
 - List item
-
 	> Quoted in list
 	Trailing list paragraph
 

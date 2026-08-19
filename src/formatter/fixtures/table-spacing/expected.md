@@ -26,7 +26,6 @@ Pipeless line is still a table row
 ## Heading ends the table
 
 - List item
-
 	| g | h |
 	| - | - |
 	| 7 | 8 |

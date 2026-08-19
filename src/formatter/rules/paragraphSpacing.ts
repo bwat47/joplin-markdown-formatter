@@ -9,7 +9,4 @@ export const paragraphSpacing = createBlockSpacingRule({
     name: 'paragraphSpacing',
     option: 'ensureParagraphBlankLines',
     nodeType: 'paragraph',
-    shouldSpace(_node, ancestors) {
-        return ancestors.length === 1 && ancestors[0].type === 'root';
-    },
 });

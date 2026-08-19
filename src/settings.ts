@@ -175,7 +175,7 @@ export async function registerSettings(): Promise<void> {
             },
             label: 'List spacing',
             description:
-                'Semantic keeps each list tight or loose as authored and only makes mixed spacing consistent, so rendering never changes. Note: Tightening is skipped for a whole list when any item holds multi-block content (e.g. a second paragraph)',
+                'Semantic keeps each list tight or loose as authored and only makes mixed spacing consistent, so rendering never changes. This setting also controls spacing between blocks inside list items; the individual block-spacing settings only affect root-level blocks. Note: Tightening is skipped for a whole list when any item holds multi-block content (e.g. a second paragraph)',
         },
         indentation: {
             value: DEFAULT_OPTIONS.indentation,
@@ -216,7 +216,7 @@ export async function registerSettings(): Promise<void> {
             section: SECTION,
             public: true,
             label: 'Ensure blank lines around headings',
-            description: 'Add one blank line before and after headings when neighboring content exists.',
+            description: 'Add one blank line before and after root-level headings when neighboring content exists.',
         },
         normalizeHeadingMarkerSpacing: {
             value: DEFAULT_OPTIONS.normalizeHeadingMarkerSpacing,
@@ -250,7 +250,7 @@ export async function registerSettings(): Promise<void> {
             section: SECTION,
             public: true,
             label: 'Ensure blank lines around code blocks',
-            description: 'Add one blank line before and after code blocks when neighboring content exists.',
+            description: 'Add one blank line before and after root-level code blocks when neighboring content exists.',
         },
         setDefaultCodeBlockLanguage: {
             value: DEFAULT_OPTIONS.setDefaultCodeBlockLanguage,
@@ -276,7 +276,7 @@ export async function registerSettings(): Promise<void> {
             section: SECTION,
             public: true,
             label: 'Ensure blank lines around math blocks',
-            description: 'Add one blank line before and after math blocks when neighboring content exists.',
+            description: 'Add one blank line before and after root-level math blocks when neighboring content exists.',
         },
         ensureTableBlankLines: {
             value: DEFAULT_OPTIONS.ensureTableBlankLines,
@@ -284,7 +284,7 @@ export async function registerSettings(): Promise<void> {
             section: SECTION,
             public: true,
             label: 'Ensure blank lines around tables',
-            description: 'Add one blank line before and after tables when neighboring content exists.',
+            description: 'Add one blank line before and after root-level tables when neighboring content exists.',
         },
         ensureBlockquoteBlankLines: {
             value: DEFAULT_OPTIONS.ensureBlockquoteBlankLines,
@@ -292,7 +292,7 @@ export async function registerSettings(): Promise<void> {
             section: SECTION,
             public: true,
             label: 'Ensure blank lines around blockquotes',
-            description: 'Add one blank line before and after blockquotes when neighboring content exists.',
+            description: 'Add one blank line before and after root-level blockquotes when neighboring content exists.',
         },
         normalizeBlockquoteMarkerSpacing: {
             value: DEFAULT_OPTIONS.normalizeBlockquoteMarkerSpacing,

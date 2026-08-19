@@ -10,9 +10,7 @@ Subtitle
 --------
 
 - List intro
-
 	### Nested heading
-
 	Nested body.
 
 > Quoted intro
