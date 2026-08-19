@@ -10,17 +10,24 @@ interface BlockSpacingConfig {
     option: keyof FormatterOptions;
     /** mdast node type to space, e.g. `'heading'` or `'code'`. */
     nodeType: string;
-    /** Optional guard for node kinds that need tighter scoping. */
-    shouldSpace?: (node: Node, ancestors: Node[]) => boolean;
+}
+
+/** True when the visited node is a direct child of the document root. */
+function isRootLevel(ancestors: readonly Node[]): boolean {
+    return ancestors.length === 1 && ancestors[0].type === 'root';
 }
 
 /**
  * Build a rule that ensures a given block node type has exactly one blank line
- * around it when neighboring content exists. Blockquote occurrences are left
- * alone because inserting ordinary blank lines there splits the quote into
- * separate blockquotes.
+ * around it when neighboring content exists.
+ *
+ * Only blocks at the document root are spaced, because inside a container a
+ * blank line is never free: in a blockquote it splits the quote in two, and in
+ * a list item it turns the whole list from tight to loose. Blank lines inside
+ * list items therefore belong to listSpacing, which owns tight/loose and
+ * already spaces the blocks of a loose item.
  */
-export function createBlockSpacingRule({ name, option, nodeType, shouldSpace }: BlockSpacingConfig): Rule {
+export function createBlockSpacingRule({ name, option, nodeType }: BlockSpacingConfig): Rule {
     return {
         name,
 
@@ -35,8 +42,7 @@ export function createBlockSpacingRule({ name, option, nodeType, shouldSpace }: 
 
             walkWithAncestors(tree, (node, ancestors) => {
                 if (node.type !== nodeType) return;
-                if (ancestors.some((ancestor) => ancestor.type === 'blockquote')) return;
-                if (shouldSpace && !shouldSpace(node, ancestors)) return;
+                if (!isRootLevel(ancestors)) return;
                 const start = node.position?.start?.offset;
                 const end = node.position?.end?.offset;
                 if (start === undefined || end === undefined) return;

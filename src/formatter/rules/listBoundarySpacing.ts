@@ -9,7 +9,4 @@ export const listBoundarySpacing = createBlockSpacingRule({
     name: 'listBoundarySpacing',
     option: 'ensureListBlankLines',
     nodeType: 'list',
-    shouldSpace(_node, ancestors) {
-        return ancestors.length === 1 && ancestors[0].type === 'root';
-    },
 });

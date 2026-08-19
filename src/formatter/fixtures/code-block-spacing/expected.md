@@ -26,11 +26,9 @@ Indented code:
 After indented code
 
 - List item
-
 	```json
 	{"ok": true}
 	```
-
 	Following list paragraph.
 
 > Quoted before

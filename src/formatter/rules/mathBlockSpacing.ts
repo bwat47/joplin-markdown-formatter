@@ -1,9 +1,10 @@
 import { createBlockSpacingRule } from './blockSpacing';
 
 /**
- * Ensure math blocks have exactly one blank line around them when neighboring
- * content exists. Blockquote math blocks are left alone because ordinary blank
- * lines split the quote.
+ * Ensure root-level math blocks have exactly one blank line around them when
+ * neighboring content exists. Math blocks inside lists and blockquotes are
+ * left to listSpacing and to the author, because a blank line there changes
+ * rendering rather than just layout.
  */
 export const mathBlockSpacing = createBlockSpacingRule({
     name: 'mathBlockSpacing',
