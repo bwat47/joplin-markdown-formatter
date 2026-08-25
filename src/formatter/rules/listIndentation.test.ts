@@ -1,11 +1,9 @@
-import { formatMarkdown } from '../pipeline';
+import { expectIdempotent } from '../testUtils';
 import type { Indentation } from '../types';
 
 const format = (input: string, indentation: Indentation): string => {
-    const result = formatMarkdown(input, { indentation, ensureFinalNewline: false });
+    const result = expectIdempotent(input, { indentation, ensureFinalNewline: false });
     expect(result.skippedRules).toEqual([]);
-    // Formatting the output again must be a no-op, or notes churn on every run.
-    expect(formatMarkdown(result.text, { indentation, ensureFinalNewline: false }).text).toBe(result.text);
     return result.text;
 };
 

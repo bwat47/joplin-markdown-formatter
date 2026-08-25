@@ -1,11 +1,11 @@
-import { formatMarkdown } from '../pipeline';
+import { expectIdempotent } from '../testUtils';
 
 const options = {
     collapseBlankLines: false,
     ensureFinalNewline: false,
 };
 
-const format = (input: string): string => formatMarkdown(input, options).text;
+const format = (input: string): string => expectIdempotent(input, options).text;
 
 describe('linkTextSpacing', () => {
     test('trims leading and trailing whitespace inside link text', () => {
@@ -37,7 +37,7 @@ describe('linkTextSpacing', () => {
 
     test('trims whitespace-only boundary nodes around inline content', () => {
         const input = '[ *bold* and `code` ](https://www.example.com/)';
-        const result = formatMarkdown(input, options);
+        const result = expectIdempotent(input, options);
         expect(result.text).toBe('[*bold* and `code`](https://www.example.com/)');
         expect(result.skippedRules).not.toContain('linkTextSpacing');
     });
@@ -45,7 +45,7 @@ describe('linkTextSpacing', () => {
     test('trims whitespace-only boundary nodes in reference-link text', () => {
         const input = ['[ *bold* ][ref]', '', '[ref]: https://www.example.com/'].join('\n');
         const expected = ['[*bold*][ref]', '', '[ref]: https://www.example.com/'].join('\n');
-        const result = formatMarkdown(input, options);
+        const result = expectIdempotent(input, options);
         expect(result.text).toBe(expected);
         expect(result.skippedRules).not.toContain('linkTextSpacing');
     });
@@ -72,11 +72,11 @@ describe('linkTextSpacing', () => {
 
     test('is a no-op when set to preserve', () => {
         const input = '[ a link ](https://www.example.com/)';
-        expect(formatMarkdown(input, { ...options, linkTextSpacing: 'preserve' }).text).toBe(input);
+        expect(expectIdempotent(input, { ...options, linkTextSpacing: 'preserve' }).text).toBe(input);
     });
 
     test('is not dropped by structural verification', () => {
-        const result = formatMarkdown('[ a link ](https://www.example.com/)', options);
+        const result = expectIdempotent('[ a link ](https://www.example.com/)', options);
         expect(result.skippedRules).not.toContain('linkTextSpacing');
         expect(result.text).toBe('[a link](https://www.example.com/)');
     });
@@ -185,7 +185,7 @@ describe('linkTextSpacing', () => {
         });
 
         test('is not dropped by structural verification', () => {
-            const result = formatMarkdown('[a  \nb](https://www.example.com/)', options);
+            const result = expectIdempotent('[a  \nb](https://www.example.com/)', options);
             expect(result.skippedRules).not.toContain('linkTextSpacing');
             expect(result.text).toBe('[a b](https://www.example.com/)');
         });
@@ -201,7 +201,7 @@ describe('linkTextSpacing', () => {
         // are left alone.
         test('leaves a multi-line link as written', () => {
             const input = '> [a  \n> b](https://www.example.com/)';
-            const result = formatMarkdown(input, options);
+            const result = expectIdempotent(input, options);
             expect(result.text).toBe(input);
             expect(result.skippedRules).not.toContain('linkTextSpacing');
         });
@@ -217,7 +217,7 @@ describe('linkTextSpacing', () => {
             const expected = ['> [a  ', '> b](https://www.example.com/)', '', '[c d](https://www.example.com/)'].join(
                 '\n'
             );
-            const result = formatMarkdown(input, options);
+            const result = expectIdempotent(input, options);
             expect(result.text).toBe(expected);
             expect(result.skippedRules).not.toContain('linkTextSpacing');
         });
@@ -225,7 +225,7 @@ describe('linkTextSpacing', () => {
 
     describe("'spaces' mode", () => {
         const formatSpaces = (input: string): string =>
-            formatMarkdown(input, { ...options, linkTextSpacing: 'spaces' }).text;
+            expectIdempotent(input, { ...options, linkTextSpacing: 'spaces' }).text;
 
         test('collapses and trims whitespace within a line', () => {
             expect(formatSpaces('[  a   link  ](https://www.example.com/)')).toBe('[a link](https://www.example.com/)');
@@ -237,14 +237,14 @@ describe('linkTextSpacing', () => {
 
         test('leaves a soft line break as written', () => {
             const input = '[a\nb](https://www.example.com/)';
-            const result = formatMarkdown(input, { ...options, linkTextSpacing: 'spaces' });
+            const result = expectIdempotent(input, { ...options, linkTextSpacing: 'spaces' });
             expect(result.text).toBe(input);
             expect(result.skippedRules).not.toContain('linkTextSpacing');
         });
 
         test('leaves a hard line break as written', () => {
             const input = '[a  \nb](https://www.example.com/)';
-            const result = formatMarkdown(input, {
+            const result = expectIdempotent(input, {
                 ...options,
                 linkTextSpacing: 'spaces',
                 trimTrailingWhitespace: false,
@@ -257,7 +257,7 @@ describe('linkTextSpacing', () => {
             // The space before the break and the indentation after it are part of
             // the same whitespace run as the break itself, so all of it is frozen.
             const input = '[a **b** \n   c](https://www.example.com/)';
-            const result = formatMarkdown(input, {
+            const result = expectIdempotent(input, {
                 ...options,
                 linkTextSpacing: 'spaces',
                 trimTrailingWhitespace: false,
@@ -274,7 +274,7 @@ describe('linkTextSpacing', () => {
         test('normalizes each line of a multi-line label', () => {
             const input = '[  a **google     link** \ntext123             ](https://www.example.com/)';
             const expected = '[a **google link**\ntext123](https://www.example.com/)';
-            const result = formatMarkdown(input, { ...options, linkTextSpacing: 'spaces' });
+            const result = expectIdempotent(input, { ...options, linkTextSpacing: 'spaces' });
             expect(result.text).toBe(expected);
             expect(result.skippedRules).not.toContain('linkTextSpacing');
         });
@@ -287,7 +287,7 @@ describe('linkTextSpacing', () => {
             // The indentation before `]` is part of the same run as the break, so
             // trimming at the bracket must not nibble at it.
             const input = '[a\n  ](https://www.example.com/)';
-            const result = formatMarkdown(input, {
+            const result = expectIdempotent(input, {
                 ...options,
                 linkTextSpacing: 'spaces',
                 trimTrailingWhitespace: false,
