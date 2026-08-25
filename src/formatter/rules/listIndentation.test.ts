@@ -45,6 +45,12 @@ const cases: Case[] = [
         expected: '1. item\n    continued',
     },
     {
+        name: 'normalizes an outer continuation after a nested list marker changes indentation style',
+        indentation: 'spaces4',
+        input: '- Before\n\t* child\n\t* sibling\n\tAfter\n- sibling item',
+        expected: '- Before\n    - child\n    - sibling\n    After\n- sibling item',
+    },
+    {
         name: 'snaps a continuation to the tab stop when marker spacing changes its column',
         indentation: 'tabs',
         input: '1.  item\n\tcontinued',

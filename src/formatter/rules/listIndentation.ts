@@ -142,6 +142,14 @@ function processList(ctx: ListContext, list: List, depth: number, parentContentC
         ctx.actions.set(layout.markerLine, layout.marker);
         const structuralLines = structuralIndentLines(ctx.lineStarts, item);
         for (let line = layout.markerLine + 1; line <= layout.lastLine; line++) {
+            const start = ctx.lineStarts[line];
+            const end = ctx.lineStarts[line + 1] ?? ctx.text.length;
+            const whitespace = /^[ \t]*/.exec(ctx.text.slice(start, end))![0];
+            // A lazy continuation belongs to this item syntactically but sits
+            // outside its content column. Leave any action assigned by the
+            // parent item in place so outer structural indentation can still
+            // be normalized when a nested marker's prefix changes style.
+            if (!isBlankLine(ctx.text, start, end) && columnWidth(whitespace) < layout.shift.oldContentCol) continue;
             ctx.actions.set(line, { ...layout.shift, structuralIndent: structuralLines.has(line) });
         }
 
