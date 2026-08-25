@@ -20,7 +20,8 @@ Read CodeMirror buffer ---> Load settings
 
 The major areas are:
 
-- [`src/index.ts`](../src/index.ts): coordinates the Joplin command, settings, preview, notifications, and error handling.
+- [`src/index.ts`](../src/index.ts): registers the command, menus, toolbar, and content script, and binds the command's dependencies to Joplin's APIs.
+- [`src/formatNoteCommand.ts`](../src/formatNoteCommand.ts): coordinates one command run across settings, formatting, preview, notifications, and error handling, against those dependencies rather than Joplin directly.
 - [`src/contentScripts/`](../src/contentScripts/): reads and updates the live CodeMirror editor buffer.
 - [`src/formatter/`](../src/formatter/): pure, Joplin-independent formatting engine.
 - [`src/diffPreview/`](../src/diffPreview/): computes and renders the optional review dialog.
@@ -67,7 +68,7 @@ Some valid Markdown constructs are intentionally left unchanged when their white
 
 ## Joplin integration
 
-The plugin registers the `formatMarkdownNote` command and exposes it in the Edit menu and editor toolbar. On each invocation it:
+The plugin registers the `formatMarkdownNote` command and exposes it in the Edit menu and editor toolbar. Its body is [`executeFormatMarkdownNote`](../src/formatNoteCommand.ts), which takes every Joplin touchpoint as an injected dependency so the flow can be tested without the host. On each invocation it:
 
 1. Reads the live editor text and current settings.
 2. Runs the pure formatter.
