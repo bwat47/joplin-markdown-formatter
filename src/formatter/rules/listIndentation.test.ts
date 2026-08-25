@@ -51,6 +51,14 @@ const cases: Case[] = [
         expected: '- Before\n    - child\n    - sibling\n    After\n- sibling item',
     },
     {
+        // `After` starts as a lazy continuation of the final child. Moving the
+        // child markers left makes it a regular continuation in the same pass.
+        name: 'normalizes a lazy continuation against the rewritten child content column',
+        indentation: 'tabs',
+        input: '1. Before\n      - child\n      - sibling\n      After\n2. next',
+        expected: '1. Before\n\t- child\n\t- sibling\n\t\tAfter\n2. next',
+    },
+    {
         // The nested list narrows from column 6 to column 4, so keeping the
         // paragraph's two extra columns would hand it to `- sibling`.
         name: 'clamps a block after a nested list that narrows onto it',

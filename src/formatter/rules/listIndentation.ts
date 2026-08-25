@@ -192,18 +192,25 @@ function continuationShifts(
     for (let line = layout.markerLine + 1; line <= layout.lastLine; line++) {
         const start = ctx.lineStarts[line];
         const end = ctx.lineStarts[line + 1] ?? ctx.text.length;
+        const blank = isBlankLine(ctx.text, start, end);
+        const wsCols = columnWidth(leadingWhitespace(ctx.text, start, end));
+        const wasLazy = isLazyContinuation(ctx.text, start, end, layout.shift.oldContentCol);
+        const structuralIndent = structuralLines.has(line);
         // Leave any action assigned by the parent item in place, so outer
         // structural indentation can still be normalized when a nested
-        // marker's prefix changes style.
-        if (isLazyContinuation(ctx.text, start, end, layout.shift.oldContentCol)) continue;
+        // marker's prefix changes style. A structural line that stops being
+        // lazy when the marker moves left is normalized against that rewritten
+        // content column now, rather than waiting for a second formatting pass.
+        // Literal content stays under the parent's action because its leading
+        // whitespace is part of its value.
+        if (wasLazy && (!structuralIndent || wsCols < layout.newContentCol)) continue;
 
-        const structuralIndent = structuralLines.has(line);
         const nestedContentCol = nestedContentColAt(nested, line);
-        if (!structuralIndent && !isBlankLine(ctx.text, start, end)) {
-            const wsCols = columnWidth(leadingWhitespace(ctx.text, start, end));
-            if (shiftedContentCol(layout.shift, wsCols, false) >= nestedContentCol) return null;
+        const shift = wasLazy ? { ...layout.shift, oldContentCol: layout.newContentCol } : layout.shift;
+        if (!structuralIndent && !blank) {
+            if (shiftedContentCol(shift, wsCols, false) >= nestedContentCol) return null;
         }
-        shifts.set(line, { ...layout.shift, structuralIndent, nestedContentCol });
+        shifts.set(line, { ...shift, structuralIndent, nestedContentCol });
     }
     return shifts;
 }
