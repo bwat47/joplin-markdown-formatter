@@ -59,6 +59,24 @@ const cases: Case[] = [
         expected: '1. Before\n\t- child\n\t- sibling\n\t\tAfter\n2. next',
     },
     {
+        // `hard break` stays a lazy continuation once the markers move, so it
+        // keeps its column and only its prefix is restyled. Letting the outer
+        // item shift it instead would land it on the inner item's content
+        // column, and a second pass would then re-render it as whole tabs.
+        name: 'holds a still-lazy continuation at its own column',
+        indentation: 'tabs',
+        input: '3) Item\n    + Item\n\n      10.   Item\n          hard break',
+        expected: '3) Item\n\t- Item\n\n\t\t10. Item\n\t\t  hard break',
+    },
+    {
+        // Both lines are lazy continuations of the same paragraph. Shifting
+        // one of them without the other would split the paragraph in two.
+        name: 'holds every lazy line of a block at its own column',
+        indentation: 'tabs',
+        input: '+ I\n  +  I\n| a | b |\n    |---|---|',
+        expected: '- I\n\t- I\n| a | b |\n\t|---|---|',
+    },
+    {
         // The nested list narrows from column 6 to column 4, so keeping the
         // paragraph's two extra columns would hand it to `- sibling`.
         name: 'clamps a block after a nested list that narrows onto it',

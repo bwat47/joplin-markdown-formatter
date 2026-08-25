@@ -202,14 +202,22 @@ function continuationShifts(
         const wsCols = columnWidth(leadingWhitespace(ctx.text, start, end));
         const wasLazy = isLazyContinuation(ctx.text, start, end, layout.shift.oldContentCol);
         const structuralIndent = structuralLines.has(line);
-        // Leave any action assigned by the parent item in place, so outer
-        // structural indentation can still be normalized when a nested
-        // marker's prefix changes style. A structural line that stops being
-        // lazy when the marker moves left is normalized against that rewritten
-        // content column now, rather than waiting for a second formatting pass.
-        // Literal content stays under the parent's action because its leading
-        // whitespace is part of its value.
-        if (wasLazy && (!structuralIndent || wsCols < layout.newContentCol)) continue;
+        // Literal content the item does not own stays under the parent's
+        // action, because its leading whitespace is part of its value.
+        if (wasLazy && !structuralIndent) continue;
+        // A structural line the item still would not own after the rewrite
+        // holds its column, and only has its prefix re-rendered in the
+        // configured style. Leaving it to the parent's action instead would
+        // move it: the parent shifts a line only once it clears the *parent's*
+        // content column, which within one block can be true of some lines and
+        // not others, and a line that moved right would be owned on the next
+        // pass. A line that stops being lazy when the marker moves left is
+        // normalized against that rewritten content column now, rather than
+        // waiting for a second formatting pass.
+        if (wasLazy && wsCols < layout.newContentCol) {
+            shifts.set(line, holdInPlace(wsCols));
+            continue;
+        }
 
         const nestedContentCol = nestedContentColAt(nested, line);
         const shift = wasLazy ? { ...layout.shift, oldContentCol: layout.newContentCol } : layout.shift;
@@ -219,6 +227,18 @@ function continuationShifts(
         shifts.set(line, { ...shift, structuralIndent, nestedContentCol });
     }
     return shifts;
+}
+
+/** A shift that re-renders a line's indentation in the configured style without moving it. */
+function holdInPlace(wsCols: number): ShiftAction {
+    return {
+        kind: 'shift',
+        oldContentCol: wsCols,
+        targetCol: wsCols,
+        snapToTarget: false,
+        structuralIndent: true,
+        nestedContentCol: Infinity,
+    };
 }
 
 /** The lines a nested list occupies, and the leftmost content column it will occupy once rewritten. */
