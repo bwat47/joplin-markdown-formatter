@@ -51,6 +51,27 @@ const cases: Case[] = [
         expected: '- Before\n    - child\n    - sibling\n    After\n- sibling item',
     },
     {
+        // The nested list narrows from column 6 to column 4, so keeping the
+        // paragraph's two extra columns would hand it to `- sibling`.
+        name: 'clamps a block after a nested list that narrows onto it',
+        indentation: 'spaces2',
+        input: '- Before\n\n\t* child\n\t* sibling\n\n\tAfter\n- sibling item',
+        expected: '- Before\n\n  - child\n  - sibling\n\n  After\n\n- sibling item',
+    },
+    {
+        name: 'clamps a blockquote after a nested list that narrows onto it',
+        indentation: 'spaces2',
+        input: '- Before\n\n\t* child\n\n\t> quoted\n- sibling item',
+        expected: '- Before\n\n  - child\n\n  > quoted\n\n- sibling item',
+    },
+    {
+        // Column 5 leaves room for the paragraph, so its extra column stays.
+        name: 'leaves a block alone when the nested list stays right of it',
+        indentation: 'spaces2',
+        input: '- Before\n\n\t1. child\n\n\tAfter\n- sibling item',
+        expected: '- Before\n\n  1. child\n\n    After\n\n- sibling item',
+    },
+    {
         name: 'snaps a continuation to the tab stop when marker spacing changes its column',
         indentation: 'tabs',
         input: '1.  item\n\tcontinued',
