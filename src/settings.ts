@@ -185,7 +185,8 @@ export async function registerSettings(): Promise<void> {
             isEnum: true,
             options: { tabs: 'Tabs', spaces2: '2 spaces', spaces4: '4 spaces' },
             label: 'List indentation',
-            description: 'Indentation used for nested list content, applied before the list marker.',
+            description:
+                'Preferred indentation before nested list markers. It may be widened to preserve CommonMark nesting; for example, 2 spaces becomes 3 beneath `1.` and 4 beneath `10.`.',
         },
         tableStyle: {
             value: DEFAULT_OPTIONS.tableStyle,
