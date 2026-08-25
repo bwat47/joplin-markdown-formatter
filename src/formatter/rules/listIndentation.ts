@@ -144,12 +144,10 @@ function processList(ctx: ListContext, list: List, depth: number, parentContentC
         for (let line = layout.markerLine + 1; line <= layout.lastLine; line++) {
             const start = ctx.lineStarts[line];
             const end = ctx.lineStarts[line + 1] ?? ctx.text.length;
-            const whitespace = /^[ \t]*/.exec(ctx.text.slice(start, end))![0];
-            // A lazy continuation belongs to this item syntactically but sits
-            // outside its content column. Leave any action assigned by the
-            // parent item in place so outer structural indentation can still
-            // be normalized when a nested marker's prefix changes style.
-            if (!isBlankLine(ctx.text, start, end) && columnWidth(whitespace) < layout.shift.oldContentCol) continue;
+            // Leave any action assigned by the parent item in place, so outer
+            // structural indentation can still be normalized when a nested
+            // marker's prefix changes style.
+            if (isLazyContinuation(ctx.text, start, end, layout.shift.oldContentCol)) continue;
             ctx.actions.set(line, { ...layout.shift, structuralIndent: structuralLines.has(line) });
         }
 
@@ -305,6 +303,22 @@ function matchMarker(text: string, list: List, startOffset: number): string | nu
     return match ? match[0] : null;
 }
 
+/** The leading spaces and tabs of the line spanning `[start, end)`. */
+function leadingWhitespace(text: string, start: number, end: number): string {
+    return /^[ \t]*/.exec(text.slice(start, end))![0];
+}
+
+/**
+ * True when a non-blank line is indented less than `contentCol`: it is a lazy
+ * continuation, belonging to the item syntactically while sitting outside its
+ * content column, so the item does not own that indentation. A blank line
+ * carries no indentation to compare and is never lazy.
+ */
+function isLazyContinuation(text: string, start: number, end: number, contentCol: number): boolean {
+    if (isBlankLine(text, start, end)) return false;
+    return columnWidth(leadingWhitespace(text, start, end)) < contentCol;
+}
+
 /** First offset at or after `offset` that is not a space or tab. */
 function skipSpaces(text: string, offset: number): number {
     let i = offset;
@@ -334,10 +348,9 @@ function shiftEdit(text: string, start: number, end: number, action: ShiftAction
     ) {
         return null;
     }
-    const ws = /^[ \t]*/.exec(text.slice(start, end))![0];
+    if (isLazyContinuation(text, start, end, action.oldContentCol)) return null;
+    const ws = leadingWhitespace(text, start, end);
     const wsCols = columnWidth(ws);
-    // Lazy continuation lines (indented less than the content column) stay as written.
-    if (wsCols < action.oldContentCol) return null;
     // A structural prefix is indentation end to end: snapped onto the target
     // when that is a tab stop, otherwise shifted with its extra columns intact.
     // Literal-content blocks always keep the tail beyond the old content
