@@ -91,10 +91,10 @@ interface ListContext {
  * are processed. An item whose blocks cannot take the rounding (an indented
  * code block or raw HTML, among the cases in {@link canRoundToTabStop}) keeps
  * the exact content column, so in tabs mode its continuation prefixes mix tabs
- * and spaces where that column is not a tab stop. An item is left exactly as
- * written when a nested list would narrow onto a literal-content block after
- * it, since the columns past the content column are part of that block's value
- * and cannot be clamped away.
+ * and spaces where that column is not a tab stop. A whole list is left exactly
+ * as written when one of its items cannot move -- a nested list narrowing onto
+ * a literal-content block after it, say, whose columns past the content column
+ * are part of that block's value and cannot be clamped away.
  */
 export const listIndentation: Rule = {
     name: 'listIndentation',
@@ -148,16 +148,22 @@ function processList(ctx: ListContext, list: List, depth: number, parentContentC
 
     const indentCols = listIndentCols(ctx, depth, parentContentCol);
 
+    // Every item is measured before any is rewritten. An item left as written
+    // among re-indented siblings changes what the list means, and the
+    // structural check then drops the rule for the whole document -- so one
+    // item that cannot move (a literal-content block a nested list would
+    // capture, among the cases in {@link measureItem}) leaves the whole list
+    // as written, exactly as a mid-line list does.
+    const planned: { item: ListItem; layout: ItemLayout; shifts: Map<number, ShiftAction> }[] = [];
     for (const item of list.children as ListItem[]) {
         const layout = measureItem(ctx, list, item, indentCols);
-        if (!layout) continue;
-
+        if (!layout) return;
         const shifts = continuationShifts(ctx, item, layout, depth);
-        // A literal-content block the nested list would capture cannot be
-        // clamped out of its way, so the item is left exactly as written --
-        // marker, continuations, and nested lists alike.
-        if (!shifts) continue;
+        if (!shifts) return;
+        planned.push({ item, layout, shifts });
+    }
 
+    for (const { item, layout, shifts } of planned) {
         ctx.actions.set(layout.markerLine, layout.marker);
         for (const [line, action] of shifts) ctx.actions.set(line, action);
 
@@ -177,7 +183,7 @@ function processList(ctx: ListContext, list: List, depth: number, parentContentC
  * means. Structural indentation is clamped back to the item's own content
  * column, which is always left of a nested list's; a literal-content block
  * cannot be clamped -- the columns past the content column are part of its
- * value -- so the item is left alone instead.
+ * value -- so the whole list is left alone instead.
  */
 function continuationShifts(
     ctx: ListContext,

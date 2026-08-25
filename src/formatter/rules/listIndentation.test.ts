@@ -260,6 +260,19 @@ describe('list indentation', () => {
         expect(format(input, indentation)).toBe(expected);
     });
 
+    // The nested `1.` item cannot move: narrowing it would bring its content
+    // column onto the indented code block after it. Re-indenting its siblings
+    // around it would change what the document means, and the structural check
+    // would then drop every edit the rule made anywhere in the note -- so the
+    // whole list stays as written and the rest of the note is still formatted.
+    test('leaves a whole list as written rather than moving part of it', () => {
+        const input = '3) I\n   -  I\n     * I\n       1. I\n       ```\n          indented code';
+
+        expect(format(input, 'spaces2')).toBe(
+            '3) I\n   -  I\n     - I\n       1. I\n       ```\n          indented code'
+        );
+    });
+
     // A code fence under a `- ` marker cannot be re-rendered as a tab: the
     // content column is narrower than the tab width, and the columns past it
     // may belong to the code. Everything structural does make the trip back.
