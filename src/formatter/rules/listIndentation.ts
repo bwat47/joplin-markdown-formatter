@@ -2,6 +2,7 @@ import type { List, ListItem, Root } from 'mdast';
 import type { Edit, Rule, RuleContext } from '../types';
 import type { Indentation } from '../types';
 import { computeLineStarts, isBlankLine, lineIndexOfOffset, columnWidth, indentBeyondColumn } from '../lines';
+import { getProtectedRanges, intersectsProtectedRange, type OffsetRange } from '../protectedRanges';
 
 interface MarkerAction {
     kind: 'marker';
@@ -21,9 +22,20 @@ interface ShiftAction {
     snapToTarget: boolean;
     /** True when the line's leading whitespace is container indentation end to end. */
     structuralIndent: boolean;
+    /**
+     * Content column of a nested list opening earlier in the item, which this
+     * line must stay left of to keep belonging to the item; `Infinity` when no
+     * such list precedes it.
+     */
+    nestedContentCol: number;
 }
 
-type LineAction = MarkerAction | ShiftAction;
+interface PreserveAction {
+    kind: 'preserve';
+}
+
+type ContinuationAction = ShiftAction | PreserveAction;
+type LineAction = MarkerAction | ContinuationAction;
 
 /** Columns a tab spans; CommonMark's tab stop, and what `columnWidth` assumes. */
 const TAB_COLS = 4;
@@ -33,8 +45,8 @@ interface ItemLayout {
     markerLine: number;
     lastLine: number;
     marker: MarkerAction;
-    /** Item-wide part of every continuation line's shift; the per-line flag is added in `processList`. */
-    shift: Omit<ShiftAction, 'structuralIndent'>;
+    /** Item-wide part of every continuation line's shift; the per-line fields are added in `continuationShifts`. */
+    shift: Omit<ShiftAction, 'structuralIndent' | 'nestedContentCol'>;
     /** Content column of the rewritten item, i.e. where a nested list may start. */
     newContentCol: number;
 }
@@ -45,6 +57,7 @@ interface ListContext {
     /** Columns of indentation per nesting level. */
     unitCols: number;
     style: Indentation;
+    protectedRanges: OffsetRange[];
     // Innermost assignment wins: parents fill their whole span first,
     // then recursion into nested lists overwrites the nested lines.
     actions: Map<number, LineAction>;
@@ -74,14 +87,21 @@ interface ListContext {
  *
  * CommonMark guard: a child list's marker must sit at or beyond the parent
  * item's content column to stay nested (a 2-space unit under a `10. ` marker
- * would break out), so the computed indent is bumped up when needed.
+ * would break out), so the computed indent is bumped up when needed. The
+ * mirror of it applies to blocks after a nested list: narrowing the list can
+ * bring its content column back onto a later block of the *outer* item, which
+ * would capture that block, so such a block is clamped to the item's own
+ * content column (see {@link continuationShifts}).
  *
  * Limitations (documented in ARCHITECTURE.md): lists inside blockquotes or
  * footnote definitions are left untouched — only lists at the document root
  * are processed. An item whose blocks cannot take the rounding (an indented
  * code block or raw HTML, among the cases in {@link canRoundToTabStop}) keeps
  * the exact content column, so in tabs mode its continuation prefixes mix tabs
- * and spaces where that column is not a tab stop.
+ * and spaces where that column is not a tab stop. A whole list is left exactly
+ * as written when one of its items cannot move -- a nested list narrowing onto
+ * a literal-content block after it, say, whose columns past the content column
+ * are part of that block's value and cannot be clamped away.
  */
 export const listIndentation: Rule = {
     name: 'listIndentation',
@@ -97,6 +117,7 @@ export const listIndentation: Rule = {
 
         const edits: Edit[] = [];
         for (const [line, action] of actions) {
+            if (action.kind === 'preserve') continue;
             const start = lineStarts[line];
             const end = lineStarts[line + 1] ?? text.length;
             const edit =
@@ -117,7 +138,14 @@ function collectActions(
     unitCols: number,
     style: Indentation
 ): Map<number, LineAction> {
-    const ctx: ListContext = { text, lineStarts, unitCols, style, actions: new Map() };
+    const ctx: ListContext = {
+        text,
+        lineStarts,
+        unitCols,
+        style,
+        protectedRanges: getProtectedRanges(tree),
+        actions: new Map(),
+    };
     for (const child of tree.children) {
         if (child.type === 'list') processList(ctx, child, 0, 0);
     }
@@ -135,20 +163,168 @@ function processList(ctx: ListContext, list: List, depth: number, parentContentC
 
     const indentCols = listIndentCols(ctx, depth, parentContentCol);
 
+    // Every item is measured before any is rewritten. An item left as written
+    // among re-indented siblings changes what the list means, and the
+    // structural check then drops the rule for the whole document -- so one
+    // item that cannot move (a literal-content block a nested list would
+    // capture, among the cases in {@link measureItem}) leaves the whole list
+    // as written, exactly as a mid-line list does.
+    const planned: { item: ListItem; layout: ItemLayout; shifts: Map<number, ContinuationAction> }[] = [];
     for (const item of list.children as ListItem[]) {
         const layout = measureItem(ctx, list, item, indentCols);
-        if (!layout) continue;
+        if (!layout) return;
+        const shifts = continuationShifts(ctx, item, layout, depth);
+        if (!shifts) return;
+        planned.push({ item, layout, shifts });
+    }
 
+    for (const { item, layout, shifts } of planned) {
         ctx.actions.set(layout.markerLine, layout.marker);
-        const structuralLines = structuralIndentLines(ctx.lineStarts, item);
-        for (let line = layout.markerLine + 1; line <= layout.lastLine; line++) {
-            ctx.actions.set(line, { ...layout.shift, structuralIndent: structuralLines.has(line) });
-        }
+        for (const [line, action] of shifts) ctx.actions.set(line, action);
 
         for (const child of item.children) {
             if (child.type === 'list') processList(ctx, child, depth + 1, layout.newContentCol);
         }
     }
+}
+
+/**
+ * The shift each continuation line of `item` needs, or null when the item must
+ * be left as written.
+ *
+ * A nested list rewritten to a narrower indent can end up with its content
+ * column at or left of where a following block of the *outer* item lands,
+ * which would hand that block to the nested item and change what the document
+ * means. Structural indentation is clamped back to the item's own content
+ * column, which is always left of a nested list's; a literal-content block
+ * cannot be clamped -- the columns past the content column are part of its
+ * value -- so the whole list is left alone instead.
+ */
+function continuationShifts(
+    ctx: ListContext,
+    item: ListItem,
+    layout: ItemLayout,
+    depth: number
+): Map<number, ContinuationAction> | null {
+    const structuralLines = structuralIndentLines(ctx.lineStarts, item);
+    const nested = nestedListSpans(ctx, item, depth, layout.newContentCol);
+    const shifts = new Map<number, ContinuationAction>();
+
+    for (let line = layout.markerLine + 1; line <= layout.lastLine; line++) {
+        const start = ctx.lineStarts[line];
+        const end = ctx.lineStarts[line + 1] ?? ctx.text.length;
+        const blank = isBlankLine(ctx.text, start, end);
+        const ws = leadingWhitespace(ctx.text, start, end);
+        const wsCols = columnWidth(ws);
+        const wasLazy = isLazyContinuation(ctx.text, start, end, layout.shift.oldContentCol);
+        const structuralIndent = structuralLines.has(line);
+        // Literal content the item does not own stays under the parent's
+        // action, because its leading whitespace is part of its value.
+        if (wasLazy && !structuralIndent) continue;
+        // A structural line the item still would not own after the rewrite
+        // holds its column. Its prefix is re-rendered in the configured style
+        // unless that prefix is literal content inside a protected node, in
+        // which case a no-op action holds it byte-for-byte while still
+        // overriding the parent's action. Leaving either line to the parent
+        // would move it: the parent shifts a line only once it clears the
+        // *parent's* content column, which within one block can be true of some
+        // lines and not others, and a line that moved right would be owned on
+        // the next pass. A line that stops being lazy when the marker moves
+        // left is normalized against that rewritten content column now,
+        // rather than waiting for a second formatting pass.
+        if (wasLazy && wsCols < layout.newContentCol) {
+            shifts.set(line, holdInPlace(ctx, start, ws, wsCols));
+            continue;
+        }
+
+        const nestedContentCol = nestedContentColAt(nested, line);
+        const shift = wasLazy ? { ...layout.shift, oldContentCol: layout.newContentCol } : layout.shift;
+        if (!structuralIndent && !blank) {
+            if (shiftedContentCol(shift, wsCols, false) >= nestedContentCol) return null;
+        }
+        shifts.set(line, { ...shift, structuralIndent, nestedContentCol });
+    }
+    return shifts;
+}
+
+/** Hold a line at its current column, preserving a protected prefix byte-for-byte. */
+function holdInPlace(ctx: ListContext, start: number, ws: string, wsCols: number): ContinuationAction {
+    if (intersectsProtectedRange(ctx.protectedRanges, start, start + ws.length)) return { kind: 'preserve' };
+    return {
+        kind: 'shift',
+        oldContentCol: wsCols,
+        targetCol: wsCols,
+        snapToTarget: false,
+        structuralIndent: true,
+        nestedContentCol: Infinity,
+    };
+}
+
+/** The lines a nested list occupies, and the leftmost content column it will occupy once rewritten. */
+interface NestedListSpan {
+    fromLine: number;
+    toLine: number;
+    /** `Infinity` for a list recursion leaves as written, whose geometry does not move. */
+    contentCol: number;
+}
+
+/** Every nested list directly inside `item`, measured where recursion will put it. */
+function nestedListSpans(ctx: ListContext, item: ListItem, depth: number, parentContentCol: number): NestedListSpan[] {
+    const spans: NestedListSpan[] = [];
+    for (const child of item.children) {
+        if (child.type !== 'list') continue;
+        const startOffset = child.position?.start?.offset;
+        const endOffset = child.position?.end?.offset;
+        if (startOffset === undefined || endOffset === undefined) continue;
+
+        const rewritten = !startsMidLine(ctx.text, ctx.lineStarts, child);
+        const indentCols = listIndentCols(ctx, depth + 1, parentContentCol);
+        spans.push({
+            fromLine: lineIndexOfOffset(ctx.lineStarts, startOffset),
+            toLine: lineIndexOfOffset(ctx.lineStarts, Math.max(endOffset - 1, startOffset)),
+            contentCol: rewritten ? narrowestContentCol(ctx, child, indentCols) : Infinity,
+        });
+    }
+    return spans;
+}
+
+/**
+ * The content column `line` must stay left of: the leftmost of every nested
+ * list that has already closed above it. A line inside a nested list is that
+ * list's own business — recursion rewrites it — and a line above them all is
+ * unconstrained.
+ */
+function nestedContentColAt(spans: NestedListSpan[], line: number): number {
+    let limit = Infinity;
+    for (const span of spans) {
+        if (line >= span.fromLine && line <= span.toLine) return Infinity;
+        if (line > span.toLine) limit = Math.min(limit, span.contentCol);
+    }
+    return limit;
+}
+
+/** The leftmost content column any item of `list` occupies once indented to `indentCols`. */
+function narrowestContentCol(ctx: ListContext, list: List, indentCols: number): number {
+    let narrowest = Infinity;
+    for (const item of list.children as ListItem[]) {
+        const startOffset = item.position?.start?.offset;
+        if (startOffset === undefined) continue;
+        const marker = matchMarker(ctx.text, list, startOffset);
+        if (marker !== null) narrowest = Math.min(narrowest, indentCols + marker.length + 1);
+    }
+    return narrowest;
+}
+
+/** Column a continuation line's content lands on once shifted. */
+function shiftedContentCol(
+    shift: Omit<ShiftAction, 'structuralIndent' | 'nestedContentCol'>,
+    wsCols: number,
+    structuralIndent: boolean
+): number {
+    // Only a structural prefix is re-rendered onto the tab stop; a literal
+    // block keeps its tail, so it moves by the change in content column.
+    if (structuralIndent && shift.snapToTarget) return shift.targetCol;
+    return wsCols - shift.oldContentCol + shift.targetCol;
 }
 
 /**
@@ -297,6 +473,22 @@ function matchMarker(text: string, list: List, startOffset: number): string | nu
     return match ? match[0] : null;
 }
 
+/** The leading spaces and tabs of the line spanning `[start, end)`. */
+function leadingWhitespace(text: string, start: number, end: number): string {
+    return /^[ \t]*/.exec(text.slice(start, end))![0];
+}
+
+/**
+ * True when a non-blank line is indented less than `contentCol`: it is a lazy
+ * continuation, belonging to the item syntactically while sitting outside its
+ * content column, so the item does not own that indentation. A blank line
+ * carries no indentation to compare and is never lazy.
+ */
+function isLazyContinuation(text: string, start: number, end: number, contentCol: number): boolean {
+    if (isBlankLine(text, start, end)) return false;
+    return columnWidth(leadingWhitespace(text, start, end)) < contentCol;
+}
+
 /** First offset at or after `offset` that is not a space or tab. */
 function skipSpaces(text: string, offset: number): number {
     let i = offset;
@@ -326,15 +518,19 @@ function shiftEdit(text: string, start: number, end: number, action: ShiftAction
     ) {
         return null;
     }
-    const ws = /^[ \t]*/.exec(text.slice(start, end))![0];
+    if (isLazyContinuation(text, start, end, action.oldContentCol)) return null;
+    const ws = leadingWhitespace(text, start, end);
     const wsCols = columnWidth(ws);
-    // Lazy continuation lines (indented less than the content column) stay as written.
-    if (wsCols < action.oldContentCol) return null;
     // A structural prefix is indentation end to end: snapped onto the target
-    // when that is a tab stop, otherwise shifted with its extra columns intact.
-    // Literal-content blocks always keep the tail beyond the old content
-    // column verbatim, so the block's own indentation survives.
-    const structuralCols = action.snapToTarget ? action.targetCol : wsCols - action.oldContentCol + action.targetCol;
+    // when that is a tab stop, otherwise shifted with its extra columns intact
+    // — but never so far that a nested list opening earlier in the item would
+    // capture the block. The item's own content column is always left of that
+    // list's, so it is a safe fallback. Literal-content blocks always keep the
+    // tail beyond the old content column verbatim, so the block's own
+    // indentation survives; one that would be captured never reaches here
+    // (see {@link continuationShifts}).
+    const shifted = shiftedContentCol(action, wsCols, action.structuralIndent);
+    const structuralCols = shifted < action.nestedContentCol ? shifted : action.targetCol;
     const newWs = action.structuralIndent
         ? makeIndent(structuralCols, style)
         : makeIndent(action.targetCol, style) + indentBeyondColumn(ws, action.oldContentCol);

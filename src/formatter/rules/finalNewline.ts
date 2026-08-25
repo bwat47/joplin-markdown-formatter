@@ -32,6 +32,12 @@ export const finalNewline: Rule = {
             if (range.end > cut) cut = Math.min(range.end, text.length);
         }
 
+        // An open literal block can own the whitespace all the way through
+        // EOF. Once it already ends in a line break, appending another one is
+        // both unnecessary and structurally unsafe -- the safety check drops
+        // the edit -- so leave it at this clean fixed point. A protected block
+        // that merely reaches past the trailing run still gets trimmed below.
+        if (cut === text.length && text.endsWith('\n')) return [];
         if (text.slice(cut) === '\n') return [];
         return [{ start: cut, end: text.length, replacement: '\n' }];
     },

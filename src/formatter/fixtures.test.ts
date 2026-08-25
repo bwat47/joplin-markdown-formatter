@@ -12,7 +12,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { formatMarkdown } from './pipeline';
+import { expectIdempotent } from './testUtils';
 import type { FormatterOptions } from './types';
 
 const fixturesDir = path.join(process.cwd(), 'src', 'formatter', 'fixtures');
@@ -33,9 +33,90 @@ describe('formatMarkdown fixtures', () => {
             ? JSON.parse(fs.readFileSync(optionsPath, 'utf8'))
             : {};
 
-        const result = formatMarkdown(input, options);
+        const result = expectIdempotent(input, options);
         expect(result.text).toBe(expected);
         expect(result.skippedRules).toEqual([]);
-        expect(formatMarkdown(result.text, options).text).toBe(result.text);
+    });
+});
+
+interface IdempotencyProfile {
+    name: string;
+    options: Partial<FormatterOptions>;
+}
+
+const idempotencyProfiles: IdempotencyProfile[] = [
+    { name: 'defaults', options: {} },
+    {
+        name: 'preserving modes',
+        options: {
+            unorderedListMarker: 'preserve',
+            doubleQuoteStyle: 'preserve',
+            singleQuoteStyle: 'preserve',
+            linkTextSpacing: 'preserve',
+            listSpacing: 'preserve',
+            tableStyle: 'preserve',
+            normalizeOrderedListNumbering: false,
+            normalizeHeadingLevels: false,
+        },
+    },
+    {
+        name: 'compact tight two-space layout',
+        options: {
+            indentation: 'spaces2',
+            listSpacing: 'tight',
+            tableStyle: 'compact',
+            linkTextSpacing: 'spaces',
+            minimumHeadingLevel: 'h2',
+            thematicBreakMarker: '---',
+        },
+    },
+    {
+        name: 'aligned loose four-space layout',
+        options: {
+            indentation: 'spaces4',
+            listSpacing: 'loose',
+            tableStyle: 'aligned',
+            minimumHeadingLevel: 'firstHeading',
+            thematicBreakMarker: '- - -',
+            setDefaultCodeBlockLanguage: true,
+            defaultCodeBlockLanguage: 'text',
+        },
+    },
+    {
+        name: 'alternate inline and marker styles',
+        options: {
+            unorderedListMarker: '*',
+            thematicBreakMarker: '***',
+            emphasisMarker: '_',
+            strongMarker: '__',
+            doubleQuoteStyle: 'smart',
+            singleQuoteStyle: 'straight',
+        },
+    },
+    {
+        name: 'spacing disabled',
+        options: {
+            collapseBlankLines: false,
+            trimTrailingWhitespace: false,
+            ensureHeadingBlankLines: false,
+            ensureParagraphBlankLines: false,
+            ensureCodeBlockBlankLines: false,
+            ensureMathBlockBlankLines: false,
+            ensureTableBlankLines: false,
+            ensureBlockquoteBlankLines: false,
+            ensureListBlankLines: false,
+            ensureFrontmatterBlankLine: false,
+            ensureFinalNewline: false,
+        },
+    },
+];
+
+const profileCases = caseNames.flatMap((caseName) => idempotencyProfiles.map((profile) => ({ caseName, profile })));
+
+describe('formatMarkdown fixture option profiles', () => {
+    test.each(profileCases)('$caseName — $profile.name', ({ caseName, profile }) => {
+        const input = fs.readFileSync(path.join(fixturesDir, caseName, 'input.md'), 'utf8');
+
+        expect(expectIdempotent(input, profile.options).skippedRules).toEqual([]);
     });
 });

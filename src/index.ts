@@ -1,11 +1,35 @@
 import joplin from 'api';
 import { ContentScriptType, MenuItemLocation, ToastType, ToolbarButtonLocation } from 'api/types';
-import { computeCharacterChangeStats, formatCharacterChangeStats } from './changeStats';
 import { EDITOR_CONTENT_SCRIPT_ID, GET_NOTE_TEXT_COMMAND, SET_NOTE_TEXT_COMMAND } from './constants';
 import { confirmFormattingChanges, registerDiffPreviewDialog } from './diffPreview/dialog';
-import { formatMarkdown } from './formatter';
+import { executeFormatMarkdownNote, type FormatNoteCommandDependencies } from './formatNoteCommand';
 import { loadDisplayToastMessages, loadFormatterOptions, loadShowDiffPreview, registerSettings } from './settings';
 import logger from './logger';
+
+const formatNoteCommandDependencies: FormatNoteCommandDependencies = {
+    readEditorText: async () =>
+        joplin.commands.execute('editor.execCommand', {
+            name: GET_NOTE_TEXT_COMMAND,
+        }),
+    // Replace via the content script so the change is a normal CodeMirror
+    // transaction (undoable), not an editor reload.
+    writeEditorText: async (expectedText, formattedText) =>
+        joplin.commands.execute('editor.execCommand', {
+            name: SET_NOTE_TEXT_COMMAND,
+            args: [expectedText, formattedText],
+        }),
+    loadFormatterOptions,
+    loadDisplayToastMessages,
+    loadShowDiffPreview,
+    confirmChanges: confirmFormattingChanges,
+    showToast: async (toast) => {
+        await joplin.views.dialogs.showToast({
+            message: toast.message,
+            type: toast.type === 'info' ? ToastType.Info : ToastType.Success,
+        });
+    },
+    logger,
+};
 
 joplin.plugins.register({
     onStart: async function () {
@@ -22,63 +46,7 @@ joplin.plugins.register({
             name: 'formatMarkdownNote',
             label: 'Format Markdown',
             iconName: 'fas fa-align-left',
-            execute: async () => {
-                try {
-                    const currentText = await joplin.commands.execute('editor.execCommand', {
-                        name: GET_NOTE_TEXT_COMMAND,
-                    });
-                    if (typeof currentText !== 'string') {
-                        logger.warn('Could not read editor text; formatting skipped.');
-                        return;
-                    }
-
-                    const [options, displayToastMessages, showDiffPreview] = await Promise.all([
-                        loadFormatterOptions(),
-                        loadDisplayToastMessages(),
-                        loadShowDiffPreview(),
-                    ]);
-                    const result = formatMarkdown(currentText, options);
-                    if (result.skippedRules.length > 0) {
-                        logger.warn('Rules skipped by the structural safety check:', result.skippedRules.join(', '));
-                    }
-                    if (result.text === currentText) {
-                        logger.debug('Note already formatted; no changes.');
-                        if (displayToastMessages) {
-                            await joplin.views.dialogs.showToast({
-                                message: 'No formatting changes needed.',
-                                type: ToastType.Info,
-                            });
-                        }
-                        return;
-                    }
-                    if (showDiffPreview) {
-                        const confirmed = await confirmFormattingChanges(currentText, result.text, result.skippedRules);
-                        if (!confirmed) {
-                            logger.debug('Formatting cancelled from the diff preview.');
-                            return;
-                        }
-                    }
-                    // Replace via the content script so the change is a normal
-                    // CodeMirror transaction (undoable), not an editor reload.
-                    const didUpdate = await joplin.commands.execute('editor.execCommand', {
-                        name: SET_NOTE_TEXT_COMMAND,
-                        args: [currentText, result.text],
-                    });
-                    if (didUpdate !== true) {
-                        logger.warn('Editor text changed before formatted text could be applied; write skipped.');
-                        return;
-                    }
-                    if (displayToastMessages) {
-                        const stats = computeCharacterChangeStats(currentText, result.text);
-                        await joplin.views.dialogs.showToast({
-                            message: `Markdown formatted. ${formatCharacterChangeStats(stats)}.`,
-                            type: ToastType.Success,
-                        });
-                    }
-                } catch (error) {
-                    logger.error('Formatting failed; note left unchanged.', error);
-                }
-            },
+            execute: async () => executeFormatMarkdownNote(formatNoteCommandDependencies),
         });
 
         await joplin.views.menuItems.create('formatMarkdownNoteMenuItem', 'formatMarkdownNote', MenuItemLocation.Edit, {

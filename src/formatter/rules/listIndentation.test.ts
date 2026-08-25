@@ -1,11 +1,9 @@
-import { formatMarkdown } from '../pipeline';
+import { expectIdempotent } from '../testUtils';
 import type { Indentation } from '../types';
 
 const format = (input: string, indentation: Indentation): string => {
-    const result = formatMarkdown(input, { indentation, ensureFinalNewline: false });
+    const result = expectIdempotent(input, { indentation, ensureFinalNewline: false });
     expect(result.skippedRules).toEqual([]);
-    // Formatting the output again must be a no-op, or notes churn on every run.
-    expect(formatMarkdown(result.text, { indentation, ensureFinalNewline: false }).text).toBe(result.text);
     return result.text;
 };
 
@@ -45,6 +43,70 @@ const cases: Case[] = [
         indentation: 'spaces4',
         input: '1. item\n\tcontinued',
         expected: '1. item\n    continued',
+    },
+    {
+        name: 'normalizes an outer continuation after a nested list marker changes indentation style',
+        indentation: 'spaces4',
+        input: '- Before\n\t* child\n\t* sibling\n\tAfter\n- sibling item',
+        expected: '- Before\n    - child\n    - sibling\n    After\n- sibling item',
+    },
+    {
+        // `After` starts as a lazy continuation of the final child. Moving the
+        // child markers left makes it a regular continuation in the same pass.
+        name: 'normalizes a lazy continuation against the rewritten child content column',
+        indentation: 'tabs',
+        input: '1. Before\n      - child\n      - sibling\n      After\n2. next',
+        expected: '1. Before\n\t- child\n\t- sibling\n\t\tAfter\n2. next',
+    },
+    {
+        // `hard break` stays a lazy continuation once the markers move, so it
+        // keeps its column and only its prefix is restyled. Letting the outer
+        // item shift it instead would land it on the inner item's content
+        // column, and a second pass would then re-render it as whole tabs.
+        name: 'holds a still-lazy continuation at its own column',
+        indentation: 'tabs',
+        input: '3) Item\n    + Item\n\n      10.   Item\n          hard break',
+        expected: '3) Item\n\t- Item\n\n\t\t10. Item\n\t\t  hard break',
+    },
+    {
+        // Both lines are lazy continuations of the same paragraph. Shifting
+        // one of them without the other would split the paragraph in two.
+        name: 'holds every lazy line of a block at its own column',
+        indentation: 'tabs',
+        input: '+ I\n  +  I\n| a | b |\n    |---|---|',
+        expected: '- I\n\t- I\n| a | b |\n\t|---|---|',
+    },
+    {
+        // The apparent child markers and backticks are lazy paragraph text
+        // under the wide marker. Their prefixes may be restyled, except where
+        // the whitespace itself belongs to the multiline inline-code value.
+        // Those protected prefixes stay byte-for-byte unchanged without
+        // causing list indentation elsewhere in the note to be discarded.
+        name: 'preserves protected prefixes in a held lazy paragraph',
+        indentation: 'tabs',
+        input: '100. outer\n    - child\n    - sibling\n    ```\n    code\n    ```\n\n- other\n   - nested',
+        expected: '100. outer\n\t- child\n\t- sibling\n\t```\n    code\n    ```\n\n- other\n\t- nested',
+    },
+    {
+        // The nested list narrows from column 6 to column 4, so keeping the
+        // paragraph's two extra columns would hand it to `- sibling`.
+        name: 'clamps a block after a nested list that narrows onto it',
+        indentation: 'spaces2',
+        input: '- Before\n\n\t* child\n\t* sibling\n\n\tAfter\n- sibling item',
+        expected: '- Before\n\n  - child\n  - sibling\n\n  After\n\n- sibling item',
+    },
+    {
+        name: 'clamps a blockquote after a nested list that narrows onto it',
+        indentation: 'spaces2',
+        input: '- Before\n\n\t* child\n\n\t> quoted\n- sibling item',
+        expected: '- Before\n\n  - child\n\n  > quoted\n\n- sibling item',
+    },
+    {
+        // Column 5 leaves room for the paragraph, so its extra column stays.
+        name: 'leaves a block alone when the nested list stays right of it',
+        indentation: 'spaces2',
+        input: '- Before\n\n\t1. child\n\n\tAfter\n- sibling item',
+        expected: '- Before\n\n  1. child\n\n    After\n\n- sibling item',
     },
     {
         name: 'snaps a continuation to the tab stop when marker spacing changes its column',
@@ -225,6 +287,19 @@ describe('list indentation', () => {
 
     test.each(wideMarkerCases)('$name', ({ indentation, input, expected }) => {
         expect(format(input, indentation)).toBe(expected);
+    });
+
+    // The nested `1.` item cannot move: narrowing it would bring its content
+    // column onto the indented code block after it. Re-indenting its siblings
+    // around it would change what the document means, and the structural check
+    // would then drop every edit the rule made anywhere in the note -- so the
+    // whole list stays as written and the rest of the note is still formatted.
+    test('leaves a whole list as written rather than moving part of it', () => {
+        const input = '3) I\n   -  I\n     * I\n       1. I\n       ```\n          indented code';
+
+        expect(format(input, 'spaces2')).toBe(
+            '3) I\n   -  I\n     - I\n       1. I\n       ```\n          indented code'
+        );
     });
 
     // A code fence under a `- ` marker cannot be re-rendered as a tab: the
