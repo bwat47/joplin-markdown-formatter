@@ -62,7 +62,7 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Ensure blank lines around math blocks | On | Add one blank line before and after root-level math blocks with neighboring content. |
 | Ensure blank lines around tables | On | Add one blank line before and after root-level tables with neighboring content. |
 | Ensure blank lines around blockquotes | On | Add one blank line before and after root-level blockquotes with neighboring content. Quote interiors are never rewritten. |
-| Normalize blockquote marker spacing | On | Use one space between blockquote `>` markers and quoted content, and between markers in nested quotes (`>>` becomes `> >`). Content requiring exact indentation (e.g. code inside the quote) and lists inside blockquotes are left unchanged. |
+| Normalize blockquote marker spacing | On | Use one space between blockquote `>` markers and quoted content, and between markers in nested quotes (`>>` becomes `> >`). A blockquote is left entirely unchanged if any of its lines cannot be rewritten safely (code or other literal content requiring exact indentation, or a list inside the quote), so a single quote never ends up with mixed marker spacing. |
 | Ensure blank lines around lists | On | Add one blank line before and after root-level lists when neighboring content exists. |
 | Ensure blank line after front matter | On | Add one blank line between YAML front matter and following content. |
 | Collapse consecutive blank lines | On | Reduce runs of blank lines to one blank line outside protected content. |

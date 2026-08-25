@@ -17,17 +17,26 @@ const TAB_SIZE = 4;
  * last marker and the quoted content. Indentation before the first marker
  * is left as written.
  *
- * Three kinds of content make blind collapsing unsafe, so all are left alone:
- * - Literal content (code, HTML, math, front matter) protected by
- *   {@link getProtectedRanges}, which can rely on exact indentation.
- * - Lines inside a list nested in a blockquote, where a continuation line's
- *   indentation determines which list item it belongs to (same exemption
- *   `listIndentation` already makes for lists inside blockquotes).
- * - A line where content right after the marker(s) itself starts with `>`:
- *   the parser only treats that `>` as a further nesting level within a
- *   tight column budget (see {@link matchMarkerPrefix}), so shrinking the
- *   gap in front of it could turn literal quoted text into a new nesting
- *   level on the next parse.
+ * Normalization is all-or-nothing per outermost blockquote: if any of its
+ * lines cannot be touched, the entire quote is left as written. Rewriting
+ * only the touchable lines would leave one quote with two marker styles
+ * (`> > ` on the line opening a fenced code block, `>>` on the fenced lines
+ * below it), which is worse than leaving the quote alone.
+ *
+ * A line cannot be touched when:
+ * - Its marker prefix sits inside literal content (code, HTML, math, front
+ *   matter) protected by {@link getProtectedRanges}, which can rely on exact
+ *   indentation — the interior and closing lines of a fenced code block
+ *   quoted line by line, for instance.
+ * - It belongs to a list nested in the blockquote, where a continuation
+ *   line's indentation determines which list item it belongs to (same
+ *   exemption `listIndentation` already makes for lists inside blockquotes).
+ *
+ * One case is left alone line by line rather than quote-wide: content right
+ * after the marker(s) that itself starts with `>`. The parser only treats
+ * that `>` as a further nesting level within a tight column budget (see
+ * {@link matchMarkerPrefix}), so shrinking the gap in front of it could turn
+ * literal quoted text into a new nesting level on the next parse.
  */
 export const blockquoteMarkerSpacing: Rule = {
     name: 'blockquoteMarkerSpacing',
@@ -41,7 +50,7 @@ export const blockquoteMarkerSpacing: Rule = {
         const lineStarts = computeLineStarts(text);
         const lineEnd = (i: number): number => lineStarts[i + 1] ?? text.length;
         const protectedRanges = getProtectedRanges(tree);
-        const skipLines = collectListLines(tree, lineStarts);
+        const listLines = collectListLines(tree, lineStarts);
 
         walkWithAncestors(tree, (node, ancestors) => {
             if (node.type !== 'blockquote') return;
@@ -54,10 +63,15 @@ export const blockquoteMarkerSpacing: Rule = {
             const firstLine = lineIndexOfOffset(lineStarts, start);
             const lastLine = lineIndexOfOffset(lineStarts, Math.max(start, end - 1));
 
+            const quoteEdits: Edit[] = [];
             for (let line = firstLine; line <= lastLine; line++) {
-                if (skipLines.has(line)) continue;
-                addLineEdits(text, lineStarts[line], lineEnd(line), protectedRanges, addEdit);
+                if (listLines.has(line)) return; // untouchable line: leave the whole quote as written
+                const lineEdits = collectLineEdits(text, lineStarts[line], lineEnd(line), protectedRanges);
+                if (lineEdits === null) return;
+                quoteEdits.push(...lineEdits);
             }
+
+            for (const edit of quoteEdits) addEdit(edit);
         });
 
         return edits;
@@ -158,15 +172,19 @@ function matchMarkerPrefix(text: string, lineStart: number, lineEnd: number): Ma
     return markers;
 }
 
-function addLineEdits(
+/**
+ * Edits normalizing one line's marker prefix, or `null` when the line's
+ * markers sit inside protected literal content and cannot be rewritten — in
+ * which case the caller leaves the whole blockquote alone.
+ */
+function collectLineEdits(
     text: string,
     lineStart: number,
     lineEndOffset: number,
-    protectedRanges: OffsetRange[],
-    addEdit: (edit: Edit) => void
-): void {
+    protectedRanges: OffsetRange[]
+): Edit[] | null {
     const markers = matchMarkerPrefix(text, lineStart, lineEndOffset);
-    if (markers.length === 0) return; // lazy continuation line, no marker to normalize
+    if (markers.length === 0) return []; // lazy continuation line, no marker to normalize
 
     const markerEnd = markers[markers.length - 1].end;
 
@@ -174,13 +192,15 @@ function addLineEdits(
     // on an earlier line (e.g. an interior line of a fenced/indented code
     // block quoted line-by-line) — the whole prefix and remainder are
     // protected, including any `>` characters that resemble nested markers.
-    if (protectedRanges.some((range) => range.start < markerEnd && range.end > markerEnd)) return;
+    if (protectedRanges.some((range) => range.start < markerEnd && range.end > markerEnd)) return null;
+
+    const edits: Edit[] = [];
 
     // Between two structural markers is always pure whitespace, and any gap
     // the matcher accepted is within the per-level budget, so shrinking it to
     // one space never changes what the next parse recognizes.
     for (let i = 0; i < markers.length - 1; i++) {
-        addEdit({ start: markers[i].end, end: markers[i + 1].start, replacement: ' ' });
+        edits.push({ start: markers[i].end, end: markers[i + 1].start, replacement: ' ' });
     }
 
     const wsMatch = /^[ \t]*/.exec(text.slice(markerEnd, lineEndOffset))!;
@@ -195,12 +215,13 @@ function addLineEdits(
 
     const cappedByProtection = cap < wsEnd;
     if (!cappedByProtection) {
-        if (/^\r?\n?$/.test(text.slice(wsEnd, lineEndOffset))) return; // blank quote line; trim rule handles it
+        if (/^\r?\n?$/.test(text.slice(wsEnd, lineEndOffset))) return edits; // blank quote line; trim rule handles it
         // matchMarkerPrefix deliberately stopped short of this `>` (the gap
         // exceeded the level budget); shrinking the gap could make it a new
         // nesting level on the next parse instead of literal quoted text.
-        if (text[wsEnd] === '>') return;
+        if (text[wsEnd] === '>') return edits;
     }
 
-    addEdit({ start: markerEnd, end: cap, replacement: ' ' });
+    edits.push({ start: markerEnd, end: cap, replacement: ' ' });
+    return edits;
 }
