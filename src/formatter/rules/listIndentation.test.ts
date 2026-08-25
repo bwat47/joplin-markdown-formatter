@@ -77,6 +77,17 @@ const cases: Case[] = [
         expected: '- I\n\t- I\n| a | b |\n\t|---|---|',
     },
     {
+        // The apparent child markers and backticks are lazy paragraph text
+        // under the wide marker. Their prefixes may be restyled, except where
+        // the whitespace itself belongs to the multiline inline-code value.
+        // Those protected prefixes stay byte-for-byte unchanged without
+        // causing list indentation elsewhere in the note to be discarded.
+        name: 'preserves protected prefixes in a held lazy paragraph',
+        indentation: 'tabs',
+        input: '100. outer\n    - child\n    - sibling\n    ```\n    code\n    ```\n\n- other\n   - nested',
+        expected: '100. outer\n\t- child\n\t- sibling\n\t```\n    code\n    ```\n\n- other\n\t- nested',
+    },
+    {
         // The nested list narrows from column 6 to column 4, so keeping the
         // paragraph's two extra columns would hand it to `- sibling`.
         name: 'clamps a block after a nested list that narrows onto it',

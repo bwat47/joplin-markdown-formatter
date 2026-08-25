@@ -2,6 +2,7 @@ import type { List, ListItem, Root } from 'mdast';
 import type { Edit, Rule, RuleContext } from '../types';
 import type { Indentation } from '../types';
 import { computeLineStarts, isBlankLine, lineIndexOfOffset, columnWidth, indentBeyondColumn } from '../lines';
+import { getProtectedRanges, intersectsProtectedRange, type OffsetRange } from '../protectedRanges';
 
 interface MarkerAction {
     kind: 'marker';
@@ -29,7 +30,12 @@ interface ShiftAction {
     nestedContentCol: number;
 }
 
-type LineAction = MarkerAction | ShiftAction;
+interface PreserveAction {
+    kind: 'preserve';
+}
+
+type ContinuationAction = ShiftAction | PreserveAction;
+type LineAction = MarkerAction | ContinuationAction;
 
 /** Columns a tab spans; CommonMark's tab stop, and what `columnWidth` assumes. */
 const TAB_COLS = 4;
@@ -51,6 +57,7 @@ interface ListContext {
     /** Columns of indentation per nesting level. */
     unitCols: number;
     style: Indentation;
+    protectedRanges: OffsetRange[];
     // Innermost assignment wins: parents fill their whole span first,
     // then recursion into nested lists overwrites the nested lines.
     actions: Map<number, LineAction>;
@@ -110,6 +117,7 @@ export const listIndentation: Rule = {
 
         const edits: Edit[] = [];
         for (const [line, action] of actions) {
+            if (action.kind === 'preserve') continue;
             const start = lineStarts[line];
             const end = lineStarts[line + 1] ?? text.length;
             const edit =
@@ -130,7 +138,14 @@ function collectActions(
     unitCols: number,
     style: Indentation
 ): Map<number, LineAction> {
-    const ctx: ListContext = { text, lineStarts, unitCols, style, actions: new Map() };
+    const ctx: ListContext = {
+        text,
+        lineStarts,
+        unitCols,
+        style,
+        protectedRanges: getProtectedRanges(tree),
+        actions: new Map(),
+    };
     for (const child of tree.children) {
         if (child.type === 'list') processList(ctx, child, 0, 0);
     }
@@ -154,7 +169,7 @@ function processList(ctx: ListContext, list: List, depth: number, parentContentC
     // item that cannot move (a literal-content block a nested list would
     // capture, among the cases in {@link measureItem}) leaves the whole list
     // as written, exactly as a mid-line list does.
-    const planned: { item: ListItem; layout: ItemLayout; shifts: Map<number, ShiftAction> }[] = [];
+    const planned: { item: ListItem; layout: ItemLayout; shifts: Map<number, ContinuationAction> }[] = [];
     for (const item of list.children as ListItem[]) {
         const layout = measureItem(ctx, list, item, indentCols);
         if (!layout) return;
@@ -190,32 +205,35 @@ function continuationShifts(
     item: ListItem,
     layout: ItemLayout,
     depth: number
-): Map<number, ShiftAction> | null {
+): Map<number, ContinuationAction> | null {
     const structuralLines = structuralIndentLines(ctx.lineStarts, item);
     const nested = nestedListSpans(ctx, item, depth, layout.newContentCol);
-    const shifts = new Map<number, ShiftAction>();
+    const shifts = new Map<number, ContinuationAction>();
 
     for (let line = layout.markerLine + 1; line <= layout.lastLine; line++) {
         const start = ctx.lineStarts[line];
         const end = ctx.lineStarts[line + 1] ?? ctx.text.length;
         const blank = isBlankLine(ctx.text, start, end);
-        const wsCols = columnWidth(leadingWhitespace(ctx.text, start, end));
+        const ws = leadingWhitespace(ctx.text, start, end);
+        const wsCols = columnWidth(ws);
         const wasLazy = isLazyContinuation(ctx.text, start, end, layout.shift.oldContentCol);
         const structuralIndent = structuralLines.has(line);
         // Literal content the item does not own stays under the parent's
         // action, because its leading whitespace is part of its value.
         if (wasLazy && !structuralIndent) continue;
         // A structural line the item still would not own after the rewrite
-        // holds its column, and only has its prefix re-rendered in the
-        // configured style. Leaving it to the parent's action instead would
-        // move it: the parent shifts a line only once it clears the *parent's*
-        // content column, which within one block can be true of some lines and
-        // not others, and a line that moved right would be owned on the next
-        // pass. A line that stops being lazy when the marker moves left is
-        // normalized against that rewritten content column now, rather than
-        // waiting for a second formatting pass.
+        // holds its column. Its prefix is re-rendered in the configured style
+        // unless that prefix is literal content inside a protected node, in
+        // which case a no-op action holds it byte-for-byte while still
+        // overriding the parent's action. Leaving either line to the parent
+        // would move it: the parent shifts a line only once it clears the
+        // *parent's* content column, which within one block can be true of some
+        // lines and not others, and a line that moved right would be owned on
+        // the next pass. A line that stops being lazy when the marker moves
+        // left is normalized against that rewritten content column now,
+        // rather than waiting for a second formatting pass.
         if (wasLazy && wsCols < layout.newContentCol) {
-            shifts.set(line, holdInPlace(wsCols));
+            shifts.set(line, holdInPlace(ctx, start, ws, wsCols));
             continue;
         }
 
@@ -229,8 +247,9 @@ function continuationShifts(
     return shifts;
 }
 
-/** A shift that re-renders a line's indentation in the configured style without moving it. */
-function holdInPlace(wsCols: number): ShiftAction {
+/** Hold a line at its current column, preserving a protected prefix byte-for-byte. */
+function holdInPlace(ctx: ListContext, start: number, ws: string, wsCols: number): ContinuationAction {
+    if (intersectsProtectedRange(ctx.protectedRanges, start, start + ws.length)) return { kind: 'preserve' };
     return {
         kind: 'shift',
         oldContentCol: wsCols,
