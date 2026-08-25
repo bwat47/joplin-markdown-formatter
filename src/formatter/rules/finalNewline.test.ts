@@ -17,4 +17,15 @@ describe('finalNewline', () => {
 
         expect(expectIdempotent(input, options)).toEqual({ text: `${input}\n`, skippedRules: [] });
     });
+
+    // A closed protected block whose last line carries trailing spaces reaches
+    // past the trailing whitespace run without owning EOF, so the blank lines
+    // after it are still ordinary trailing whitespace and must be trimmed.
+    test.each([
+        { name: 'fenced code', input: '```txt\ncode\n```   \n\n\n', expected: '```txt\ncode\n```   \n' },
+        { name: 'html', input: '<div>\nx\n</div>   \n\n\n', expected: '<div>\nx\n</div>   \n' },
+        { name: 'math', input: '$$\nx\n$$   \n\n\n', expected: '$$\nx\n$$   \n' },
+    ])('trims trailing blank lines after a closed $name block', ({ input, expected }) => {
+        expect(expectIdempotent(input, options)).toEqual({ text: expected, skippedRules: [] });
+    });
 });
