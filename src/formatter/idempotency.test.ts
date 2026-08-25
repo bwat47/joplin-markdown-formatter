@@ -70,6 +70,9 @@ const listSpacingModes: FormatterOptions['listSpacing'][] = ['semantic', 'tight'
 
 interface InteractionCase {
     name: string;
+    container: string;
+    block: string;
+    separator: string;
     input: string;
     options: Pick<FormatterOptions, 'indentation' | 'listSpacing'>;
 }
@@ -82,6 +85,9 @@ for (const container of containers) {
                 for (const listSpacing of listSpacingModes) {
                     interactionCases.push({
                         name: `${container.name} / ${block.name} / ${separator.name} / ${indentation} / ${listSpacing}`,
+                        container: container.name,
+                        block: block.name,
+                        separator: separator.name,
                         input: container.render(block.source, separator.source),
                         options: { indentation, listSpacing },
                     });
@@ -91,11 +97,35 @@ for (const container of containers) {
     }
 }
 
+/**
+ * Rules these inputs are known to lose to the structural safety check.
+ *
+ * A nested unordered list separated from its item's paragraph by a blank line
+ * makes `listIndentation` propose edits the check rejects in `spaces2` mode,
+ * so the whole rule is dropped and the item keeps the indentation it was
+ * written with. Output is still stable, which is why plain idempotency misses
+ * it. Asserted as an exact set rather than ignored, so this fails loudly when
+ * the gap is closed or when it spreads to another combination.
+ */
+function knownSkippedRules({ container, block, separator, options }: InteractionCase): string[] {
+    const inListItem = container === 'list item' || container === 'nested list item';
+    const blankLineSeparated = separator !== 'adjacent lines';
+
+    if (inListItem && block === 'unordered list' && blankLineSeparated && options.indentation === 'spaces2') {
+        return ['listIndentation'];
+    }
+    return [];
+}
+
 describe('generated formatter interactions', () => {
-    test.each(interactionCases)('$name', ({ input, options }) => {
+    test.each(interactionCases)('$name', (interaction) => {
+        const { input, options } = interaction;
+        const expectedSkips = knownSkippedRules(interaction);
+
         const once = formatMarkdown(input, options);
         const twice = formatMarkdown(once.text, options);
 
-        expect(twice.text).toBe(once.text);
+        expect(once.skippedRules).toEqual(expectedSkips);
+        expect(twice).toEqual({ text: once.text, skippedRules: expectedSkips });
     });
 });
