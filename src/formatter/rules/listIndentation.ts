@@ -95,6 +95,15 @@ interface ListContext {
  * would capture that block, so such a block is clamped to the item's own
  * content column (see {@link continuationShifts}).
  *
+ * A GFM task marker is the one place this rule rewrites whitespace that the
+ * parser hands to inline content rather than structural indentation: the
+ * spacing after `[x]` lands in the first paragraph's leading text node, so
+ * collapsing it is a text change the structural check would otherwise reject.
+ * That is why `listIndentation` owns an exemption in {@link verify} -- see
+ * `trimTaskMarkerSpacing` there. The checkbox is item syntax rather than
+ * prose, so the item's content column is still measured at the `[` and
+ * continuation lines are unaffected.
+ *
  * Limitations (documented in ARCHITECTURE.md): lists inside blockquotes or
  * footnote definitions are left untouched — only lists at the document root
  * are processed. An item whose blocks cannot take the rounding (an indented
