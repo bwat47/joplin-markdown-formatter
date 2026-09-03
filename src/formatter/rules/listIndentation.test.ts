@@ -145,6 +145,18 @@ const cases: Case[] = [
         expected: '- [ ]  \n  continued',
     },
     {
+        name: 'normalizes task-marker spacing in tabs mode',
+        indentation: 'tabs',
+        input: '10.  [x]   task\n     continued',
+        expected: '10. [x] task\n\tcontinued',
+    },
+    {
+        name: 'normalizes task-marker spacing in a nested list',
+        indentation: 'spaces4',
+        input: '- [ ]  outer\n  -  [x]   inner',
+        expected: '- [ ] outer\n    - [x] inner',
+    },
+    {
         name: 'does not treat bracketed list-item text as a task marker',
         indentation: 'spaces4',
         input: '-  [no]   text',
