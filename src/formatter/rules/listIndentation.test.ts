@@ -121,6 +121,36 @@ const cases: Case[] = [
         expected: '1. item\n   continued',
     },
     {
+        name: 'normalizes spacing after an unchecked task-list marker',
+        indentation: 'spaces4',
+        input: '-  [ ]   task',
+        expected: '- [ ] task',
+    },
+    {
+        name: 'normalizes spacing after a checked ordered task-list marker',
+        indentation: 'spaces4',
+        input: '1.  [X]\ttask\n    continued',
+        expected: '1. [X] task\n   continued',
+    },
+    {
+        name: 'normalizes task-marker spacing before formatted inline content',
+        indentation: 'spaces4',
+        input: '- [x]   **task**',
+        expected: '- [x] **task**',
+    },
+    {
+        name: 'preserves hard-break spaces after a task marker at end of line',
+        indentation: 'spaces4',
+        input: '-  [ ]  \n  continued',
+        expected: '- [ ]  \n  continued',
+    },
+    {
+        name: 'does not treat bracketed list-item text as a task marker',
+        indentation: 'spaces4',
+        input: '-  [no]   text',
+        expected: '- [no]   text',
+    },
+    {
         name: 'normalizes a space-indented blockquote in a list item when configured for tabs',
         indentation: 'tabs',
         input: '- item\n\n    > quoted',
