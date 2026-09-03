@@ -40,6 +40,20 @@ describe('isStructurallyEqual', () => {
         expect(isStructurallyEqual(before, after, 'listSpacing')).toBe(false);
     });
 
+    test('task-marker spacing normalization is ignored for listIndentation', () => {
+        const before = parseMarkdown('- [ ]   task\n');
+        const after = parseMarkdown('- [ ] task\n');
+        expect(isStructurallyEqual(before, after, 'listIndentation')).toBe(true);
+        // Not exempt for other rules: no one else may rewrite text after a task marker.
+        expect(isStructurallyEqual(before, after, 'listSpacing')).toBe(false);
+    });
+
+    test('task-marker exemption still detects removed content after the marker', () => {
+        const before = parseMarkdown('- [ ] a task\n');
+        const after = parseMarkdown('- [ ] task\n');
+        expect(isStructurallyEqual(before, after, 'listIndentation')).toBe(false);
+    });
+
     test('changed emphasis nesting is detected', () => {
         expect(equal('*_x_*\n', '__x__\n')).toBe(false);
     });

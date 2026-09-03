@@ -32,8 +32,26 @@ function normalizeNode(node: AnyNode, ruleName?: string, insideLink = false): An
     normalizeTextValue(copy, ruleName, insideLink);
     if (Array.isArray(copy.children)) {
         copy.children = normalizeChildren(copy.children, copy.type, ruleName, insideLink);
+        if (ruleName === 'listIndentation' && copy.type === 'listItem' && typeof copy.checked === 'boolean') {
+            copy.children = trimTaskMarkerSpacing(copy.children);
+        }
     }
     return copy;
+}
+
+/** Ignore whitespace normalized between a GFM task marker and its first inline child. */
+function trimTaskMarkerSpacing(children: AnyNode[]): AnyNode[] {
+    const first = children[0];
+    if (first?.type !== 'paragraph' || !Array.isArray(first.children)) return children;
+
+    const paragraphChildren = [...first.children];
+    const leading = paragraphChildren[0];
+    if (leading?.type !== 'text' || typeof leading.value !== 'string') return children;
+
+    const value = leading.value.trimStart();
+    if (value === '') paragraphChildren.shift();
+    else paragraphChildren[0] = { ...leading, value };
+    return [{ ...first, children: paragraphChildren }, ...children.slice(1)];
 }
 
 /** Drop the fields a rule is allowed to change, so both sides compare equal. */

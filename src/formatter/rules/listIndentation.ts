@@ -9,6 +9,8 @@ interface MarkerAction {
     /** Offset just past the marker's trailing whitespace (first content char, or EOL for empty items). */
     contentOffset: number;
     marker: string;
+    /** A parsed GFM task marker and the first content offset after its trailing whitespace. */
+    taskMarker?: { marker: string; contentOffset: number };
     indentCols: number;
     emptyItem: boolean;
 }
@@ -66,7 +68,7 @@ interface ListContext {
 /**
  * Normalize list indentation: a configurable unit (tab / 2 spaces / 4
  * spaces) per nesting level *before* the marker, and exactly one space
- * *after* it.
+ * *after* it and any GFM task marker.
  *
  * How it works: top-level lists are walked recursively, tracking each item's
  * old and new content column (tab stop = 4). The marker line gets its prefix
@@ -92,6 +94,15 @@ interface ListContext {
  * bring its content column back onto a later block of the *outer* item, which
  * would capture that block, so such a block is clamped to the item's own
  * content column (see {@link continuationShifts}).
+ *
+ * A GFM task marker is the one place this rule rewrites whitespace that the
+ * parser hands to inline content rather than structural indentation: the
+ * spacing after `[x]` lands in the first paragraph's leading text node, so
+ * collapsing it is a text change the structural check would otherwise reject.
+ * That is why `listIndentation` owns an exemption in {@link verify} -- see
+ * `trimTaskMarkerSpacing` there. The checkbox is item syntax rather than
+ * prose, so the item's content column is still measured at the `[` and
+ * continuation lines are unaffected.
  *
  * Limitations (documented in ARCHITECTURE.md): lists inside blockquotes or
  * footnote definitions are left untouched — only lists at the document root
@@ -359,6 +370,7 @@ function measureItem(ctx: ListContext, list: List, item: ListItem, indentCols: n
 
     const contentOffset = skipSpaces(text, startOffset + marker.length);
     const emptyItem = contentOffset >= text.length || text[contentOffset] === '\n' || text[contentOffset] === '\r';
+    const taskMarker = matchTaskMarker(text, item, contentOffset);
 
     const markerLine = lineIndexOfOffset(lineStarts, startOffset);
     const markerEndCol = columnWidth(text.slice(lineStarts[markerLine], startOffset + marker.length));
@@ -380,7 +392,7 @@ function measureItem(ctx: ListContext, list: List, item: ListItem, indentCols: n
     return {
         markerLine,
         lastLine: lineIndexOfOffset(lineStarts, Math.max(endOffset - 1, startOffset)),
-        marker: { kind: 'marker', contentOffset, marker, indentCols, emptyItem },
+        marker: { kind: 'marker', contentOffset, marker, taskMarker, indentCols, emptyItem },
         shift: { kind: 'shift', oldContentCol, targetCol, snapToTarget },
         newContentCol,
     };
@@ -473,6 +485,24 @@ function matchMarker(text: string, list: List, startOffset: number): string | nu
     return match ? match[0] : null;
 }
 
+/** A parsed GFM task marker with non-empty same-line content, or undefined. */
+function matchTaskMarker(
+    text: string,
+    item: ListItem,
+    contentOffset: number
+): { marker: string; contentOffset: number } | undefined {
+    if (typeof item.checked !== 'boolean') return undefined;
+
+    const match = /^\[[ xX]\]/.exec(text.slice(contentOffset, contentOffset + 3));
+    if (!match) return undefined;
+
+    const taskContentOffset = skipSpaces(text, contentOffset + match[0].length);
+    if (taskContentOffset >= text.length || text[taskContentOffset] === '\n' || text[taskContentOffset] === '\r') {
+        return undefined;
+    }
+    return { marker: match[0], contentOffset: taskContentOffset };
+}
+
 /** The leading spaces and tabs of the line spanning `[start, end)`. */
 function leadingWhitespace(text: string, start: number, end: number): string {
     return /^[ \t]*/.exec(text.slice(start, end))![0];
@@ -496,12 +526,17 @@ function skipSpaces(text: string, offset: number): number {
     return i;
 }
 
-/** Rewrite a marker line's prefix to `indent + marker + ' '`. */
+/** Rewrite a marker line's prefix with one space after its list and optional task markers. */
 function markerEdit(text: string, start: number, action: MarkerAction, style: Indentation): Edit | null {
-    const newPrefix = makeIndent(action.indentCols, style) + action.marker + (action.emptyItem ? '' : ' ');
-    const oldPrefix = text.slice(start, action.contentOffset);
+    let newPrefix = makeIndent(action.indentCols, style) + action.marker + (action.emptyItem ? '' : ' ');
+    let end = action.contentOffset;
+    if (action.taskMarker) {
+        newPrefix += action.taskMarker.marker + ' ';
+        end = action.taskMarker.contentOffset;
+    }
+    const oldPrefix = text.slice(start, end);
     if (oldPrefix === newPrefix) return null;
-    return { start, end: action.contentOffset, replacement: newPrefix };
+    return { start, end, replacement: newPrefix };
 }
 
 /** Shift a continuation line's leading whitespace to the new content column. */
