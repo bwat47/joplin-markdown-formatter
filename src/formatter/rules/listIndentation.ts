@@ -1,43 +1,23 @@
-import type { List, ListItem, Root } from 'mdast';
+import type { List, ListItem } from 'mdast';
 import type { Edit, Rule, RuleContext } from '../types';
 import type { Indentation } from '../types';
 import { computeLineStarts, isBlankLine, lineIndexOfOffset, columnWidth, indentBeyondColumn } from '../lines';
 import { getProtectedRanges, intersectsProtectedRange, type OffsetRange } from '../protectedRanges';
 
-interface MarkerAction {
-    kind: 'marker';
-    /** Offset just past the marker's trailing whitespace (first content char, or EOL for empty items). */
-    contentOffset: number;
+/** A parsed GFM task marker and the first content offset after its trailing whitespace. */
+interface TaskMarker {
     marker: string;
-    /** A parsed GFM task marker and the first content offset after its trailing whitespace. */
-    taskMarker?: { marker: string; contentOffset: number };
-    indentCols: number;
-    emptyItem: boolean;
+    contentOffset: number;
 }
 
-interface ShiftAction {
-    kind: 'shift';
+/** How an item moves its continuation lines: from its old content column to the target column. */
+interface ItemShift {
     oldContentCol: number;
     /** Column the line's container indentation is rewritten to. */
     targetCol: number;
     /** True when `targetCol` was rounded up to a tab stop, so the prefix is whole tabs. */
     snapToTarget: boolean;
-    /** True when the line's leading whitespace is container indentation end to end. */
-    structuralIndent: boolean;
-    /**
-     * Content column of a nested list opening earlier in the item, which this
-     * line must stay left of to keep belonging to the item; `Infinity` when no
-     * such list precedes it.
-     */
-    nestedContentCol: number;
 }
-
-interface PreserveAction {
-    kind: 'preserve';
-}
-
-type ContinuationAction = ShiftAction | PreserveAction;
-type LineAction = MarkerAction | ContinuationAction;
 
 /** Columns a tab spans; CommonMark's tab stop, and what `columnWidth` assumes. */
 const TAB_COLS = 4;
@@ -46,9 +26,8 @@ const TAB_COLS = 4;
 interface ItemLayout {
     markerLine: number;
     lastLine: number;
-    marker: MarkerAction;
-    /** Item-wide part of every continuation line's shift; the per-line fields are added in `continuationShifts`. */
-    shift: Omit<ShiftAction, 'structuralIndent' | 'nestedContentCol'>;
+    markerEdit: Edit | null;
+    shift: ItemShift;
     /** Content column of the rewritten item, i.e. where a nested list may start. */
     newContentCol: number;
 }
@@ -60,9 +39,10 @@ interface ListContext {
     unitCols: number;
     style: Indentation;
     protectedRanges: OffsetRange[];
-    // Innermost assignment wins: parents fill their whole span first,
-    // then recursion into nested lists overwrites the nested lines.
-    actions: Map<number, LineAction>;
+    // Innermost assignment wins: parents fill their whole span first, then
+    // recursion into nested lists overwrites the nested lines. `null` marks a
+    // line an inner item owns but leaves as is, so it still overrides the parent.
+    edits: Map<number, Edit | null>;
 }
 
 /**
@@ -93,7 +73,7 @@ interface ListContext {
  * mirror of it applies to blocks after a nested list: narrowing the list can
  * bring its content column back onto a later block of the *outer* item, which
  * would capture that block, so such a block is clamped to the item's own
- * content column (see {@link continuationShifts}).
+ * content column (see {@link continuationEdits}).
  *
  * A GFM task marker is the one place this rule rewrites whitespace that the
  * parser hands to inline content rather than structural indentation: the
@@ -122,53 +102,27 @@ export const listIndentation: Rule = {
     },
 
     apply({ text, tree, options }: RuleContext): Edit[] {
-        const lineStarts = computeLineStarts(text);
-        const unitCols = options.indentation === 'spaces2' ? 2 : 4;
-        const actions = collectActions(text, lineStarts, tree, unitCols, options.indentation);
-
-        const edits: Edit[] = [];
-        for (const [line, action] of actions) {
-            if (action.kind === 'preserve') continue;
-            const start = lineStarts[line];
-            const end = lineStarts[line + 1] ?? text.length;
-            const edit =
-                action.kind === 'marker'
-                    ? markerEdit(text, start, action, options.indentation)
-                    : shiftEdit(text, start, end, action, options.indentation);
-            if (edit) edits.push(edit);
+        const ctx: ListContext = {
+            text,
+            lineStarts: computeLineStarts(text),
+            unitCols: options.indentation === 'spaces2' ? 2 : 4,
+            style: options.indentation,
+            protectedRanges: getProtectedRanges(tree),
+            edits: new Map(),
+        };
+        for (const child of tree.children) {
+            if (child.type === 'list') processList(ctx, child, 0, 0);
         }
-        return edits;
+        return [...ctx.edits.values()].filter((edit): edit is Edit => edit !== null);
     },
 };
 
-/** Map every line of every root-level list to the rewrite it needs. */
-function collectActions(
-    text: string,
-    lineStarts: number[],
-    tree: Root,
-    unitCols: number,
-    style: Indentation
-): Map<number, LineAction> {
-    const ctx: ListContext = {
-        text,
-        lineStarts,
-        unitCols,
-        style,
-        protectedRanges: getProtectedRanges(tree),
-        actions: new Map(),
-    };
-    for (const child of tree.children) {
-        if (child.type === 'list') processList(ctx, child, 0, 0);
-    }
-    return ctx.actions;
-}
-
 function processList(ctx: ListContext, list: List, depth: number, parentContentCol: number): void {
     // A nested list can open on the same line as the markers containing it
-    // (`1. - - a`). Actions are keyed by line, so only the innermost marker's
+    // (`1. - - a`). Edits are keyed by line, so only the innermost marker's
     // rewrite would survive, and it replaces from the line start — wiping out
     // the markers before it. Such a list is left as written, descendants
-    // included; the containing item's shift actions keep its later lines
+    // included; the containing item's shift edits keep its later lines
     // aligned relative to the parent's content column.
     if (startsMidLine(ctx.text, ctx.lineStarts, list)) return;
 
@@ -180,18 +134,18 @@ function processList(ctx: ListContext, list: List, depth: number, parentContentC
     // item that cannot move (a literal-content block a nested list would
     // capture, among the cases in {@link measureItem}) leaves the whole list
     // as written, exactly as a mid-line list does.
-    const planned: { item: ListItem; layout: ItemLayout; shifts: Map<number, ContinuationAction> }[] = [];
+    const planned: { item: ListItem; layout: ItemLayout; edits: Map<number, Edit | null> }[] = [];
     for (const item of list.children as ListItem[]) {
         const layout = measureItem(ctx, list, item, indentCols);
         if (!layout) return;
-        const shifts = continuationShifts(ctx, item, layout, depth);
-        if (!shifts) return;
-        planned.push({ item, layout, shifts });
+        const edits = continuationEdits(ctx, item, layout, depth);
+        if (!edits) return;
+        planned.push({ item, layout, edits });
     }
 
-    for (const { item, layout, shifts } of planned) {
-        ctx.actions.set(layout.markerLine, layout.marker);
-        for (const [line, action] of shifts) ctx.actions.set(line, action);
+    for (const { item, layout, edits } of planned) {
+        ctx.edits.set(layout.markerLine, layout.markerEdit);
+        for (const [line, edit] of edits) ctx.edits.set(line, edit);
 
         for (const child of item.children) {
             if (child.type === 'list') processList(ctx, child, depth + 1, layout.newContentCol);
@@ -200,26 +154,26 @@ function processList(ctx: ListContext, list: List, depth: number, parentContentC
 }
 
 /**
- * The shift each continuation line of `item` needs, or null when the item must
- * be left as written.
+ * The edit each continuation line of `item` needs (`null` for a line it owns
+ * but leaves as is), or null when the item must be left as written.
  *
  * A nested list rewritten to a narrower indent can end up with its content
  * column at or left of where a following block of the *outer* item lands,
  * which would hand that block to the nested item and change what the document
  * means. Structural indentation is clamped back to the item's own content
- * column, which is always left of a nested list's; a literal-content block
- * cannot be clamped -- the columns past the content column are part of its
- * value -- so the whole list is left alone instead.
+ * column (see {@link shiftLine}), which is always left of a nested list's; a
+ * literal-content block cannot be clamped -- the columns past the content
+ * column are part of its value -- so the whole list is left alone instead.
  */
-function continuationShifts(
+function continuationEdits(
     ctx: ListContext,
     item: ListItem,
     layout: ItemLayout,
     depth: number
-): Map<number, ContinuationAction> | null {
+): Map<number, Edit | null> | null {
     const structuralLines = structuralIndentLines(ctx.lineStarts, item);
     const nested = nestedListSpans(ctx, item, depth, layout.newContentCol);
-    const shifts = new Map<number, ContinuationAction>();
+    const edits = new Map<number, Edit | null>();
 
     for (let line = layout.markerLine + 1; line <= layout.lastLine; line++) {
         const start = ctx.lineStarts[line];
@@ -230,13 +184,13 @@ function continuationShifts(
         const wasLazy = isLazyContinuation(ctx.text, start, end, layout.shift.oldContentCol);
         const structuralIndent = structuralLines.has(line);
         // Literal content the item does not own stays under the parent's
-        // action, because its leading whitespace is part of its value.
+        // edit, because its leading whitespace is part of its value.
         if (wasLazy && !structuralIndent) continue;
         // A structural line the item still would not own after the rewrite
         // holds its column. Its prefix is re-rendered in the configured style
         // unless that prefix is literal content inside a protected node, in
-        // which case a no-op action holds it byte-for-byte while still
-        // overriding the parent's action. Leaving either line to the parent
+        // which case a null edit holds it byte-for-byte while still
+        // overriding the parent's edit. Leaving either line to the parent
         // would move it: the parent shifts a line only once it clears the
         // *parent's* content column, which within one block can be true of some
         // lines and not others, and a line that moved right would be owned on
@@ -244,31 +198,76 @@ function continuationShifts(
         // left is normalized against that rewritten content column now,
         // rather than waiting for a second formatting pass.
         if (wasLazy && wsCols < layout.newContentCol) {
-            shifts.set(line, holdInPlace(ctx, start, ws, wsCols));
+            edits.set(line, holdInPlace(ctx, start, ws, wsCols));
+            continue;
+        }
+        if (blank) {
+            edits.set(line, null);
             continue;
         }
 
         const nestedContentCol = nestedContentColAt(nested, line);
         const shift = wasLazy ? { ...layout.shift, oldContentCol: layout.newContentCol } : layout.shift;
-        if (!structuralIndent && !blank) {
-            if (shiftedContentCol(shift, wsCols, false) >= nestedContentCol) return null;
-        }
-        shifts.set(line, { ...shift, structuralIndent, nestedContentCol });
+        if (!structuralIndent && shiftedContentCol(shift, wsCols, false) >= nestedContentCol) return null;
+        edits.set(line, shiftLine(ctx, start, ws, shift, structuralIndent, nestedContentCol));
     }
-    return shifts;
+    return edits;
 }
 
 /** Hold a line at its current column, preserving a protected prefix byte-for-byte. */
-function holdInPlace(ctx: ListContext, start: number, ws: string, wsCols: number): ContinuationAction {
-    if (intersectsProtectedRange(ctx.protectedRanges, start, start + ws.length)) return { kind: 'preserve' };
-    return {
-        kind: 'shift',
-        oldContentCol: wsCols,
-        targetCol: wsCols,
-        snapToTarget: false,
-        structuralIndent: true,
-        nestedContentCol: Infinity,
-    };
+function holdInPlace(ctx: ListContext, start: number, ws: string, wsCols: number): Edit | null {
+    if (intersectsProtectedRange(ctx.protectedRanges, start, start + ws.length)) return null;
+    return replaceIndent(start, ws, makeIndent(wsCols, ctx.style));
+}
+
+/**
+ * Shift a continuation line's leading whitespace `ws` to the item's target
+ * column. `nestedContentCol` is the content column of a nested list opening
+ * earlier in the item, which the line must stay left of to keep belonging to
+ * the item (`Infinity` when none precedes it).
+ */
+function shiftLine(
+    ctx: ListContext,
+    start: number,
+    ws: string,
+    shift: ItemShift,
+    structuralIndent: boolean,
+    nestedContentCol: number
+): Edit | null {
+    // A literal-content line keeps the prefix it was written with when its
+    // column does not move and that column is off the tab stops: re-rendering
+    // it would spend spaces where the author wrote a tab.
+    if (
+        ctx.style === 'tabs' &&
+        shift.oldContentCol === shift.targetCol &&
+        shift.targetCol % TAB_COLS !== 0 &&
+        !structuralIndent
+    ) {
+        return null;
+    }
+    // A structural prefix is indentation end to end: snapped onto the target
+    // when that is a tab stop, otherwise shifted with its extra columns intact
+    // — but never so far that the nested list would capture the block. The
+    // item's own content column is always left of that list's, so it is a
+    // safe fallback. Literal-content blocks always keep the tail beyond the
+    // old content column verbatim, so the block's own indentation survives;
+    // one that would be captured never reaches here (see {@link continuationEdits}).
+    if (structuralIndent) {
+        const shifted = shiftedContentCol(shift, columnWidth(ws), true);
+        const cols = shifted < nestedContentCol ? shifted : shift.targetCol;
+        return replaceIndent(start, ws, makeIndent(cols, ctx.style));
+    }
+    return replaceIndent(
+        start,
+        ws,
+        makeIndent(shift.targetCol, ctx.style) + indentBeyondColumn(ws, shift.oldContentCol)
+    );
+}
+
+/** Replace the leading whitespace `ws` at `start` with `newWs`, or null when unchanged. */
+function replaceIndent(start: number, ws: string, newWs: string): Edit | null {
+    if (newWs === ws) return null;
+    return { start, end: start + ws.length, replacement: newWs };
 }
 
 /** The lines a nested list occupies, and the leftmost content column it will occupy once rewritten. */
@@ -327,11 +326,7 @@ function narrowestContentCol(ctx: ListContext, list: List, indentCols: number): 
 }
 
 /** Column a continuation line's content lands on once shifted. */
-function shiftedContentCol(
-    shift: Omit<ShiftAction, 'structuralIndent' | 'nestedContentCol'>,
-    wsCols: number,
-    structuralIndent: boolean
-): number {
+function shiftedContentCol(shift: ItemShift, wsCols: number, structuralIndent: boolean): number {
     // Only a structural prefix is re-rendered onto the tab stop; a literal
     // block keeps its tail, so it moves by the change in content column.
     if (structuralIndent && shift.snapToTarget) return shift.targetCol;
@@ -392,8 +387,14 @@ function measureItem(ctx: ListContext, list: List, item: ListItem, indentCols: n
     return {
         markerLine,
         lastLine: lineIndexOfOffset(lineStarts, Math.max(endOffset - 1, startOffset)),
-        marker: { kind: 'marker', contentOffset, marker, taskMarker, indentCols, emptyItem },
-        shift: { kind: 'shift', oldContentCol, targetCol, snapToTarget },
+        markerEdit: markerEdit(ctx, lineStarts[markerLine], {
+            contentOffset,
+            marker,
+            taskMarker,
+            indentCols,
+            emptyItem,
+        }),
+        shift: { oldContentCol, targetCol, snapToTarget },
         newContentCol,
     };
 }
@@ -486,11 +487,7 @@ function matchMarker(text: string, list: List, startOffset: number): string | nu
 }
 
 /** A parsed GFM task marker with non-empty same-line content, or undefined. */
-function matchTaskMarker(
-    text: string,
-    item: ListItem,
-    contentOffset: number
-): { marker: string; contentOffset: number } | undefined {
+function matchTaskMarker(text: string, item: ListItem, contentOffset: number): TaskMarker | undefined {
     if (typeof item.checked !== 'boolean') return undefined;
 
     const match = /^\[[ xX]\]/.exec(text.slice(contentOffset, contentOffset + 3));
@@ -526,51 +523,27 @@ function skipSpaces(text: string, offset: number): number {
     return i;
 }
 
-/** Rewrite a marker line's prefix with one space after its list and optional task markers. */
-function markerEdit(text: string, start: number, action: MarkerAction, style: Indentation): Edit | null {
-    let newPrefix = makeIndent(action.indentCols, style) + action.marker + (action.emptyItem ? '' : ' ');
-    let end = action.contentOffset;
-    if (action.taskMarker) {
-        newPrefix += action.taskMarker.marker + ' ';
-        end = action.taskMarker.contentOffset;
-    }
-    const oldPrefix = text.slice(start, end);
-    if (oldPrefix === newPrefix) return null;
-    return { start, end, replacement: newPrefix };
+/** A marker line's parts, measured in {@link measureItem}. */
+interface MarkerPrefix {
+    /** Offset just past the marker's trailing whitespace (first content char, or EOL for empty items). */
+    contentOffset: number;
+    marker: string;
+    taskMarker?: TaskMarker;
+    indentCols: number;
+    emptyItem: boolean;
 }
 
-/** Shift a continuation line's leading whitespace to the new content column. */
-function shiftEdit(text: string, start: number, end: number, action: ShiftAction, style: Indentation): Edit | null {
-    if (isBlankLine(text, start, end)) return null;
-    // A literal-content line keeps the prefix it was written with when its
-    // column does not move and that column is off the tab stops: re-rendering
-    // it would spend spaces where the author wrote a tab.
-    if (
-        style === 'tabs' &&
-        action.oldContentCol === action.targetCol &&
-        action.targetCol % TAB_COLS !== 0 &&
-        !action.structuralIndent
-    ) {
-        return null;
+/** Rewrite a marker line's prefix with one space after its list and optional task markers. */
+function markerEdit(ctx: ListContext, start: number, prefix: MarkerPrefix): Edit | null {
+    let newPrefix = makeIndent(prefix.indentCols, ctx.style) + prefix.marker + (prefix.emptyItem ? '' : ' ');
+    let end = prefix.contentOffset;
+    if (prefix.taskMarker) {
+        newPrefix += prefix.taskMarker.marker + ' ';
+        end = prefix.taskMarker.contentOffset;
     }
-    if (isLazyContinuation(text, start, end, action.oldContentCol)) return null;
-    const ws = leadingWhitespace(text, start, end);
-    const wsCols = columnWidth(ws);
-    // A structural prefix is indentation end to end: snapped onto the target
-    // when that is a tab stop, otherwise shifted with its extra columns intact
-    // — but never so far that a nested list opening earlier in the item would
-    // capture the block. The item's own content column is always left of that
-    // list's, so it is a safe fallback. Literal-content blocks always keep the
-    // tail beyond the old content column verbatim, so the block's own
-    // indentation survives; one that would be captured never reaches here
-    // (see {@link continuationShifts}).
-    const shifted = shiftedContentCol(action, wsCols, action.structuralIndent);
-    const structuralCols = shifted < action.nestedContentCol ? shifted : action.targetCol;
-    const newWs = action.structuralIndent
-        ? makeIndent(structuralCols, style)
-        : makeIndent(action.targetCol, style) + indentBeyondColumn(ws, action.oldContentCol);
-    if (newWs === ws) return null;
-    return { start, end: start + ws.length, replacement: newWs };
+    const oldPrefix = ctx.text.slice(start, end);
+    if (oldPrefix === newPrefix) return null;
+    return { start, end, replacement: newPrefix };
 }
 
 /**
