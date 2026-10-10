@@ -135,7 +135,7 @@ function processList(ctx: ListContext, list: List, depth: number, parentContentC
     // capture, among the cases in {@link measureItem}) leaves the whole list
     // as written, exactly as a mid-line list does.
     const planned: { item: ListItem; layout: ItemLayout; edits: Map<number, Edit | null> }[] = [];
-    for (const item of list.children as ListItem[]) {
+    for (const item of list.children) {
         const layout = measureItem(ctx, list, item, indentCols);
         if (!layout) return;
         const edits = continuationEdits(ctx, item, layout, depth);
@@ -316,7 +316,7 @@ function nestedContentColAt(spans: NestedListSpan[], line: number): number {
 /** The leftmost content column any item of `list` occupies once indented to `indentCols`. */
 function narrowestContentCol(ctx: ListContext, list: List, indentCols: number): number {
     let narrowest = Infinity;
-    for (const item of list.children as ListItem[]) {
+    for (const item of list.children) {
         const startOffset = item.position?.start?.offset;
         if (startOffset === undefined) continue;
         const marker = matchMarker(ctx.text, list, startOffset);
