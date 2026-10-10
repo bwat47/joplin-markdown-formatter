@@ -1,5 +1,4 @@
-import type { Table, TableRow } from 'mdast';
-import type { AlignType } from 'mdast';
+import type { Table, TableRow, AlignType } from 'mdast';
 import type { Node } from 'unist';
 import type { Edit, Rule, RuleContext } from '../types';
 import { walkWithAncestors } from '../walk';

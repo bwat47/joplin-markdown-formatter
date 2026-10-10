@@ -1,6 +1,5 @@
 import { computeCharacterChangeStats, formatCharacterChangeStats } from './changeStats';
-import { formatMarkdown } from './formatter';
-import type { FormatterOptions } from './formatter';
+import { formatMarkdown, type FormatterOptions } from './formatter';
 
 interface CommandLogger {
     debug(message: string, ...args: unknown[]): void;

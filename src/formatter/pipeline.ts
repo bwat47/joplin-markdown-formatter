@@ -1,5 +1,4 @@
-import type { FormatterOptions } from './types';
-import { DEFAULT_OPTIONS } from './types';
+import { type FormatterOptions, DEFAULT_OPTIONS } from './types';
 import { parseMarkdown } from './parse';
 import { applyEdits } from './edits';
 import { isStructurallyEqual } from './verify';

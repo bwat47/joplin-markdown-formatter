@@ -1,6 +1,5 @@
 import type { List, ListItem } from 'mdast';
-import type { Edit, Rule, RuleContext } from '../types';
-import type { Indentation } from '../types';
+import type { Edit, Rule, RuleContext, Indentation } from '../types';
 import { computeLineStarts, isBlankLine, lineIndexOfOffset, columnWidth, indentBeyondColumn } from '../lines';
 import { getProtectedRanges, intersectsProtectedRange, type OffsetRange } from '../protectedRanges';
 
