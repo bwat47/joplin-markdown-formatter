@@ -7,13 +7,13 @@ import { loadDisplayToastMessages, loadFormatterOptions, loadShowDiffPreview, re
 import logger from './logger';
 
 const formatNoteCommandDependencies: FormatNoteCommandDependencies = {
-    readEditorText: async () =>
+    readEditorText: async (): Promise<unknown> =>
         joplin.commands.execute('editor.execCommand', {
             name: GET_NOTE_TEXT_COMMAND,
         }),
     // Replace via the content script so the change is a normal CodeMirror
     // transaction (undoable), not an editor reload.
-    writeEditorText: async (expectedText, formattedText) =>
+    writeEditorText: async (expectedText, formattedText): Promise<unknown> =>
         joplin.commands.execute('editor.execCommand', {
             name: SET_NOTE_TEXT_COMMAND,
             args: [expectedText, formattedText],
