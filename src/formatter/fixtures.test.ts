@@ -31,8 +31,9 @@ describe('formatMarkdown fixtures', () => {
         const input = fs.readFileSync(path.join(caseDir, 'input.md'), 'utf8');
         const expected = fs.readFileSync(path.join(caseDir, 'expected.md'), 'utf8');
         const optionsPath = path.join(caseDir, 'options.json');
+        // Repository-owned fixtures contain partial formatter options.
         const options: Partial<FormatterOptions> = fs.existsSync(optionsPath)
-            ? JSON.parse(fs.readFileSync(optionsPath, 'utf8'))
+            ? (JSON.parse(fs.readFileSync(optionsPath, 'utf8')) as Partial<FormatterOptions>)
             : {};
 
         const result = expectIdempotent(input, options);
