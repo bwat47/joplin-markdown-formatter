@@ -49,6 +49,8 @@ export default defineConfig([
             '@typescript-eslint/no-import-type-side-effects': 'error',
             '@typescript-eslint/no-inferrable-types': 'error',
             '@typescript-eslint/explicit-module-boundary-types': 'error',
+            // Redundant with TypeScript's own no-overlap check (TS2367) and has false positives
+            'sonarjs/different-types-comparison': 'off',
         },
     },
 
@@ -66,6 +68,8 @@ export default defineConfig([
             globals: vitest.environments.env.globals,
         },
         rules: {
+            // mocks use async to satisfy promise-returning interfaces
+            '@typescript-eslint/require-await': 'off',
             '@typescript-eslint/unbound-method': 'off',
             'vitest/unbound-method': 'error',
         },
