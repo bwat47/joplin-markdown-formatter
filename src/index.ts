@@ -31,7 +31,7 @@ const formatNoteCommandDependencies: FormatNoteCommandDependencies = {
     logger,
 };
 
-joplin.plugins.register({
+void joplin.plugins.register({
     onStart: async function () {
         await registerSettings();
         await registerDiffPreviewDialog();
