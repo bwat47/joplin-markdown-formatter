@@ -21,6 +21,8 @@ const caseNames = fs
     .readdirSync(fixturesDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
+    // Fixture names need deterministic code-unit ordering.
+    // eslint-disable-next-line sonarjs/no-alphabetical-sort
     .sort();
 
 describe('formatMarkdown fixtures', () => {
