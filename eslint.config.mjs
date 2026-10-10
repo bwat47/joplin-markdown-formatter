@@ -11,7 +11,7 @@ import globals from 'globals';
 import vitest from '@vitest/eslint-plugin';
 
 export default defineConfig([
-    globalIgnores(['api/**', 'dist/**']),
+    globalIgnores(['api/**', 'dist/**', 'webpack.config.js']),
 
     js.configs.recommended,
     sonarjs.configs.recommended,
