@@ -14,13 +14,13 @@ interface CommandToast {
 }
 
 export interface FormatNoteCommandDependencies {
-    readEditorText(): Promise<unknown>;
-    writeEditorText(expectedText: string, formattedText: string): Promise<unknown>;
-    loadFormatterOptions(): Promise<FormatterOptions>;
-    loadDisplayToastMessages(): Promise<boolean>;
-    loadShowDiffPreview(): Promise<boolean>;
-    confirmChanges(oldText: string, newText: string, skippedRules: string[]): Promise<boolean>;
-    showToast(toast: CommandToast): Promise<void>;
+    readEditorText: () => Promise<unknown>;
+    writeEditorText: (expectedText: string, formattedText: string) => Promise<unknown>;
+    loadFormatterOptions: () => Promise<FormatterOptions>;
+    loadDisplayToastMessages: () => Promise<boolean>;
+    loadShowDiffPreview: () => Promise<boolean>;
+    confirmChanges: (oldText: string, newText: string, skippedRules: string[]) => Promise<boolean>;
+    showToast: (toast: CommandToast) => Promise<void>;
     logger: CommandLogger;
 }
 
