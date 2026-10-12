@@ -1,7 +1,7 @@
 import { parseMarkdown } from './parse';
 import { isStructurallyEqual } from './verify';
 
-const equal = (a: string, b: string): boolean => isStructurallyEqual(parseMarkdown(a), parseMarkdown(b));
+const equal = (a: string, b: string): boolean => isStructurallyEqual(parseMarkdown(a).tree, parseMarkdown(b).tree);
 
 describe('isStructurallyEqual', () => {
     test('identical documents are equal', () => {
@@ -17,40 +17,40 @@ describe('isStructurallyEqual', () => {
     });
 
     test('heading depth normalization is ignored for headingLevels', () => {
-        const before = parseMarkdown('# a\n\n#### b\n');
-        const after = parseMarkdown('# a\n\n## b\n');
+        const before = parseMarkdown('# a\n\n#### b\n').tree;
+        const after = parseMarkdown('# a\n\n## b\n').tree;
         expect(isStructurallyEqual(before, after, 'headingLevels')).toBe(true);
         // Not exempt for other rules: no one else may change heading depth.
         expect(isStructurallyEqual(before, after, 'headingMarkerSpacing')).toBe(false);
     });
 
     test('quote character conversion is ignored for quoteStyle', () => {
-        const before = parseMarkdown('He said “hi” and ‘bye’.\n');
-        const after = parseMarkdown('He said "hi" and \'bye\'.\n');
+        const before = parseMarkdown('He said “hi” and ‘bye’.\n').tree;
+        const after = parseMarkdown('He said "hi" and \'bye\'.\n').tree;
         expect(isStructurallyEqual(before, after, 'quoteStyle')).toBe(true);
         // Not exempt for other rules: no one else may rewrite quote characters.
         expect(isStructurallyEqual(before, after, 'emphasisStyle')).toBe(false);
     });
 
     test('adjacent bullet lists merged by marker normalization are equal for listMarkers', () => {
-        const before = parseMarkdown('* a\n\n- b\n');
-        const after = parseMarkdown('- a\n- b\n');
+        const before = parseMarkdown('* a\n\n- b\n').tree;
+        const after = parseMarkdown('- a\n- b\n').tree;
         expect(isStructurallyEqual(before, after, 'listMarkers')).toBe(true);
         // Not exempt for other rules: no one else may merge sibling lists.
         expect(isStructurallyEqual(before, after, 'listSpacing')).toBe(false);
     });
 
     test('task-marker spacing normalization is ignored for listIndentation', () => {
-        const before = parseMarkdown('- [ ]   task\n');
-        const after = parseMarkdown('- [ ] task\n');
+        const before = parseMarkdown('- [ ]   task\n').tree;
+        const after = parseMarkdown('- [ ] task\n').tree;
         expect(isStructurallyEqual(before, after, 'listIndentation')).toBe(true);
         // Not exempt for other rules: no one else may rewrite text after a task marker.
         expect(isStructurallyEqual(before, after, 'listSpacing')).toBe(false);
     });
 
     test('task-marker exemption still detects removed content after the marker', () => {
-        const before = parseMarkdown('- [ ] a task\n');
-        const after = parseMarkdown('- [ ] task\n');
+        const before = parseMarkdown('- [ ] a task\n').tree;
+        const after = parseMarkdown('- [ ] task\n').tree;
         expect(isStructurallyEqual(before, after, 'listIndentation')).toBe(false);
     });
 
@@ -59,22 +59,22 @@ describe('isStructurallyEqual', () => {
     });
 
     test('link-text whitespace normalization is ignored for linkTextSpacing', () => {
-        const before = parseMarkdown('[ a   link ](https://example.com/)\n');
-        const after = parseMarkdown('[a link](https://example.com/)\n');
+        const before = parseMarkdown('[ a   link ](https://example.com/)\n').tree;
+        const after = parseMarkdown('[a link](https://example.com/)\n').tree;
         expect(isStructurallyEqual(before, after, 'linkTextSpacing')).toBe(true);
         // Not exempt for other rules.
         expect(isStructurallyEqual(before, after)).toBe(false);
     });
 
     test('link-text normalization ignores removed whitespace-only boundary nodes', () => {
-        const before = parseMarkdown('[ *bold* ](https://example.com/)\n');
-        const after = parseMarkdown('[*bold*](https://example.com/)\n');
+        const before = parseMarkdown('[ *bold* ](https://example.com/)\n').tree;
+        const after = parseMarkdown('[*bold*](https://example.com/)\n').tree;
         expect(isStructurallyEqual(before, after, 'linkTextSpacing')).toBe(true);
     });
 
     test('link-text normalization still detects removed spaces around inline nodes', () => {
-        const before = parseMarkdown('[a *bold* c](https://example.com/)\n');
-        const after = parseMarkdown('[a*bold*c](https://example.com/)\n');
+        const before = parseMarkdown('[a *bold* c](https://example.com/)\n').tree;
+        const after = parseMarkdown('[a*bold*c](https://example.com/)\n').tree;
         expect(isStructurallyEqual(before, after, 'linkTextSpacing')).toBe(false);
     });
 

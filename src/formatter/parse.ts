@@ -7,6 +7,11 @@
  * do not parse (e.g. ==highlight== or single-dollar inline math) lands in plain
  * text/paragraph nodes and is left untouched because rules only edit what they
  * explicitly recognize.
+ *
+ * A few syntax details have no mdast node at all, such as the `>` markers of
+ * a blockquote. Those are collected from the parser's tokens during the same
+ * parse and returned as plain source ranges, so rules never re-derive them
+ * from the text and never see a parser token.
  */
 
 import { fromMarkdown } from 'mdast-util-from-markdown';
@@ -17,6 +22,7 @@ import { frontmatter } from 'micromark-extension-frontmatter';
 import { mathFromMarkdown } from 'mdast-util-math';
 import { math } from 'micromark-extension-math';
 import type { Root } from 'mdast';
+import type { OffsetRange } from './protectedRanges';
 
 const mathOptions = {
     // Single-dollar inline math conflicts with ordinary price prose such as
@@ -24,9 +30,29 @@ const mathOptions = {
     singleDollarTextMath: false,
 };
 
-export function parseMarkdown(text: string): Root {
-    return fromMarkdown(text, {
+export interface ParsedMarkdown {
+    tree: Root;
+    /** Every `>` the parser matched as a blockquote marker, in source order. */
+    blockquoteMarkers: OffsetRange[];
+}
+
+export function parseMarkdown(text: string): ParsedMarkdown {
+    const blockquoteMarkers: OffsetRange[] = [];
+    const tree = fromMarkdown(text, {
         extensions: [gfm(), frontmatter(['yaml']), math(mathOptions)],
-        mdastExtensions: [gfmFromMarkdown(), frontmatterFromMarkdown(['yaml']), mathFromMarkdown()],
+        mdastExtensions: [
+            gfmFromMarkdown(),
+            frontmatterFromMarkdown(['yaml']),
+            mathFromMarkdown(),
+            {
+                // A listener observes every token without changing how the
+                // tree is built (mdast-util-from-markdown >= 2.1.0).
+                afterExit(token) {
+                    if (token.type !== 'blockQuoteMarker') return;
+                    blockquoteMarkers.push({ start: token.start.offset, end: token.end.offset });
+                },
+            },
+        ],
     });
+    return { tree, blockquoteMarkers };
 }

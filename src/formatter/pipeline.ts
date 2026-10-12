@@ -31,24 +31,24 @@ export function formatMarkdown(text: string, options: Partial<FormatterOptions> 
     const resolved: FormatterOptions = { ...DEFAULT_OPTIONS, ...options };
 
     let current = text;
-    // The tree is reused across rules while the text is unchanged, and the
-    // verification parse becomes the next rule's tree when an edit is
+    // The parse is reused across rules while the text is unchanged, and the
+    // verification parse becomes the next rule's parse when an edit is
     // accepted, so each version of the text is parsed exactly once.
-    let tree = parseMarkdown(current);
+    let parsed = parseMarkdown(current);
     const skippedRules: string[] = [];
     for (const rule of rules) {
         if (!rule.isEnabled(resolved)) continue;
-        const edits = rule.apply({ text: current, tree, options: resolved });
+        const edits = rule.apply({ text: current, ...parsed, options: resolved });
         if (edits.length === 0) continue;
         const next = applyEdits(current, edits);
         if (next === current) continue;
-        const nextTree = parseMarkdown(next);
-        if (!isStructurallyEqual(tree, nextTree, rule.name)) {
+        const nextParsed = parseMarkdown(next);
+        if (!isStructurallyEqual(parsed.tree, nextParsed.tree, rule.name)) {
             skippedRules.push(rule.name);
             continue;
         }
         current = next;
-        tree = nextTree;
+        parsed = nextParsed;
     }
     return { text: current, skippedRules };
 }

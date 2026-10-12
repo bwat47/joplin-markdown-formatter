@@ -8,6 +8,7 @@
  */
 
 import type { Root } from 'mdast';
+import type { OffsetRange } from './protectedRanges';
 
 type ListSpacing = 'semantic' | 'tight' | 'loose' | 'preserve';
 export type Indentation = 'tabs' | 'spaces2' | 'spaces4';
@@ -141,6 +142,8 @@ export interface Edit {
 export interface RuleContext {
     text: string;
     tree: Root;
+    /** Source range of every blockquote `>` marker, parsed alongside `tree`. */
+    blockquoteMarkers: OffsetRange[];
     options: FormatterOptions;
 }
 

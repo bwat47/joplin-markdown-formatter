@@ -5,13 +5,6 @@ import { walkWithAncestors } from '../walk';
 import { createEditSink } from './blockSpacing';
 
 /**
- * Number of columns a tab advances to (the next multiple of), matching
- * micromark's `constants.tabSize`. A block quote marker allows up to
- * `TAB_SIZE - 1` columns of indentation before it.
- */
-const TAB_SIZE = 4;
-
-/**
  * Normalize the whitespace around a blockquote's `>` marker(s) to a single
  * space: between consecutive markers of a nested quote, and between the
  * last marker and the quoted content. Indentation before the first marker
@@ -34,9 +27,13 @@ const TAB_SIZE = 4;
  *
  * One case is left alone line by line rather than quote-wide: content right
  * after the marker(s) that itself starts with `>`. The parser only treats
- * that `>` as a further nesting level within a tight column budget (see
- * {@link matchMarkerPrefix}), so shrinking the gap in front of it could turn
- * literal quoted text into a new nesting level on the next parse.
+ * that `>` as a further nesting level within a tight column budget (up to
+ * three columns of indentation after the previous level's optional space), so
+ * shrinking the gap in front of it could turn literal quoted text into a new
+ * nesting level on the next parse.
+ *
+ * Marker positions come from the parser itself (see `parseMarkdown`),
+ * so tab stops and nesting budgets never have to be re-derived here.
  */
 export const blockquoteMarkerSpacing: Rule = {
     name: 'blockquoteMarkerSpacing',
@@ -45,12 +42,13 @@ export const blockquoteMarkerSpacing: Rule = {
         return options.normalizeBlockquoteMarkerSpacing;
     },
 
-    apply({ text, tree }: RuleContext): Edit[] {
+    apply({ text, tree, blockquoteMarkers }: RuleContext): Edit[] {
         const { edits, addEdit } = createEditSink(text);
         const lineStarts = computeLineStarts(text);
         const lineEnd = (i: number): number => lineStarts[i + 1] ?? text.length;
         const protectedRanges = getProtectedRanges(tree);
         const listLines = collectListLines(tree, lineStarts);
+        const markersByLine = groupMarkersByLine(blockquoteMarkers, lineStarts);
 
         walkWithAncestors(tree, (node, ancestors) => {
             if (node.type !== 'blockquote') return;
@@ -66,7 +64,8 @@ export const blockquoteMarkerSpacing: Rule = {
             const quoteEdits: Edit[] = [];
             for (let line = firstLine; line <= lastLine; line++) {
                 if (listLines.has(line)) return; // untouchable line: leave the whole quote as written
-                const lineEdits = collectLineEdits(text, lineStarts[line], lineEnd(line), protectedRanges);
+                const markers = markersByLine.get(line) ?? [];
+                const lineEdits = collectLineEdits(text, markers, lineEnd(line), protectedRanges);
                 if (lineEdits === null) return;
                 quoteEdits.push(...lineEdits);
             }
@@ -96,80 +95,19 @@ function collectListLines(tree: RuleContext['tree'], lineStarts: number[]): Set<
     return skipLines;
 }
 
-/** Half-open [start, end) span of one `>` character in a marker chain. */
-interface MarkerSpan {
-    start: number;
-    end: number;
-}
-
-/** A position within a line, paired with the column it renders at. */
-interface Cursor {
-    pos: number;
-    col: number;
-}
-
-/** Column reached after `ch` at column `col`, advancing tabs to the next tab stop. */
-function advanceColumn(ch: string, col: number): number {
-    return ch === '\t' ? (Math.floor(col / TAB_SIZE) + 1) * TAB_SIZE : col + 1;
-}
-
 /**
- * Skip the 0 to `TAB_SIZE - 1` columns of space/tab indentation a block quote
- * level may have before its `>`. Stops before the character that would exceed
- * that budget, so the caller sees a non-`>` and ends the marker chain.
+ * The parser's blockquote markers grouped by the line they sit on, outermost
+ * first. A line with no entry has no marker at all (a lazy continuation line).
  */
-function skipLevelIndent(text: string, cursor: Cursor, lineEnd: number): Cursor {
-    const startCol = cursor.col;
-    let { pos, col } = cursor;
-
-    while (pos < lineEnd) {
-        const ch = text[pos];
-        if (ch !== ' ' && ch !== '\t') break;
-        const nextCol = advanceColumn(ch, col);
-        if (nextCol - startCol > TAB_SIZE - 1) break;
-        col = nextCol;
-        pos++;
+function groupMarkersByLine(markers: OffsetRange[], lineStarts: number[]): Map<number, OffsetRange[]> {
+    const byLine = new Map<number, OffsetRange[]>();
+    for (const marker of markers) {
+        const line = lineIndexOfOffset(lineStarts, marker.start);
+        const lineMarkers = byLine.get(line);
+        if (lineMarkers) lineMarkers.push(marker);
+        else byLine.set(line, [marker]);
     }
-
-    return { pos, col };
-}
-
-/**
- * Consume the one space/tab a level optionally claims as its own after the
- * `>`. Exactly one character, regardless of how many columns a tab spans.
- */
-function consumeMarkerSpace(text: string, cursor: Cursor, lineEnd: number): Cursor {
-    if (cursor.pos >= lineEnd) return cursor;
-    const ch = text[cursor.pos];
-    if (ch !== ' ' && ch !== '\t') return cursor;
-    return { pos: cursor.pos + 1, col: advanceColumn(ch, cursor.col) };
-}
-
-/**
- * Find every `>` marker in a (possibly nested) blockquote prefix, replicating
- * micromark's container matching (see
- * `micromark-core-commonmark/lib/block-quote.js`): each level allows 0 to
- * `TAB_SIZE - 1` columns of leading space/tab (tab-stop aware) before its
- * `>`, then optionally consumes exactly one following space/tab character
- * (not tab-expanded) as that level's own before the next level is attempted.
- * Returns an empty array for a line with no marker at all (a lazy
- * continuation line).
- */
-function matchMarkerPrefix(text: string, lineStart: number, lineEnd: number): MarkerSpan[] {
-    const markers: MarkerSpan[] = [];
-    let cursor: Cursor = { pos: lineStart, col: 0 };
-
-    for (;;) {
-        const afterIndent = skipLevelIndent(text, cursor, lineEnd);
-        if (afterIndent.pos >= lineEnd || text[afterIndent.pos] !== '>') break;
-
-        const markerStart = afterIndent.pos;
-        cursor = { pos: markerStart + 1, col: afterIndent.col + 1 };
-        markers.push({ start: markerStart, end: cursor.pos });
-        cursor = consumeMarkerSpace(text, cursor, lineEnd);
-    }
-
-    return markers;
+    return byLine;
 }
 
 /**
@@ -179,11 +117,10 @@ function matchMarkerPrefix(text: string, lineStart: number, lineEnd: number): Ma
  */
 function collectLineEdits(
     text: string,
-    lineStart: number,
+    markers: OffsetRange[],
     lineEndOffset: number,
     protectedRanges: OffsetRange[]
 ): Edit[] | null {
-    const markers = matchMarkerPrefix(text, lineStart, lineEndOffset);
     if (markers.length === 0) return []; // lazy continuation line, no marker to normalize
 
     const markerEnd = markers[markers.length - 1].end;
@@ -197,7 +134,7 @@ function collectLineEdits(
     const edits: Edit[] = [];
 
     // Between two structural markers is always pure whitespace, and any gap
-    // the matcher accepted is within the per-level budget, so shrinking it to
+    // the parser accepted is within the per-level budget, so shrinking it to
     // one space never changes what the next parse recognizes.
     for (let i = 0; i < markers.length - 1; i++) {
         edits.push({ start: markers[i].end, end: markers[i + 1].start, replacement: ' ' });
@@ -216,9 +153,9 @@ function collectLineEdits(
     const cappedByProtection = cap < wsEnd;
     if (!cappedByProtection) {
         if (/^\r?\n?$/.test(text.slice(wsEnd, lineEndOffset))) return edits; // blank quote line; trim rule handles it
-        // matchMarkerPrefix deliberately stopped short of this `>` (the gap
-        // exceeded the level budget); shrinking the gap could make it a new
-        // nesting level on the next parse instead of literal quoted text.
+        // The parser did not match this `>` as a marker (the gap exceeded the
+        // level budget); shrinking the gap could make it a new nesting level
+        // on the next parse instead of literal quoted text.
         if (text[wsEnd] === '>') return edits;
     }
 
