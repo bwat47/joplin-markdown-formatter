@@ -2,7 +2,7 @@ import type { Table, TableRow, AlignType } from 'mdast';
 import type { Node } from 'unist';
 import type { Edit, Rule, RuleContext } from '../types';
 import { walkWithAncestors } from '../walk';
-import { computeLineStarts, lineIndexOfOffset, trailingWhitespaceStart } from '../lines';
+import { trailingWhitespaceStart } from '../lines';
 
 /**
  * Rebuild table rows in canonical `| a | b |` form, and the delimiter row to
@@ -17,9 +17,11 @@ import { computeLineStarts, lineIndexOfOffset, trailingWhitespaceStart } from '.
  * list items keep their indentation. Ragged rows keep their own cell count —
  * a row with fewer or more cells than the delimiter row is rebuilt with
  * exactly the cells it has, since adding or dropping one changes the parsed
- * table. Tables inside blockquotes are skipped (the delimiter row has no AST
- * node, and rewriting around `>` prefixes is not worth the risk). Column
- * widths count UTF-16 code units.
+ * table. Tables inside blockquotes are skipped (rewriting around `>` prefixes
+ * is not worth the risk). Column widths count UTF-16 code units.
+ *
+ * The delimiter row has no mdast node; its position comes from the parser
+ * (see `parseMarkdown`), so it is never located by scanning lines.
  */
 export const tableStyle: Rule = {
     name: 'tableStyle',
@@ -28,10 +30,8 @@ export const tableStyle: Rule = {
         return options.tableStyle !== 'preserve';
     },
 
-    apply({ text, tree, options }: RuleContext): Edit[] {
+    apply({ text, tree, tableDelimiterRows, options }: RuleContext): Edit[] {
         const edits: Edit[] = [];
-        const lineStarts = computeLineStarts(text);
-        const lineEnd = (i: number): number => lineStarts[i + 1] ?? text.length;
 
         walkWithAncestors(tree, (node: Node, ancestors: Node[]) => {
             if (node.type !== 'table') return;
@@ -60,17 +60,13 @@ export const tableStyle: Rule = {
             const renderRow = (cells: string[]): string =>
                 '| ' + cells.map((cell, col) => pad(cell, widths[col] ?? 0, align[col] ?? null)).join(' | ') + ' |';
 
-            // The delimiter row has no AST node; it is the line after the header row.
-            const headerEnd = rows[0].position?.end?.offset;
-            if (headerEnd === undefined) return;
-            const delimiterLine = lineIndexOfOffset(lineStarts, headerEnd) + 1;
-            const delimiterStart = lineStarts[delimiterLine];
-            const delimiterText = text.slice(delimiterStart, lineEnd(delimiterLine));
-            // The delimiter body starts at a non-whitespace character so it cannot
-            // overlap the leading-indent group, and it excludes \r and \n so the
-            // greedy run stops at the line ending: neither part backtracks.
-            const delimiterMatch = /^([ \t]*)([|:-][|: \t-]*)\r?\n?$/.exec(delimiterText);
-            if (!delimiterMatch) return;
+            // The delimiter row is the one inside this table's span; tables
+            // cannot nest, so there is exactly one.
+            const tableStart = table.position?.start?.offset;
+            const tableEnd = table.position?.end?.offset;
+            if (tableStart === undefined || tableEnd === undefined) return;
+            const delimiter = tableDelimiterRows.find((row) => row.start >= tableStart && row.end <= tableEnd);
+            if (!delimiter) return;
 
             // Rows are staged so a row without offsets abandons the whole table:
             // rewriting some rows and not the delimiter row would corrupt it.
@@ -92,8 +88,11 @@ export const tableStyle: Rule = {
                 '| ' +
                 align.map((a, col) => (compact ? compactDelimiterCell(a) : delimiterCell(widths[col], a))).join(' | ') +
                 ' |';
-            const start = delimiterStart + delimiterMatch[1].length;
-            const end = start + delimiterMatch[2].length;
+            // The row's own indentation is kept, like every other row's; its
+            // trailing whitespace is replaced along with the cells.
+            const delimiterText = text.slice(delimiter.start, delimiter.end);
+            const start = delimiter.start + delimiterText.length - delimiterText.trimStart().length;
+            const end = delimiter.end;
             if (text.slice(start, end) !== delimiterRow) {
                 edits.push({ start, end, replacement: delimiterRow });
             }

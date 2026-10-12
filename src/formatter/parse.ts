@@ -9,9 +9,9 @@
  * explicitly recognize.
  *
  * A few syntax details have no mdast node at all, such as the `>` markers of
- * a blockquote. Those are collected from the parser's tokens during the same
- * parse and returned as plain source ranges, so rules never re-derive them
- * from the text and never see a parser token.
+ * a blockquote or a table's delimiter row. Those are collected from the
+ * parser's tokens during the same parse and returned as plain source ranges,
+ * so rules never re-derive them from the text and never see a parser token.
  */
 
 import { fromMarkdown } from 'mdast-util-from-markdown';
@@ -21,6 +21,10 @@ import { frontmatterFromMarkdown } from 'mdast-util-frontmatter';
 import { frontmatter } from 'micromark-extension-frontmatter';
 import { mathFromMarkdown } from 'mdast-util-math';
 import { math } from 'micromark-extension-math';
+// Type-only: loads the GFM table token names (`tableDelimiterRow`, ...) into
+// micromark's token type map. micromark-extension-gfm bundles the table syntax
+// at runtime but does not load these typings.
+import type {} from 'micromark-extension-gfm-table';
 import type { Root } from 'mdast';
 import type { OffsetRange } from './protectedRanges';
 
@@ -34,10 +38,17 @@ export interface ParsedMarkdown {
     tree: Root;
     /** Every `>` the parser matched as a blockquote marker, in source order. */
     blockquoteMarkers: OffsetRange[];
+    /**
+     * Every table delimiter row (`| --- | :-: |`), in source order: its own
+     * indentation and trailing whitespace included, container prefixes
+     * (list item indent) excluded.
+     */
+    tableDelimiterRows: OffsetRange[];
 }
 
 export function parseMarkdown(text: string): ParsedMarkdown {
     const blockquoteMarkers: OffsetRange[] = [];
+    const tableDelimiterRows: OffsetRange[] = [];
     const tree = fromMarkdown(text, {
         extensions: [gfm(), frontmatter(['yaml']), math(mathOptions)],
         mdastExtensions: [
@@ -48,11 +59,12 @@ export function parseMarkdown(text: string): ParsedMarkdown {
                 // A listener observes every token without changing how the
                 // tree is built (mdast-util-from-markdown >= 2.1.0).
                 afterExit(token) {
-                    if (token.type !== 'blockQuoteMarker') return;
-                    blockquoteMarkers.push({ start: token.start.offset, end: token.end.offset });
+                    const range = { start: token.start.offset, end: token.end.offset };
+                    if (token.type === 'blockQuoteMarker') blockquoteMarkers.push(range);
+                    else if (token.type === 'tableDelimiterRow') tableDelimiterRows.push(range);
                 },
             },
         ],
     });
-    return { tree, blockquoteMarkers };
+    return { tree, blockquoteMarkers, tableDelimiterRows };
 }
