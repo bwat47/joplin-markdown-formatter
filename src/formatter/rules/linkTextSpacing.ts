@@ -13,25 +13,6 @@ interface Span {
 const LINE_BREAK = /[\r\n]/;
 
 /**
- * Source range between a link's brackets: just after `[` up to the `]` that
- * closes the text. The closing bracket is found by scanning forward from the
- * last child rather than trusting that child's end, because whitespace right
- * before `]` can belong to no node at all (see {@link editableSpans}).
- */
-function linkTextRegion(link: Link | LinkReference, text: string): Span | null {
-    const linkStart = link.position?.start?.offset;
-    const linkEnd = link.position?.end?.offset;
-    const lastChildEnd = link.children[link.children.length - 1]?.position?.end?.offset;
-    if (linkStart === undefined || linkEnd === undefined || lastChildEnd === undefined) return null;
-    if (text[linkStart] !== '[') return null;
-
-    let close = lastChildEnd;
-    while (close < linkEnd && /\s/.test(text[close])) close += 1;
-    const end = text[close] === ']' ? close : lastChildEnd;
-    return end > linkStart + 1 ? { start: linkStart + 1, end } : null;
-}
-
-/**
  * Source ranges inside `region` this rule may rewrite — every descendant `text`
  * and `break` node, plus whitespace runs that belong to no node at all — merged
  * into maximal runs so each run is normalized as one piece, and the `break`
@@ -221,6 +202,9 @@ function mergeSpans(spans: Span[]): Span[] {
  *
  * Image alt text is not touched: mdast stores it as a string property, not as
  * editable `text` nodes.
+ *
+ * The text region between the brackets comes from the parser itself (see
+ * `parseMarkdown`), so the closing `]` is never located by scanning the source.
  */
 export const linkTextSpacing: Rule = {
     name: 'linkTextSpacing',
@@ -229,15 +213,18 @@ export const linkTextSpacing: Rule = {
         return options.linkTextSpacing !== 'preserve';
     },
 
-    apply({ text, tree, options }: RuleContext): Edit[] {
+    apply({ text, tree, linkLabels, options }: RuleContext): Edit[] {
         const edits: Edit[] = [];
         const collapseLineBreaks = options.linkTextSpacing === 'all';
+        // Each label starts just after its link's opening `[`.
+        const labelsByLinkStart = new Map(linkLabels.map((label) => [label.start - 1, label]));
 
         walkWithAncestors(tree, (node, ancestors) => {
             if (node.type !== 'link' && node.type !== 'linkReference') return;
             const link = node as Link | LinkReference;
             if (link.children.length === 0) return;
-            const region = linkTextRegion(link, text);
+            const linkStart = link.position?.start?.offset;
+            const region = linkStart === undefined ? undefined : labelsByLinkStart.get(linkStart);
             if (!region) return;
             if (isMultiLineInBlockquote(text, region, ancestors)) return;
 
