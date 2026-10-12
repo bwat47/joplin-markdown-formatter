@@ -9,9 +9,10 @@
  * explicitly recognize.
  *
  * A few syntax details have no mdast node at all, such as the `>` markers of
- * a blockquote or a table's delimiter row. Those are collected from the
- * parser's tokens during the same parse and returned as plain source ranges,
- * so rules never re-derive them from the text and never see a parser token.
+ * a blockquote, a table's delimiter row, or the bracketed text of a link.
+ * Those are collected from the parser's tokens during the same parse and
+ * returned as plain source ranges, so rules never re-derive them from the text
+ * and never see a parser token.
  */
 
 import { fromMarkdown } from 'mdast-util-from-markdown';
@@ -44,11 +45,22 @@ export interface ParsedMarkdown {
      * (list item indent) excluded.
      */
     tableDelimiterRows: OffsetRange[];
+    /**
+     * The text between the brackets of every link and link reference (not
+     * images), in the order their links close: just after `[` up to the `]`
+     * that closes the text, whitespace that belongs to no inline node included.
+     */
+    linkLabels: OffsetRange[];
 }
 
 export function parseMarkdown(text: string): ParsedMarkdown {
     const blockquoteMarkers: OffsetRange[] = [];
     const tableDelimiterRows: OffsetRange[] = [];
+    const linkLabels: OffsetRange[] = [];
+    // Images get a `labelText` too. A label's text always exits right before
+    // its own `link`/`image` group (anything nested closes inside the text),
+    // so hold the latest one until the group exit says which it belongs to.
+    let pendingLabel: OffsetRange | undefined;
     const tree = fromMarkdown(text, {
         extensions: [gfm(), frontmatter(['yaml']), math(mathOptions)],
         mdastExtensions: [
@@ -62,9 +74,14 @@ export function parseMarkdown(text: string): ParsedMarkdown {
                     const range = { start: token.start.offset, end: token.end.offset };
                     if (token.type === 'blockQuoteMarker') blockquoteMarkers.push(range);
                     else if (token.type === 'tableDelimiterRow') tableDelimiterRows.push(range);
+                    else if (token.type === 'labelText') pendingLabel = range;
+                    else if (token.type === 'link' || token.type === 'image') {
+                        if (token.type === 'link' && pendingLabel) linkLabels.push(pendingLabel);
+                        pendingLabel = undefined;
+                    }
                 },
             },
         ],
     });
-    return { tree, blockquoteMarkers, tableDelimiterRows };
+    return { tree, blockquoteMarkers, tableDelimiterRows, linkLabels };
 }

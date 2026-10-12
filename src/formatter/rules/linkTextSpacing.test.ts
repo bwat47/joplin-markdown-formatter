@@ -60,6 +60,12 @@ describe('linkTextSpacing', () => {
         expect(format(input)).toBe(expected);
     });
 
+    test('normalizes a link wrapping an image without touching the image', () => {
+        expect(format('[ ![ alt ](a.png)   caption ](https://www.example.com/)')).toBe(
+            '[![ alt ](a.png) caption](https://www.example.com/)'
+        );
+    });
+
     test('normalizes shortcut reference labels while keeping them resolvable', () => {
         const input = ['[ Foo ]', '', '[Foo]: https://www.example.com/'].join('\n');
         const expected = ['[Foo]', '', '[Foo]: https://www.example.com/'].join('\n');

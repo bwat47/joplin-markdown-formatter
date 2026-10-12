@@ -33,7 +33,7 @@ The formatter parses Markdown for analysis but edits the original source. It doe
 
 Each formatting rule:
 
-1. Inspects an mdast tree with source positions, plus the few parser-supplied syntax ranges that have no mdast node (blockquote `>` markers, table delimiter rows), collected during the same parse in [`parse.ts`](../src/formatter/parse.ts).
+1. Inspects an mdast tree with source positions, plus the few parser-supplied syntax ranges that have no mdast node (blockquote `>` markers, table delimiter rows, link text between brackets), collected during the same parse in [`parse.ts`](../src/formatter/parse.ts).
 2. Produces targeted text edits against the original source.
 3. Lets the pipeline validate and apply those edits.
 4. Has its result parsed and structurally verified before it is accepted.

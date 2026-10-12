@@ -146,6 +146,8 @@ export interface RuleContext {
     blockquoteMarkers: OffsetRange[];
     /** Source range of every table delimiter row, parsed alongside `tree`. */
     tableDelimiterRows: OffsetRange[];
+    /** Source range of every link's text between its brackets, parsed alongside `tree`. */
+    linkLabels: OffsetRange[];
     options: FormatterOptions;
 }
 
