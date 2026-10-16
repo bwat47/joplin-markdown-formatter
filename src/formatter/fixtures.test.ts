@@ -109,6 +109,7 @@ const idempotencyProfiles: IdempotencyProfile[] = [
             ensureBlockquoteBlankLines: false,
             ensureListBlankLines: false,
             ensureFrontmatterBlankLine: false,
+            removeLeadingBlankLines: false,
             ensureFinalNewline: false,
         },
     },

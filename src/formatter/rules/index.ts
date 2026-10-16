@@ -21,6 +21,7 @@ import { tableSpacing } from './tableSpacing';
 import { blockquoteSpacing } from './blockquoteSpacing';
 import { blockquoteMarkerSpacing } from './blockquoteMarkerSpacing';
 import { frontmatterSpacing } from './frontmatterSpacing';
+import { leadingBlankLines } from './leadingBlankLines';
 import { collapseBlankLines } from './collapseBlankLines';
 import { trimTrailingWhitespace } from './trimTrailingWhitespace';
 import { finalNewline } from './finalNewline';
@@ -55,6 +56,7 @@ export const rules: Rule[] = [
     blockquoteMarkerSpacing,
     blockquoteSpacing,
     frontmatterSpacing,
+    leadingBlankLines,
     collapseBlankLines,
     trimTrailingWhitespace,
     finalNewline,

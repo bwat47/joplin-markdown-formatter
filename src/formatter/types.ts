@@ -91,6 +91,8 @@ export interface FormatterOptions {
      * hard — into a space so the label ends up on one line (all).
      */
     linkTextSpacing: LinkTextSpacing;
+    /** Remove blank lines at the start of the document. */
+    removeLeadingBlankLines: boolean;
     /** Ensure the document ends with exactly one trailing newline. */
     ensureFinalNewline: boolean;
 }
@@ -124,6 +126,7 @@ export const DEFAULT_OPTIONS: FormatterOptions = {
     thematicBreakMarker: '* * *',
     normalizeOrderedListNumbering: true,
     linkTextSpacing: 'all',
+    removeLeadingBlankLines: true,
     ensureFinalNewline: true,
 };
 

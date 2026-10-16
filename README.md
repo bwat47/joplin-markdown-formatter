@@ -67,6 +67,7 @@ Settings are available under `Markdown Formatter` in Joplin's plugin settings.
 | Ensure blank line after front matter | On | Add one blank line between YAML front matter and following content. |
 | Collapse consecutive blank lines | On | Reduce runs of blank lines to one blank line outside protected content. |
 | Trim trailing whitespace | On | Remove trailing spaces and tabs outside protected content, preserving two-space hard line breaks. |
+| Remove leading blank lines | On | Start the note with its first content or front matter, without blank lines before it. |
 | Ensure trailing newline | On | End the note with exactly one newline. |
 | Preview changes before applying | Off | Show the formatting changes as a diff, with buttons to apply or cancel them. |
 | Display toast messages | On | Show a toast after formatting with the number of characters added and removed. |

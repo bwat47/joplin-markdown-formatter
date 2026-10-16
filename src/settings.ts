@@ -44,6 +44,7 @@ const OPTION_KEYS: Array<keyof FormatterOptions> = [
     'thematicBreakMarker',
     'normalizeOrderedListNumbering',
     'linkTextSpacing',
+    'removeLeadingBlankLines',
     'ensureFinalNewline',
 ];
 
@@ -358,6 +359,14 @@ export async function registerSettings(): Promise<void> {
             label: 'Trim trailing whitespace',
             description:
                 'Remove trailing spaces and tabs outside protected content, preserving two-space hard line breaks.',
+        },
+        removeLeadingBlankLines: {
+            value: DEFAULT_OPTIONS.removeLeadingBlankLines,
+            type: SettingItemType.Bool,
+            section: SECTION,
+            public: true,
+            label: 'Remove leading blank lines',
+            description: 'Start the note with its first content or front matter, without blank lines before it.',
         },
         ensureFinalNewline: {
             value: DEFAULT_OPTIONS.ensureFinalNewline,
