@@ -1,6 +1,6 @@
 import type { Edit, Rule, RuleContext } from '../types';
 
-/** A front matter opening fence line, e.g. "---\n" or "---  \r\n". */
+/** A front matter opening fence line, e.g. `"---\n"` or `"---  \r\n"`. */
 const FRONTMATTER_FENCE = /^---[ \t]*(?:\r?\n|$)/;
 
 /**
@@ -9,7 +9,7 @@ const FRONTMATTER_FENCE = /^---[ \t]*(?:\r?\n|$)/;
  *
  * Only whole lines are removed: the cut ends at the last line break in the
  * leading whitespace run, so indentation on the first content line survives,
- * e.g. "\n \n    code" -> "    code" keeps the indented code block intact.
+ * e.g. `"\n \n    code"` → `"    code"` keeps the indented code block intact.
  *
  * A `---` line after the blank lines is left alone: front matter is only
  * recognized on the first line, so removing the blank lines would turn a

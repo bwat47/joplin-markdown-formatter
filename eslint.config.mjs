@@ -6,6 +6,7 @@ import prettier from 'eslint-config-prettier';
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
 import importPlugin from 'eslint-plugin-import-x';
 import sonarjs from 'eslint-plugin-sonarjs';
+import tsdoc from 'eslint-plugin-tsdoc';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
@@ -31,6 +32,7 @@ export default defineConfig([
         },
         plugins: {
             'import-x': importPlugin,
+            tsdoc,
         },
         settings: {
             // Resolve .ts extensions and tsconfig paths, then parse resolved TypeScript imports.
@@ -51,6 +53,7 @@ export default defineConfig([
             '@typescript-eslint/explicit-module-boundary-types': 'error',
             // Redundant with TypeScript's own no-overlap check (TS2367) and has false positives
             'sonarjs/different-types-comparison': 'off',
+            'tsdoc/syntax': 'error',
         },
     },
 

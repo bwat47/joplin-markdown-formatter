@@ -8,7 +8,7 @@
  *
  * Removed and added lines that look like edits of one another are then diffed
  * again at the character level, so the changed spans can be highlighted within
- * the line: most of this formatter's edits are a single character (`*` -> `-`,
+ * the line: most of this formatter's edits are a single character (`*` → `-`,
  * one space after a heading marker, a quote character), which a plain line diff
  * would render as an indistinguishable remove/add pair.
  */

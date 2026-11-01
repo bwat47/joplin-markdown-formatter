@@ -13,7 +13,7 @@ export function computeLineStarts(text: string): number[] {
 
 /**
  * True if the line contains only whitespace.
- * Matches "\n", "   \n", "\t\r\n", and a whitespace-only final line without a newline.
+ * Matches `"\n"`, `"   \n"`, `"\t\r\n"`, and a whitespace-only final line without a newline.
  */
 export function isBlankLine(text: string, lineStart: number, lineEnd: number): boolean {
     return /^[ \t]*\r?\n?$/.test(text.slice(lineStart, lineEnd));
@@ -31,7 +31,7 @@ export function trailingWhitespaceStart(text: string, whitespace = ' \t'): numbe
     return start;
 }
 
-/** Index of the line containing `offset` (greatest i with starts[i] <= offset). */
+/** Index of the line containing `offset` (greatest `i` with `starts[i] <= offset`). */
 export function lineIndexOfOffset(lineStarts: number[], offset: number): number {
     let low = 0;
     let high = lineStarts.length - 1;
@@ -46,7 +46,7 @@ export function lineIndexOfOffset(lineStarts: number[], offset: number): number 
 /**
  * Display width of a line prefix, expanding tabs to the next multiple of
  * `tabSize` (CommonMark uses a tab stop of 4). Non-tab characters count as
- * one column each, e.g. columnWidth('\t- ') === 6.
+ * one column each, e.g. `columnWidth('\t- ') === 6`.
  */
 export function columnWidth(prefix: string, tabSize = 4): number {
     let col = 0;

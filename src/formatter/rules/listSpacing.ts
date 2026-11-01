@@ -19,7 +19,7 @@ function* adjacentGaps(nodes: readonly Node[]): Generator<[number, number]> {
 
 /**
  * Every gap a list's spacing is defined by: first the gaps between an item's
- * own blocks (paragraph -> nested list), then those between consecutive items.
+ * own blocks (paragraph → nested list), then those between consecutive items.
  */
 function* listGaps(items: readonly ListItem[]): Generator<[number, number]> {
     for (const item of items) yield* adjacentGaps(item.children);

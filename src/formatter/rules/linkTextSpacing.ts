@@ -173,7 +173,7 @@ function mergeSpans(spans: Span[]): Span[] {
 /**
  * Normalize whitespace inside link text: collapse runs of whitespace to a single
  * space and trim leading/trailing whitespace right inside the brackets. So
- * `[ a link ](url)` -> `[a link](url)` and `[a     link](url)` -> `[a link](url)`.
+ * `[ a link ](url)` → `[a link](url)` and `[a     link](url)` → `[a link](url)`.
  *
  * The `all` mode (default) also treats line breaks as collapsible whitespace, so
  * a newline in the text becomes a space (or is dropped if it is only trailing)

@@ -14,7 +14,7 @@ const isWordChar = (ch: string | undefined): boolean => ch !== undefined && /[\p
  * - Toward underscore when the delimiter is intraword (`a*b*c`): CommonMark
  *   forbids intraword `_`, so converting would break rendering.
  * - When a character adjacent to a delimiter already equals the target
- *   marker char: the runs would merge (e.g. `*_x_*` -> `__x__` turns nested
+ *   marker char: the runs would merge (e.g. `*_x_*` → `__x__` turns nested
  *   emphasis into strong).
  */
 export const emphasisStyle: Rule = {

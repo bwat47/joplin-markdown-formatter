@@ -13,7 +13,7 @@ export interface FormatResult {
 /**
  * Format a markdown document.
  *
- * Each enabled rule runs as its own analyze -> edit pass against a tree that
+ * Each enabled rule runs as its own analyze → edit pass against a tree that
  * always matches the current text: the text is re-parsed whenever a rule
  * changes it, so byte offsets are always valid against the current document.
  * Notes are small, so the repeated parses are cheap and buy us freedom from

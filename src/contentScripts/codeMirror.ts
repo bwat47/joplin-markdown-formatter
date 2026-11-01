@@ -40,8 +40,8 @@ export interface CodeMirrorContentScriptModule {
  * Diffs `oldText` against `newText` and returns one change span per edited
  * region, with `from`/`to` addressed in `oldText` coordinates — the shape
  * CodeMirror expects for an array of changes in a single transaction.
- * E.g. "* a\ntext\n* b" -> "- a\ntext\n- b" yields
- * [{ from: 0, to: 1, insert: '-' }, { from: 9, to: 10, insert: '-' }].
+ * E.g. `"* a\ntext\n* b"` → `"- a\ntext\n- b"` yields
+ * `[{ from: 0, to: 1, insert: '-' }, { from: 9, to: 10, insert: '-' }]`.
  *
  * diff-match-patch measures in UTF-16 code units, matching CodeMirror's
  * document offsets, so positions transfer directly.

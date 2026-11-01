@@ -24,11 +24,11 @@ const OPENING_CONTEXT = /[\s([{–—‘“'"-]/;
  *
  * Toward smart, opening vs. closing is decided from the surrounding
  * characters (SmartyPants-style):
- * - after a letter/digit -> closing/apostrophe (`don't`, `word"`)
- * - `'` before a two-digit decade (`'90s`) -> apostrophe
- * - after whitespace/start/opening bracket/dash/opening quote -> opening
+ * - after a letter/digit → closing/apostrophe (`don't`, `word"`)
+ * - `'` before a two-digit decade (`'90s`) → apostrophe
+ * - after whitespace/start/opening bracket/dash/opening quote → opening
  *   when followed by a non-space, else closing
- * - anything else (e.g. after `.` or `,`) -> closing
+ * - anything else (e.g. after `.` or `,`) → closing
  *
  * Backslash-escaped quotes (`\"`) are skipped: rewriting the quote would
  * turn the escape into a literal backslash and change the text.
