@@ -47,12 +47,14 @@ export default defineConfig([
             // Merge duplicate imports using inline `type` specifiers, matching consistent-type-imports below
             'import-x/no-duplicates': ['error', { 'prefer-inline': true }],
             '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports' }],
+            '@typescript-eslint/consistent-type-exports': ['error', { fixMixedExportsWithInlineTypeSpecifier: true }],
             // Use `import type { A }` rather than `import { type A }` when every specifier is a type
             '@typescript-eslint/no-import-type-side-effects': 'error',
             '@typescript-eslint/no-inferrable-types': 'error',
             '@typescript-eslint/explicit-module-boundary-types': 'error',
             // Redundant with TypeScript's own no-overlap check (TS2367) and has false positives
             'sonarjs/different-types-comparison': 'off',
+            eqeqeq: ['error', 'always'],
             'tsdoc/syntax': 'error',
         },
     },
