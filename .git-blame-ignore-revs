@@ -1,2 +1,4 @@
 # chore(format): sort imports with prettier-plugin-sort-imports
 cebd976d5e1f21f63de23f18781c3d81eae247b6
+# chore: add tsdoc plugin and fix tsdoc syntax
+495ba2dc202b0c4d5aeaa47699cfb735e6d2f40c
