@@ -1,7 +1,8 @@
 import type { List, ListItem } from 'mdast';
-import type { Edit, Rule, RuleContext, Indentation } from '../types';
-import { computeLineStarts, isBlankLine, lineIndexOfOffset, columnWidth, indentBeyondColumn } from '../lines';
+
+import { columnWidth, computeLineStarts, indentBeyondColumn, isBlankLine, lineIndexOfOffset } from '../lines';
 import { getProtectedRanges, intersectsProtectedRange, type OffsetRange } from '../protectedRanges';
+import type { Edit, Indentation, Rule, RuleContext } from '../types';
 
 /** A parsed GFM task marker and the first content offset after its trailing whitespace. */
 interface TaskMarker {

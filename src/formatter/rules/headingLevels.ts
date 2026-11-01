@@ -1,4 +1,5 @@
 import type { Heading } from 'mdast';
+
 import type { Edit, MinimumHeadingLevel, Rule, RuleContext } from '../types';
 import { walk } from '../walk';
 

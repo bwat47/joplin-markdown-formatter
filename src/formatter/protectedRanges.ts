@@ -1,4 +1,5 @@
 import type { Root } from 'mdast';
+
 import { walk } from './walk';
 
 /** Half-open character offset range [start, end). */

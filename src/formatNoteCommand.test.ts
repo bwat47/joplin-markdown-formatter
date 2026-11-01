@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
-import { DEFAULT_OPTIONS } from './formatter';
+
 import { executeFormatMarkdownNote, type FormatNoteCommandDependencies } from './formatNoteCommand';
+import { DEFAULT_OPTIONS } from './formatter';
 
 describe('executeFormatMarkdownNote', () => {
     test('writes and previews only the first of two repeated formatting commands', async () => {

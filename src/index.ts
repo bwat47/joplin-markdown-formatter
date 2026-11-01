@@ -3,8 +3,8 @@ import { ContentScriptType, MenuItemLocation, ToastType, ToolbarButtonLocation }
 import { EDITOR_CONTENT_SCRIPT_ID, GET_NOTE_TEXT_COMMAND, SET_NOTE_TEXT_COMMAND } from './constants';
 import { confirmFormattingChanges, registerDiffPreviewDialog } from './diffPreview/dialog';
 import { executeFormatMarkdownNote, type FormatNoteCommandDependencies } from './formatNoteCommand';
-import { loadDisplayToastMessages, loadFormatterOptions, loadShowDiffPreview, registerSettings } from './settings';
 import logger from './logger';
+import { loadDisplayToastMessages, loadFormatterOptions, loadShowDiffPreview, registerSettings } from './settings';
 
 const formatNoteCommandDependencies: FormatNoteCommandDependencies = {
     readEditorText: async (): Promise<unknown> =>

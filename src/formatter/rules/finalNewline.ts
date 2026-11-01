@@ -1,6 +1,6 @@
-import type { Edit, Rule, RuleContext } from '../types';
 import { trailingWhitespaceStart } from '../lines';
 import { getProtectedRanges } from '../protectedRanges';
+import type { Edit, Rule, RuleContext } from '../types';
 
 /**
  * Ensure the document ends with exactly one trailing newline: trailing

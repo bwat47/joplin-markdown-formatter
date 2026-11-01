@@ -9,7 +9,8 @@
  * and scroll position stay anchored to the unchanged text around them.
  */
 
-import { diffMain, diffCleanupEfficiency, DIFF_EQUAL, DIFF_DELETE } from 'diff-match-patch-es';
+import { DIFF_DELETE, DIFF_EQUAL, diffCleanupEfficiency, diffMain } from 'diff-match-patch-es';
+
 import { GET_NOTE_TEXT_COMMAND, SET_NOTE_TEXT_COMMAND } from '../constants';
 
 interface ChangeSpec {

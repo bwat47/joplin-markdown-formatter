@@ -1,8 +1,9 @@
 import type { List, ListItem } from 'mdast';
 import type { Node } from 'unist';
+
+import { computeLineStarts, isBlankLine, lineIndexOfOffset } from '../lines';
 import type { Edit, Rule, RuleContext } from '../types';
 import { walkWithAncestors } from '../walk';
-import { computeLineStarts, isBlankLine, lineIndexOfOffset } from '../lines';
 
 /**
  * The gap between each pair of adjacent nodes, as `[endOffset, startOffset]`.

@@ -1,6 +1,6 @@
-import type { Edit, Rule, RuleContext } from '../types';
 import { computeLineStarts, lineIndexOfOffset } from '../lines';
 import { getProtectedRanges, type OffsetRange } from '../protectedRanges';
+import type { Edit, Rule, RuleContext } from '../types';
 import { walkWithAncestors } from '../walk';
 import { createEditSink } from './blockSpacing';
 

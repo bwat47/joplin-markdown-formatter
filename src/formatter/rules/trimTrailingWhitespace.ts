@@ -1,7 +1,8 @@
-import type { Edit, Rule, RuleContext } from '../types';
 import type { Root } from 'mdast';
+
 import { computeLineStarts, trailingWhitespaceStart } from '../lines';
 import { getProtectedRanges, intersectsProtectedRange } from '../protectedRanges';
+import type { Edit, Rule, RuleContext } from '../types';
 import { walk } from '../walk';
 
 /**

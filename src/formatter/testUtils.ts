@@ -1,4 +1,5 @@
 import { expect } from 'vitest';
+
 import { formatMarkdown, type FormatResult } from './pipeline';
 import type { FormatterOptions } from './types';
 

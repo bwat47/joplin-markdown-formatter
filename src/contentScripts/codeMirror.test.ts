@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+
 import { GET_NOTE_TEXT_COMMAND, SET_NOTE_TEXT_COMMAND } from '../constants';
 import createCodeMirrorPlugin, { computeChanges } from './codeMirror';
 

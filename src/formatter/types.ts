@@ -8,6 +8,7 @@
  */
 
 import type { Root } from 'mdast';
+
 import type { OffsetRange } from './protectedRanges';
 
 type ListSpacing = 'semantic' | 'tight' | 'loose' | 'preserve';

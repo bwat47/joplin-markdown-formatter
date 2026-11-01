@@ -1,5 +1,6 @@
 import type { Link, LinkReference } from 'mdast';
 import type { Node, Parent } from 'unist';
+
 import type { Edit, Rule, RuleContext } from '../types';
 import { walk, walkWithAncestors } from '../walk';
 

@@ -1,8 +1,8 @@
-import { type FormatterOptions, DEFAULT_OPTIONS } from './types';
-import { parseMarkdown } from './parse';
 import { applyEdits } from './edits';
-import { isStructurallyEqual } from './verify';
+import { parseMarkdown } from './parse';
 import { rules } from './rules';
+import { DEFAULT_OPTIONS, type FormatterOptions } from './types';
+import { isStructurallyEqual } from './verify';
 
 export interface FormatResult {
     text: string;

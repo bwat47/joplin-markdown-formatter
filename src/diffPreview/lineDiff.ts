@@ -17,11 +17,11 @@ import {
     DIFF_DELETE,
     DIFF_EQUAL,
     DIFF_INSERT,
-    type Diff,
     diffCharsToLines,
     diffCleanupSemantic,
     diffLinesToChars,
     diffMain,
+    type Diff,
 } from 'diff-match-patch-es';
 
 type DiffLineKind = 'context' | 'add' | 'remove';

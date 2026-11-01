@@ -1,5 +1,5 @@
-import type { Edit, Rule, RuleContext } from '../types';
 import { trailingWhitespaceStart } from '../lines';
+import type { Edit, Rule, RuleContext } from '../types';
 import { walk } from '../walk';
 
 /** Normalize separators inside ATX headings without reprinting their text. */

@@ -1,5 +1,5 @@
-import type { Edit, Rule, RuleContext } from '../types';
 import { computeLineStarts, lineIndexOfOffset } from '../lines';
+import type { Edit, Rule, RuleContext } from '../types';
 import { walk } from '../walk';
 import { addSpacingAbove, addSpacingBelow, createEditSink } from './blockSpacing';
 

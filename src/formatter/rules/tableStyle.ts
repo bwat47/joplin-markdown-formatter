@@ -1,8 +1,9 @@
-import type { Table, TableRow, AlignType } from 'mdast';
+import type { AlignType, Table, TableRow } from 'mdast';
 import type { Node } from 'unist';
+
+import { trailingWhitespaceStart } from '../lines';
 import type { Edit, Rule, RuleContext } from '../types';
 import { walkWithAncestors } from '../walk';
-import { trailingWhitespaceStart } from '../lines';
 
 /**
  * Rebuild table rows in canonical `| a | b |` form, and the delimiter row to

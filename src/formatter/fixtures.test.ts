@@ -12,6 +12,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+
 import { expectIdempotent } from './testUtils';
 import type { FormatterOptions } from './types';
 

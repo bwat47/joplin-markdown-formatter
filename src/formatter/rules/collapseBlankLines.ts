@@ -1,6 +1,6 @@
-import type { Edit, Rule, RuleContext } from '../types';
 import { computeLineStarts, isBlankLine } from '../lines';
 import { getProtectedRanges, intersectsProtectedRange } from '../protectedRanges';
+import type { Edit, Rule, RuleContext } from '../types';
 
 /**
  * Collapse runs of two or more blank lines into a single blank line.

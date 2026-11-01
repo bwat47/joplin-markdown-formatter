@@ -1,4 +1,5 @@
 import type { List } from 'mdast';
+
 import type { Edit, Rule, RuleContext } from '../types';
 import { walk } from '../walk';
 

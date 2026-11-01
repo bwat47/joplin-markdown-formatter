@@ -7,7 +7,7 @@
 
 import joplin from 'api';
 import { SettingItemType } from 'api/types';
-import { type FormatterOptions, DEFAULT_OPTIONS } from './formatter';
+import { DEFAULT_OPTIONS, type FormatterOptions } from './formatter';
 
 const SECTION = 'markdownFormatter';
 const DISPLAY_TOAST_MESSAGES_KEY = 'displayToastMessages';

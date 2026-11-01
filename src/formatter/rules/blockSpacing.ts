@@ -1,7 +1,8 @@
-import type { Edit, FormatterOptions, Rule, RuleContext } from '../types';
-import { computeLineStarts, isBlankLine, lineIndexOfOffset } from '../lines';
-import { walkWithAncestors } from '../walk';
 import type { Node } from 'unist';
+
+import { computeLineStarts, isBlankLine, lineIndexOfOffset } from '../lines';
+import type { Edit, FormatterOptions, Rule, RuleContext } from '../types';
+import { walkWithAncestors } from '../walk';
 
 interface BlockSpacingConfig {
     /** Rule name, e.g. `'headingSpacing'`. */
