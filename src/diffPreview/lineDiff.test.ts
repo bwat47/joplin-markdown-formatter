@@ -1,4 +1,12 @@
+import { assert } from 'vitest';
+
 import { computeLineDiff, type DiffHunk, type DiffLine } from './lineDiff';
+
+function requiredAt<T>(items: readonly T[], index: number): T {
+    const item = items[index];
+    assert.isDefined(item, `Expected an item at index ${index}`);
+    return item;
+}
 
 function text(line: DiffLine): string {
     return line.segments.map((segment) => segment.text).join('');
@@ -19,12 +27,13 @@ describe('computeLineDiff', () => {
 
     test('pairs a replaced line and numbers both sides', () => {
         const [hunk] = computeLineDiff('intro\n* item\ntail\n', 'intro\n- item\ntail\n');
+        assert.isDefined(hunk);
 
         expect(rows(hunk)).toEqual(['c intro', 'r * item', 'a - item', 'c tail']);
         expect(hunk).toMatchObject({ oldStart: 1, oldCount: 3, newStart: 1, newCount: 3 });
 
-        const removed = hunk.lines[1];
-        const added = hunk.lines[2];
+        const removed = requiredAt(hunk.lines, 1);
+        const added = requiredAt(hunk.lines, 2);
         expect(removed.oldNumber).toBe(2);
         expect(removed.newNumber).toBeNull();
         expect(added.oldNumber).toBeNull();
@@ -33,35 +42,39 @@ describe('computeLineDiff', () => {
 
     test('highlights only the changed characters of a replaced line', () => {
         const [hunk] = computeLineDiff('* item one\n', '- item one\n');
+        assert.isDefined(hunk);
 
-        expect(changedSpans(hunk.lines[0])).toEqual(['*']);
-        expect(changedSpans(hunk.lines[1])).toEqual(['-']);
+        expect(changedSpans(requiredAt(hunk.lines, 0))).toEqual(['*']);
+        expect(changedSpans(requiredAt(hunk.lines, 1))).toEqual(['-']);
     });
 
     test('highlights trimmed trailing whitespace', () => {
         const [hunk] = computeLineDiff('text  \n', 'text\n');
+        assert.isDefined(hunk);
 
-        expect(changedSpans(hunk.lines[0])).toEqual(['  ']);
-        expect(changedSpans(hunk.lines[1])).toEqual([]);
+        expect(changedSpans(requiredAt(hunk.lines, 0))).toEqual(['  ']);
+        expect(changedSpans(requiredAt(hunk.lines, 1))).toEqual([]);
     });
 
     test('leaves unrelated lines unhighlighted rather than pairing them character by character', () => {
         const [hunk] = computeLineDiff('# Heading\n', 'a completely different line\n');
+        assert.isDefined(hunk);
 
-        expect(changedSpans(hunk.lines[0])).toEqual([]);
-        expect(changedSpans(hunk.lines[1])).toEqual([]);
+        expect(changedSpans(requiredAt(hunk.lines, 0))).toEqual([]);
+        expect(changedSpans(requiredAt(hunk.lines, 1))).toEqual([]);
     });
 
     test('aligns runs of unequal length by similarity', () => {
         // Two rewritten lines against three added ones: the inserted blank line
         // must not push the second pair out of alignment.
         const [hunk] = computeLineDiff('### Head\n| a | b |\n', '## Head\n\n| a   | b   |\n');
+        assert.isDefined(hunk);
 
         expect(rows(hunk)).toEqual(['r ### Head', 'r | a | b |', 'a ## Head', 'a ', 'a | a   | b   |']);
-        expect(changedSpans(hunk.lines[0])).toEqual(['#']);
-        expect(changedSpans(hunk.lines[1])).toEqual([]);
-        expect(changedSpans(hunk.lines[3])).toEqual([]);
-        expect(changedSpans(hunk.lines[4])).toEqual(['  ', '  ']);
+        expect(changedSpans(requiredAt(hunk.lines, 0))).toEqual(['#']);
+        expect(changedSpans(requiredAt(hunk.lines, 1))).toEqual([]);
+        expect(changedSpans(requiredAt(hunk.lines, 3))).toEqual([]);
+        expect(changedSpans(requiredAt(hunk.lines, 4))).toEqual(['  ', '  ']);
     });
 
     test('skips multiple inserted lines before highlighting a later counterpart', () => {
@@ -69,11 +82,12 @@ describe('computeLineDiff', () => {
             'Target line before formatting\n',
             'First unrelated insertion\nSecond unrelated insertion\nTarget line after formatting\n'
         );
+        assert.isDefined(hunk);
 
-        expect(changedSpans(hunk.lines[0])).toEqual(['before']);
-        expect(changedSpans(hunk.lines[1])).toEqual([]);
-        expect(changedSpans(hunk.lines[2])).toEqual([]);
-        expect(changedSpans(hunk.lines[3])).toEqual(['after']);
+        expect(changedSpans(requiredAt(hunk.lines, 0))).toEqual(['before']);
+        expect(changedSpans(requiredAt(hunk.lines, 1))).toEqual([]);
+        expect(changedSpans(requiredAt(hunk.lines, 2))).toEqual([]);
+        expect(changedSpans(requiredAt(hunk.lines, 3))).toEqual(['after']);
     });
 
     test('prefers a globally stronger alignment over an acceptable early match', () => {
@@ -81,12 +95,13 @@ describe('computeLineDiff', () => {
             'Item one value\nItem two value\n',
             'Item zero value\nItem one value!\nItem two value!\n'
         );
+        assert.isDefined(hunk);
 
-        expect(changedSpans(hunk.lines[0])).toEqual([]);
-        expect(changedSpans(hunk.lines[1])).toEqual([]);
-        expect(changedSpans(hunk.lines[2])).toEqual([]);
-        expect(changedSpans(hunk.lines[3])).toEqual(['!']);
-        expect(changedSpans(hunk.lines[4])).toEqual(['!']);
+        expect(changedSpans(requiredAt(hunk.lines, 0))).toEqual([]);
+        expect(changedSpans(requiredAt(hunk.lines, 1))).toEqual([]);
+        expect(changedSpans(requiredAt(hunk.lines, 2))).toEqual([]);
+        expect(changedSpans(requiredAt(hunk.lines, 3))).toEqual(['!']);
+        expect(changedSpans(requiredAt(hunk.lines, 4))).toEqual(['!']);
     });
 
     test('preserves order when similar Markdown lines repeat', () => {
@@ -94,6 +109,7 @@ describe('computeLineDiff', () => {
             '* Repeated\n* Middle\n* Repeated\n',
             '- Repeated\nInserted explanation\n- Middle\n- Repeated\n'
         );
+        assert.isDefined(hunk);
 
         expect(hunk.lines.map(changedSpans)).toEqual([['*'], ['*'], ['*'], ['-'], [], ['-'], ['-']]);
     });
@@ -103,10 +119,11 @@ describe('computeLineDiff', () => {
         const newText = Array.from({ length: 65 }, (_, index) => `New item ${index}`).join('\n') + '\n';
 
         const [hunk] = computeLineDiff(oldText, newText);
+        assert.isDefined(hunk);
 
         expect(hunk.lines).toHaveLength(130);
-        expect(changedSpans(hunk.lines[0])).toEqual(['Old']);
-        expect(changedSpans(hunk.lines[65])).toEqual(['New']);
+        expect(changedSpans(requiredAt(hunk.lines, 0))).toEqual(['Old']);
+        expect(changedSpans(requiredAt(hunk.lines, 65))).toEqual(['New']);
     });
 
     test('retains highlighting when few but long lines exceed the alignment work budget', () => {
@@ -119,16 +136,18 @@ describe('computeLineDiff', () => {
         const started = Date.now();
         const [hunk] = computeLineDiff(oldText, newText);
         const elapsed = Date.now() - started;
+        assert.isDefined(hunk);
 
         expect(hunk.lines).toHaveLength(40);
-        expect(changedSpans(hunk.lines[0])).toEqual(['*']);
-        expect(changedSpans(hunk.lines[20])).toEqual(['-']);
+        expect(changedSpans(requiredAt(hunk.lines, 0))).toEqual(['*']);
+        expect(changedSpans(requiredAt(hunk.lines, 20))).toEqual(['-']);
         // The global matrix takes seconds on this input; the fallback is instant.
         expect(elapsed).toBeLessThan(1000);
     });
 
     test('leaves a line with no counterpart unpaired', () => {
         const [hunk] = computeLineDiff('keep me\n', 'keep me\nbrand new line\n');
+        assert.isDefined(hunk);
 
         for (const line of hunk.lines) {
             expect(changedSpans(line)).toEqual([]);
@@ -140,6 +159,7 @@ describe('computeLineDiff', () => {
         const newText = oldText.replace('line 7', 'LINE 7');
 
         const [hunk] = computeLineDiff(oldText, newText, 2);
+        assert.isDefined(hunk);
 
         expect(rows(hunk)).toEqual(['c line 5', 'c line 6', 'r line 7', 'a LINE 7', 'c line 8', 'c line 9']);
         expect(hunk).toMatchObject({ oldStart: 5, newStart: 5 });
@@ -152,8 +172,8 @@ describe('computeLineDiff', () => {
         const hunks = computeLineDiff(oldText, newText, 2);
 
         expect(hunks).toHaveLength(2);
-        expect(hunks[0].lines.map(text)).toContain('LINE 3');
-        expect(hunks[1].lines.map(text)).toContain('LINE 25');
+        expect(requiredAt(hunks, 0).lines.map(text)).toContain('LINE 3');
+        expect(requiredAt(hunks, 1).lines.map(text)).toContain('LINE 25');
     });
 
     test('keeps nearby changes in one hunk', () => {
@@ -163,7 +183,7 @@ describe('computeLineDiff', () => {
         const hunks = computeLineDiff(oldText, newText, 2);
 
         expect(hunks).toHaveLength(1);
-        expect(rows(hunks[0])).toEqual([
+        expect(rows(requiredAt(hunks, 0))).toEqual([
             'c line 2',
             'c line 3',
             'r line 4',
@@ -180,20 +200,24 @@ describe('computeLineDiff', () => {
     test('starts an empty side at the line it follows, not at line 1', () => {
         // Unified-diff convention for a zero-length range, as `git diff` emits it.
         const [deletion] = computeLineDiff('a\nb\n', '');
+        assert.isDefined(deletion);
         expect(deletion).toMatchObject({ oldStart: 1, oldCount: 2, newStart: 0, newCount: 0 });
 
         const [insertion] = computeLineDiff('', 'a\nb\n');
+        assert.isDefined(insertion);
         expect(insertion).toMatchObject({ oldStart: 0, oldCount: 0, newStart: 1, newCount: 2 });
     });
 
     test('keeps a non-empty side anchored to its first line', () => {
         // The same anchor drives both cases, so a replaced line must still report 1.
         const [hunk] = computeLineDiff('a\n', 'b\n');
+        assert.isDefined(hunk);
         expect(hunk).toMatchObject({ oldStart: 1, oldCount: 1, newStart: 1, newCount: 1 });
     });
 
     test('flags a final line with no trailing newline', () => {
         const [hunk] = computeLineDiff('a\nb', 'a\nb\n');
+        assert.isDefined(hunk);
 
         expect(hunk.lines.map((line) => [line.kind, line.missingFinalNewline])).toEqual([
             ['context', false],
@@ -204,6 +228,7 @@ describe('computeLineDiff', () => {
 
     test('reports insertion positions on the side that does not number them', () => {
         const [hunk] = computeLineDiff('a\nb\n', 'a\nnew\nb\n');
+        assert.isDefined(hunk);
 
         expect(rows(hunk)).toEqual(['c a', 'a new', 'c b']);
         expect(hunk).toMatchObject({ oldStart: 1, oldCount: 2, newStart: 1, newCount: 3 });

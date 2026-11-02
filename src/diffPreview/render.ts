@@ -28,7 +28,7 @@ const ESCAPES: Record<string, string> = {
 };
 
 function escapeHtml(text: string): string {
-    return text.replace(/[&<>]/g, (char) => ESCAPES[char]);
+    return text.replace(/[&<>]/g, (char) => ESCAPES[char] ?? char);
 }
 
 export function renderDiffPreviewHtml(content: DiffPreviewContent): string {
