@@ -33,7 +33,7 @@ export const listMarkers: Rule = {
             for (const item of list.children) {
                 const offset = item.position?.start?.offset;
                 if (offset === undefined) continue;
-                const bullet = text[offset];
+                const bullet = text.charAt(offset);
                 if (bullet === marker || !/[-*+]/.test(bullet)) continue;
                 edits.push({ start: offset, end: offset + 1, replacement: marker });
             }

@@ -38,8 +38,9 @@ export const codeBlockLanguage: Rule = {
             const match = /^([ \t]{0,3})(`{3,}|~{3,})([ \t]*)(\r?\n|$)/.exec(openingLine);
             if (!match) return;
 
-            const fenceEnd = start + match[1].length + match[2].length;
-            const infoEnd = fenceEnd + match[3].length;
+            // All three captures participate whenever the opening fence matches.
+            const fenceEnd = start + match[1]!.length + match[2]!.length;
+            const infoEnd = fenceEnd + match[3]!.length;
             edits.push({ start: fenceEnd, end: infoEnd, replacement: language });
         });
 

@@ -201,9 +201,10 @@ function toDiffLines(oldText: string, newText: string): AnchoredLine[] {
  */
 function groupIntoHunks(lines: AnchoredLine[], contextLines: number): DiffHunk[] {
     const hunks: DiffHunk[] = [];
+    // Indexed reads in these scans are bounded by lines.length.
     let index = 0;
     while (index < lines.length) {
-        if (lines[index].kind === 'context') {
+        if (lines[index]!.kind === 'context') {
             index += 1;
             continue;
         }
@@ -212,13 +213,13 @@ function groupIntoHunks(lines: AnchoredLine[], contextLines: number): DiffHunk[]
         let lastChange = index;
         let cursor = index + 1;
         while (cursor < lines.length) {
-            if (lines[cursor].kind !== 'context') {
+            if (lines[cursor]!.kind !== 'context') {
                 lastChange = cursor;
                 cursor += 1;
                 continue;
             }
             let run = 0;
-            while (cursor + run < lines.length && lines[cursor + run].kind === 'context') run += 1;
+            while (cursor + run < lines.length && lines[cursor + run]!.kind === 'context') run += 1;
             // A long run ends the hunk; so does a run that reaches the end of
             // the document, since there is no further change to absorb.
             if (run > contextLines * 2 || cursor + run >= lines.length) break;
@@ -233,6 +234,8 @@ function groupIntoHunks(lines: AnchoredLine[], contextLines: number): DiffHunk[]
 }
 
 function toHunk(lines: AnchoredLine[]): DiffHunk {
+    const first = lines[0];
+    if (!first) throw new Error('Cannot create a diff hunk without lines');
     const oldCount = lines.filter((line) => line.kind !== 'add').length;
     const newCount = lines.filter((line) => line.kind !== 'remove').length;
     return {
@@ -240,9 +243,9 @@ function toHunk(lines: AnchoredLine[]): DiffHunk {
         // diff convention: a note formatted away to nothing is `+0,0`, not
         // `+1,0`. The anchors hold the position *after* that line, which is
         // what a non-empty side needs.
-        oldStart: oldCount === 0 ? lines[0].oldAnchor - 1 : lines[0].oldAnchor,
+        oldStart: oldCount === 0 ? first.oldAnchor - 1 : first.oldAnchor,
         oldCount,
-        newStart: newCount === 0 ? lines[0].newAnchor - 1 : lines[0].newAnchor,
+        newStart: newCount === 0 ? first.newAnchor - 1 : first.newAnchor,
         newCount,
         lines,
     };
@@ -255,17 +258,18 @@ function toHunk(lines: AnchoredLine[]): DiffHunk {
  * rather than by index, leaving genuinely new or deleted lines unpaired.
  */
 function highlightReplacedLines(lines: DiffLine[]): void {
+    // Indexed reads in these scans are bounded by lines.length.
     let index = 0;
     while (index < lines.length) {
-        if (lines[index].kind !== 'remove') {
+        if (lines[index]!.kind !== 'remove') {
             index += 1;
             continue;
         }
 
         let removeEnd = index;
-        while (removeEnd < lines.length && lines[removeEnd].kind === 'remove') removeEnd += 1;
+        while (removeEnd < lines.length && lines[removeEnd]!.kind === 'remove') removeEnd += 1;
         let addEnd = removeEnd;
-        while (addEnd < lines.length && lines[addEnd].kind === 'add') addEnd += 1;
+        while (addEnd < lines.length && lines[addEnd]!.kind === 'add') addEnd += 1;
 
         alignRuns(lines.slice(index, removeEnd), lines.slice(removeEnd, addEnd));
         index = Math.max(addEnd, removeEnd);
@@ -304,10 +308,11 @@ function totalTextLength(lines: DiffLine[]): number {
 function alignRunsGlobally(removed: DiffLine[], added: DiffLine[], getComparison: PairComparisonGetter): void {
     const choices = buildAlignmentChoices(removed.length, added.length, getComparison);
     const pairs = traceAlignedPairs(choices, removed.length, added.length);
+    // Traceback only returns indices inside the removed and added runs.
     for (const pair of pairs) {
         applySegments(
-            removed[pair.removedIndex],
-            added[pair.addedIndex],
+            removed[pair.removedIndex]!,
+            added[pair.addedIndex]!,
             getComparison(pair.removedIndex, pair.addedIndex).diffs
         );
     }
@@ -327,22 +332,27 @@ function buildAlignmentChoices(
     const choices = Array.from({ length: removedCount + 1 }, () =>
         Array<AlignmentChoice>(addedCount + 1).fill('skipAdded')
     );
-    for (let i = 1; i <= removedCount; i += 1) choices[i][0] = 'skipRemoved';
+    // Matrices include row/column zero; all loops below stay within those dimensions.
+    for (let i = 1; i <= removedCount; i += 1) choices[i]![0] = 'skipRemoved';
 
     for (let i = 1; i <= removedCount; i += 1) {
+        const previousScores = scores[i - 1]!;
+        const currentScores = scores[i]!;
+        const currentChoices = choices[i]!;
         for (let j = 1; j <= addedCount; j += 1) {
-            let bestScore = scores[i - 1][j];
+            let bestScore = previousScores[j]!;
             let choice: AlignmentChoice = 'skipRemoved';
 
-            if (scores[i][j - 1] > bestScore) {
-                bestScore = scores[i][j - 1];
+            const skipAddedScore = currentScores[j - 1]!;
+            if (skipAddedScore > bestScore) {
+                bestScore = skipAddedScore;
                 choice = 'skipAdded';
             }
 
             const comparison = getComparison(i - 1, j - 1);
             const weight = pairingWeight(comparison.score);
             if (weight !== null) {
-                const pairedScore = scores[i - 1][j - 1] + weight;
+                const pairedScore = previousScores[j - 1]! + weight;
                 // Prefer a pair on a tie so equally good alignments retain the
                 // most useful character-level highlighting.
                 if (pairedScore >= bestScore) {
@@ -351,8 +361,8 @@ function buildAlignmentChoices(
                 }
             }
 
-            scores[i][j] = bestScore;
-            choices[i][j] = choice;
+            currentScores[j] = bestScore;
+            currentChoices[j] = choice;
         }
     }
 
@@ -365,7 +375,8 @@ function traceAlignedPairs(choices: AlignmentChoice[][], removedCount: number, a
     let j = addedCount;
     const pairs: AlignedPair[] = [];
     while (i > 0 || j > 0) {
-        const choice = choices[i][j];
+        // Dimensions match the matrix built above; each move consumes one side.
+        const choice = choices[i]![j]!;
         if (choice === 'pair') {
             pairs.push({ removedIndex: i - 1, addedIndex: j - 1 });
             i -= 1;
@@ -398,7 +409,8 @@ function alignRunsGreedily(removed: DiffLine[], added: DiffLine[], getComparison
     while (i < removed.length && j < added.length) {
         const pair = getComparison(i, j);
         if (pair.score >= MIN_LINE_SIMILARITY) {
-            applySegments(removed[i], added[j], pair.diffs);
+            // The loop bounds keep both indices within their respective runs.
+            applySegments(removed[i]!, added[j]!, pair.diffs);
             i += 1;
             j += 1;
             continue;
@@ -427,7 +439,8 @@ function createPairComparisonGetter(removed: DiffLine[], added: DiffLine[]): Pai
         const cached = cache.get(key);
         if (cached) return cached;
 
-        const comparison = comparePair(removed[removedIndex], added[addedIndex]);
+        // Alignment callers only request pairs within these runs.
+        const comparison = comparePair(removed[removedIndex]!, added[addedIndex]!);
         cache.set(key, comparison);
         return comparison;
     };

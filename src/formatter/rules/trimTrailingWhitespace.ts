@@ -23,8 +23,7 @@ export const trimTrailingWhitespace: Rule = {
         const lineStarts = computeLineStarts(text);
         const lineEnd = (i: number): number => lineStarts[i + 1] ?? text.length;
 
-        for (let i = 0; i < lineStarts.length; i++) {
-            const start = lineStarts[i];
+        for (const [i, start] of lineStarts.entries()) {
             const end = lineEnd(i);
             let contentEnd = end;
             if (text[contentEnd - 1] === '\n') contentEnd--;
