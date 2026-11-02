@@ -290,8 +290,8 @@ function nestedListSpans(ctx: ListContext, item: ListItem, depth: number, parent
     const spans: NestedListSpan[] = [];
     for (const child of item.children) {
         if (child.type !== 'list') continue;
-        const startOffset = child.position?.start?.offset;
-        const endOffset = child.position?.end?.offset;
+        const startOffset = child.position?.start.offset;
+        const endOffset = child.position?.end.offset;
         if (startOffset === undefined || endOffset === undefined) continue;
 
         const rewritten = !startsMidLine(ctx.text, ctx.lineStarts, child);
@@ -324,7 +324,7 @@ function nestedContentColAt(spans: NestedListSpan[], line: number): number {
 function narrowestContentCol(ctx: ListContext, list: List, indentCols: number): number {
     let narrowest = Infinity;
     for (const item of list.children) {
-        const startOffset = item.position?.start?.offset;
+        const startOffset = item.position?.start.offset;
         if (startOffset === undefined) continue;
         const marker = matchMarker(ctx.text, list, startOffset);
         if (marker !== null) narrowest = Math.min(narrowest, indentCols + marker.length + 1);
@@ -363,8 +363,8 @@ function listIndentCols(ctx: ListContext, depth: number, parentContentCol: numbe
  */
 function measureItem(ctx: ListContext, list: List, item: ListItem, indentCols: number): ItemLayout | null {
     const { text, lineStarts } = ctx;
-    const startOffset = item.position?.start?.offset;
-    const endOffset = item.position?.end?.offset;
+    const startOffset = item.position?.start.offset;
+    const endOffset = item.position?.end.offset;
     if (startOffset === undefined || endOffset === undefined) return null;
 
     const marker = matchMarker(text, list, startOffset);
@@ -431,7 +431,7 @@ function canRoundToTabStop(ctx: ListContext, item: ListItem, oldContentCol: numb
     return item.children.every((child) => {
         if (STRUCTURAL_INDENT_BLOCKS.has(child.type)) return true;
 
-        const startOffset = child.position?.start?.offset;
+        const startOffset = child.position?.start.offset;
         if (startOffset === undefined) return false;
         if (lineIndexOfOffset(ctx.lineStarts, startOffset) === markerLine) return false;
         // Only a block sitting exactly on the content column shifts predictably.
@@ -475,8 +475,8 @@ function structuralIndentLines(lineStarts: number[], item: ListItem): Set<number
     const lines = new Set<number>();
     for (const child of item.children) {
         if (!STRUCTURAL_INDENT_BLOCKS.has(child.type)) continue;
-        const startOffset = child.position?.start?.offset;
-        const endOffset = child.position?.end?.offset;
+        const startOffset = child.position?.start.offset;
+        const endOffset = child.position?.end.offset;
         if (startOffset === undefined || endOffset === undefined) continue;
 
         const firstLine = lineIndexOfOffset(lineStarts, startOffset);
@@ -561,7 +561,7 @@ function markerEdit(ctx: ListContext, start: number, prefix: MarkerPrefix): Edit
  * start offset answers this for every item.
  */
 function startsMidLine(text: string, lineStarts: number[], list: List): boolean {
-    const startOffset = list.position?.start?.offset;
+    const startOffset = list.position?.start.offset;
     if (startOffset === undefined) return false;
     const lineStart = lineStartAt(lineStarts, lineIndexOfOffset(lineStarts, startOffset));
     return /\S/.test(text.slice(lineStart, startOffset));

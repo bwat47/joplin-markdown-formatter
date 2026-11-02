@@ -44,8 +44,8 @@ export function createBlockSpacingRule({ name, option, nodeType }: BlockSpacingC
             walkWithAncestors(tree, (node, ancestors) => {
                 if (node.type !== nodeType) return;
                 if (!isRootLevel(ancestors)) return;
-                const start = node.position?.start?.offset;
-                const end = node.position?.end?.offset;
+                const start = node.position?.start.offset;
+                const end = node.position?.end.offset;
                 if (start === undefined || end === undefined) return;
 
                 const firstLine = lineIndexOfOffset(lineStarts, start);

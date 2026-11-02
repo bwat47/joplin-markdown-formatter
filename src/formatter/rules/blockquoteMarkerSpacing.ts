@@ -54,8 +54,8 @@ export const blockquoteMarkerSpacing: Rule = {
             if (node.type !== 'blockquote') return;
             if (ancestors.some((ancestor) => ancestor.type === 'blockquote')) return; // process outermost only
 
-            const start = node.position?.start?.offset;
-            const end = node.position?.end?.offset;
+            const start = node.position?.start.offset;
+            const end = node.position?.end.offset;
             if (start === undefined || end === undefined) return;
 
             const firstLine = lineIndexOfOffset(lineStarts, start);
@@ -84,8 +84,8 @@ function collectListLines(tree: RuleContext['tree'], lineStarts: number[]): Set<
         if (node.type !== 'list') return;
         if (!ancestors.some((ancestor) => ancestor.type === 'blockquote')) return;
 
-        const start = node.position?.start?.offset;
-        const end = node.position?.end?.offset;
+        const start = node.position?.start.offset;
+        const end = node.position?.end.offset;
         if (start === undefined || end === undefined) return;
 
         const firstLine = lineIndexOfOffset(lineStarts, start);

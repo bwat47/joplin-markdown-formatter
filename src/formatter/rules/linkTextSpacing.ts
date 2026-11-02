@@ -43,8 +43,8 @@ function editableRuns(link: Link | LinkReference, text: string, region: Span): {
 
     walk(link, (node) => {
         if (node === (link as Node)) return;
-        const start = node.position?.start?.offset;
-        const end = node.position?.end?.offset;
+        const start = node.position?.start.offset;
+        const end = node.position?.end.offset;
         if (start === undefined || end === undefined) return;
 
         if (node.type === 'text') spans.push({ start, end });
@@ -60,9 +60,9 @@ function editableRuns(link: Link | LinkReference, text: string, region: Span): {
         // around its children; the children themselves are visited in turn, so
         // whatever they leave uncovered between them stays a gap. Leaves — and
         // any node whose children lack positions — cover their whole span.
-        const children = (node as Parent).children;
-        const childrenStart = children?.[0]?.position?.start?.offset;
-        const childrenEnd = children?.[children.length - 1]?.position?.end?.offset;
+        const children = (node as Partial<Parent>).children;
+        const childrenStart = children?.[0]?.position?.start.offset;
+        const childrenEnd = children?.[children.length - 1]?.position?.end.offset;
         if (childrenStart === undefined || childrenEnd === undefined) {
             cover(start, end);
         } else {
@@ -224,7 +224,7 @@ export const linkTextSpacing: Rule = {
             if (node.type !== 'link' && node.type !== 'linkReference') return;
             const link = node as Link | LinkReference;
             if (link.children.length === 0) return;
-            const linkStart = link.position?.start?.offset;
+            const linkStart = link.position?.start.offset;
             const region = linkStart === undefined ? undefined : labelsByLinkStart.get(linkStart);
             if (!region) return;
             if (isMultiLineInBlockquote(text, region, ancestors)) return;

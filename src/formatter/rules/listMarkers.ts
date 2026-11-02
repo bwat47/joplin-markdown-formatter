@@ -31,7 +31,7 @@ export const listMarkers: Rule = {
             if (list.ordered) return;
 
             for (const item of list.children) {
-                const offset = item.position?.start?.offset;
+                const offset = item.position?.start.offset;
                 if (offset === undefined) continue;
                 const bullet = text.charAt(offset);
                 if (bullet === marker || !/[-*+]/.test(bullet)) continue;

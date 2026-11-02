@@ -19,8 +19,8 @@ export function getProtectedRanges(tree: Root): OffsetRange[] {
     const ranges: OffsetRange[] = [];
     walk(tree, (node) => {
         if (!PROTECTED_TYPES.has(node.type)) return;
-        const start = node.position?.start?.offset;
-        const end = node.position?.end?.offset;
+        const start = node.position?.start.offset;
+        const end = node.position?.end.offset;
         if (start === undefined || end === undefined) return;
         ranges.push({ start, end });
     });

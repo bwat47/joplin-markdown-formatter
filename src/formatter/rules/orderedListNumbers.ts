@@ -30,7 +30,7 @@ export const orderedListNumbers: Rule = {
             if (start + list.children.length - 1 > 999999999) return;
 
             list.children.forEach((item, index) => {
-                const offset = item.position?.start?.offset;
+                const offset = item.position?.start.offset;
                 if (offset === undefined) return;
                 // Marker digits, e.g. "12" of "12. item"; guards against position drift.
                 const match = /^\d{1,9}(?=[.)])/.exec(text.slice(offset, offset + 10));

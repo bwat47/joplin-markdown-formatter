@@ -74,8 +74,8 @@ function clamp(value: number, min: number, max: number): number {
 
 /** Returns whether the heading's markers could be rewritten to `desiredDepth`. */
 function addAtxHeadingEdits(text: string, heading: Heading, desiredDepth: number, edits: Edit[]): boolean {
-    const start = heading.position?.start?.offset;
-    const end = heading.position?.end?.offset;
+    const start = heading.position?.start.offset;
+    const end = heading.position?.end.offset;
     if (start === undefined || end === undefined) return false;
 
     const source = text.slice(start, end);

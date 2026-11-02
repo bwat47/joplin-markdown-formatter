@@ -31,8 +31,8 @@ export const emphasisStyle: Rule = {
             if (node.type !== 'emphasis' && node.type !== 'strong') return;
             const target = node.type === 'strong' ? options.strongMarker : options.emphasisMarker;
             const width = target.length;
-            const start = node.position?.start?.offset;
-            const end = node.position?.end?.offset;
+            const start = node.position?.start.offset;
+            const end = node.position?.end.offset;
             if (start === undefined || end === undefined) return;
 
             const opening = text.slice(start, start + width);

@@ -12,8 +12,8 @@ import { walkWithAncestors } from '../walk';
 function* adjacentGaps(nodes: readonly Node[]): Generator<[number, number]> {
     let previous: Node | undefined;
     for (const node of nodes) {
-        const from = previous?.position?.end?.offset;
-        const to = node.position?.start?.offset;
+        const from = previous?.position?.end.offset;
+        const to = node.position?.start.offset;
         previous = node;
         if (from !== undefined && to !== undefined) yield [from, to];
     }

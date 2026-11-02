@@ -25,8 +25,8 @@ export const thematicBreaks: Rule = {
 
         walk(tree, (node) => {
             if (node.type !== 'thematicBreak') return;
-            const start = node.position?.start?.offset;
-            const end = node.position?.end?.offset;
+            const start = node.position?.start.offset;
+            const end = node.position?.end.offset;
             if (start === undefined || end === undefined) return;
 
             const current = text.slice(start, end);

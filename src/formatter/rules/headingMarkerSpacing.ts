@@ -16,8 +16,8 @@ export const headingMarkerSpacing: Rule = {
         walk(tree, (node) => {
             if (node.type !== 'heading') return;
 
-            const start = node.position?.start?.offset;
-            const end = node.position?.end?.offset;
+            const start = node.position?.start.offset;
+            const end = node.position?.end.offset;
             if (start === undefined || end === undefined) return;
 
             addAtxHeadingSpacingEdits(text, start, end, edits);

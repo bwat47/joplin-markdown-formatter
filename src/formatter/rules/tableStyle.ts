@@ -64,8 +64,8 @@ export const tableStyle: Rule = {
 
             // The delimiter row is the one inside this table's span; tables
             // cannot nest, so there is exactly one.
-            const tableStart = table.position?.start?.offset;
-            const tableEnd = table.position?.end?.offset;
+            const tableStart = table.position?.start.offset;
+            const tableEnd = table.position?.end.offset;
             if (tableStart === undefined || tableEnd === undefined) return;
             const delimiter = tableDelimiterRows.find((row) => row.start >= tableStart && row.end <= tableEnd);
             if (!delimiter) return;
@@ -74,8 +74,8 @@ export const tableStyle: Rule = {
             // rewriting some rows and not the delimiter row would corrupt it.
             const rowEdits: Edit[] = [];
             for (const [index, row] of rows.entries()) {
-                const start = row.position?.start?.offset;
-                const end = row.position?.end?.offset;
+                const start = row.position?.start.offset;
+                const end = row.position?.end.offset;
                 if (start === undefined || end === undefined) return;
                 // cellTexts is mapped one-to-one from rows above.
                 const cells = cellTexts[index]!;
@@ -110,8 +110,8 @@ export const tableStyle: Rule = {
 
 /** Cell source text with the boundary pipes and surrounding whitespace stripped. */
 function extractCellText(text: string, cell: TableRow['children'][number]): string {
-    const start = cell.position?.start?.offset;
-    const end = cell.position?.end?.offset;
+    const start = cell.position?.start.offset;
+    const end = cell.position?.end.offset;
     if (start === undefined || end === undefined) return '';
     let raw = text.slice(start, end);
     if (raw.startsWith('|')) raw = raw.slice(1);

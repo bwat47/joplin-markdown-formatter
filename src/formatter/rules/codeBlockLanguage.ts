@@ -30,7 +30,7 @@ export const codeBlockLanguage: Rule = {
             const code = node as Code;
             if (code.lang) return;
 
-            const start = code.position?.start?.offset;
+            const start = code.position?.start.offset;
             if (start === undefined) return;
 
             const lineIndex = lineIndexOfOffset(lineStarts, start);

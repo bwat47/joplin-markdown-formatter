@@ -14,8 +14,8 @@ export const headingIndentation: Rule = {
         for (const node of tree.children) {
             if (node.type !== 'heading') continue;
 
-            const start = node.position?.start?.offset;
-            const end = node.position?.end?.offset;
+            const start = node.position?.start.offset;
+            const end = node.position?.end.offset;
             if (start === undefined || end === undefined) continue;
 
             if (!/^#{1,6}(?:[\t ]|$)/.test(text.slice(start, end))) continue; // Setext heading.
