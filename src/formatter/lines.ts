@@ -1,7 +1,7 @@
 /**
  * Start offset of every line in `text` (line i spans [starts[i], starts[i + 1] ?? text.length)).
- * Always contains offset 0, including for empty text. Indices returned by
- * {@link lineIndexOfOffset} and indices within this array's bounds have an offset.
+ * Always non-empty (offset 0 is present even for empty text), so any index
+ * returned by {@link lineIndexOfOffset} is in range.
  */
 export function computeLineStarts(text: string): number[] {
     const starts = [0];
