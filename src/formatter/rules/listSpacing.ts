@@ -10,9 +10,11 @@ import { walkWithAncestors } from '../walk';
  * Pairs where either position is missing are skipped.
  */
 function* adjacentGaps(nodes: readonly Node[]): Generator<[number, number]> {
-    for (let i = 0; i < nodes.length - 1; i++) {
-        const from = nodes[i].position?.end?.offset;
-        const to = nodes[i + 1].position?.start?.offset;
+    let previous: Node | undefined;
+    for (const node of nodes) {
+        const from = previous?.position?.end?.offset;
+        const to = node.position?.start?.offset;
+        previous = node;
         if (from !== undefined && to !== undefined) yield [from, to];
     }
 }
@@ -61,6 +63,7 @@ export const listSpacing: Rule = {
 
     apply({ text, tree, options }: RuleContext): Edit[] {
         const edits: Edit[] = [];
+        // All indexed starts below use lineIndexOfOffset or indices between its results.
         const lineStarts = computeLineStarts(text);
         const lineEnd = (i: number): number => lineStarts[i + 1] ?? text.length;
 
@@ -69,8 +72,8 @@ export const listSpacing: Rule = {
             const firstLine = lineIndexOfOffset(lineStarts, fromOffset) + 1;
             const lastLine = lineIndexOfOffset(lineStarts, toOffset) - 1;
             for (let i = firstLine; i <= lastLine; i++) {
-                if (isBlankLine(text, lineStarts[i], lineEnd(i))) {
-                    edits.push({ start: lineStarts[i], end: lineEnd(i), replacement: '' });
+                if (isBlankLine(text, lineStarts[i]!, lineEnd(i))) {
+                    edits.push({ start: lineStarts[i]!, end: lineEnd(i), replacement: '' });
                 }
             }
         };
@@ -80,7 +83,7 @@ export const listSpacing: Rule = {
             const firstLine = lineIndexOfOffset(lineStarts, fromOffset) + 1;
             const lastLine = lineIndexOfOffset(lineStarts, toOffset) - 1;
             for (let i = firstLine; i <= lastLine; i++) {
-                if (isBlankLine(text, lineStarts[i], lineEnd(i))) return true;
+                if (isBlankLine(text, lineStarts[i]!, lineEnd(i))) return true;
             }
             return false;
         };
@@ -88,7 +91,7 @@ export const listSpacing: Rule = {
         const insertedLineStarts = new Set<number>();
         const ensureBlankLineBetween = (fromOffset: number, toOffset: number): void => {
             if (hasBlankLineBetween(fromOffset, toOffset)) return;
-            const nextLineStart = lineStarts[lineIndexOfOffset(lineStarts, toOffset)];
+            const nextLineStart = lineStarts[lineIndexOfOffset(lineStarts, toOffset)]!;
             if (insertedLineStarts.has(nextLineStart)) return;
             insertedLineStarts.add(nextLineStart);
             edits.push({ start: nextLineStart, end: nextLineStart, replacement: '\n' });

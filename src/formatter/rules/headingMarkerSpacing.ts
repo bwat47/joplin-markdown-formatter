@@ -33,7 +33,8 @@ function addAtxHeadingSpacingEdits(text: string, start: number, end: number, edi
     const opening = /^( {0,3}#{1,6})([\t ]+)/.exec(source);
     if (!opening) return; // Setext heading.
 
-    addSeparatorEdit(start + opening[1].length, opening[2], edits);
+    // Both captures are required by the opening-marker pattern.
+    addSeparatorEdit(start + opening[1]!.length, opening[2]!, edits);
 
     // Only the last whitespace character before the closing sequence is matched
     // (`[\t ]+` here would backtrack quadratically over a long whitespace run);

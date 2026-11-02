@@ -27,9 +27,10 @@ export const headingLevels: Rule = {
         walk(tree, (node) => {
             if (node.type === 'heading') headings.push(node as Heading);
         });
-        if (headings.length === 0) return [];
+        const firstHeading = headings[0];
+        if (!firstHeading) return [];
 
-        const { baseline, shift } = baselineFor(options.minimumHeadingLevel, headings[0].depth);
+        const { baseline, shift } = baselineFor(options.minimumHeadingLevel, firstHeading.depth);
         const edits: Edit[] = [];
         let previousDepth: number | undefined;
 
@@ -82,7 +83,7 @@ function addAtxHeadingEdits(text: string, heading: Heading, desiredDepth: number
     if (!opening) return false;
 
     const marker = '#'.repeat(desiredDepth);
-    edits.push({ start, end: start + opening[1].length, replacement: marker });
+    edits.push({ start, end: start + opening[0].length, replacement: marker });
 
     // Only the last whitespace character before the closing sequence is matched:
     // `[\t ]+` here would backtrack quadratically over a long whitespace run.
@@ -90,6 +91,7 @@ function addAtxHeadingEdits(text: string, heading: Heading, desiredDepth: number
     if (!closing) return true;
 
     const closingStart = start + closing.index + 1;
-    edits.push({ start: closingStart, end: closingStart + closing[1].length, replacement: marker });
+    // Capture 1 is required by the closing-marker pattern.
+    edits.push({ start: closingStart, end: closingStart + closing[1]!.length, replacement: marker });
     return true;
 }

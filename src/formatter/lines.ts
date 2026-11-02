@@ -1,4 +1,8 @@
-/** Start offset of every line in `text` (line i spans [starts[i], starts[i + 1] ?? text.length)). */
+/**
+ * Start offset of every line in `text` (line i spans [starts[i], starts[i + 1] ?? text.length)).
+ * Always contains offset 0, including for empty text. Indices returned by
+ * {@link lineIndexOfOffset} and indices within this array's bounds have an offset.
+ */
 export function computeLineStarts(text: string): number[] {
     const starts = [0];
     for (let i = 0; i < text.length; i++) {
@@ -27,7 +31,7 @@ export function isBlankLine(text: string, lineStart: number, lineEnd: number): b
  */
 export function trailingWhitespaceStart(text: string, whitespace = ' \t'): number {
     let start = text.length;
-    while (start > 0 && whitespace.includes(text[start - 1])) start--;
+    while (start > 0 && whitespace.includes(text.charAt(start - 1))) start--;
     return start;
 }
 
@@ -37,7 +41,8 @@ export function lineIndexOfOffset(lineStarts: number[], offset: number): number 
     let high = lineStarts.length - 1;
     while (low < high) {
         const mid = Math.ceil((low + high) / 2);
-        if (lineStarts[mid] <= offset) low = mid;
+        // mid lies between low and high, within the supplied line starts.
+        if (lineStarts[mid]! <= offset) low = mid;
         else high = mid - 1;
     }
     return low;

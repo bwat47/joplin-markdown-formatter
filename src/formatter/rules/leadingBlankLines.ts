@@ -25,7 +25,7 @@ export const leadingBlankLines: Rule = {
     apply({ text }: RuleContext): Edit[] {
         // End of the leading run of spaces, tabs, and newlines, e.g. "\n\n  text" -> 2 + 2.
         let runEnd = 0;
-        while (runEnd < text.length && ' \t\r\n'.includes(text[runEnd])) runEnd++;
+        while (runEnd < text.length && ' \t\r\n'.includes(text.charAt(runEnd))) runEnd++;
 
         const cut = text.lastIndexOf('\n', runEnd - 1) + 1;
         if (cut === 0 || FRONTMATTER_FENCE.test(text.slice(cut))) return [];

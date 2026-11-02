@@ -39,12 +39,13 @@ export const tableStyle: Rule = {
             if (ancestors.some((ancestor) => ancestor.type === 'blockquote')) return;
             const table = node as Table;
             const rows = table.children;
-            if (rows.length === 0) return;
 
             const cellTexts = rows.map((row) => row.children.map((cell) => extractCellText(text, cell)));
             // The delimiter row defines the table's columns; a ragged row keeps
             // exactly the cells it was written with (see renderRow).
-            const columnCount = table.align?.length ?? cellTexts[0].length;
+            const firstCells = cellTexts[0];
+            if (!firstCells) return;
+            const columnCount = table.align?.length ?? firstCells.length;
             const align: AlignType[] = Array.from({ length: columnCount }, (_, i) => table.align?.[i] ?? null);
 
             // Compact style never pads cells (width 0 is a no-op for pad())
@@ -76,7 +77,8 @@ export const tableStyle: Rule = {
                 const start = row.position?.start?.offset;
                 const end = row.position?.end?.offset;
                 if (start === undefined || end === undefined) return;
-                const cells = cellTexts[index];
+                // cellTexts is mapped one-to-one from rows above.
+                const cells = cellTexts[index]!;
                 if (cells.length === 0) continue;
                 const replacement = renderRow(cells);
                 if (text.slice(start, end) !== replacement) {
@@ -85,9 +87,12 @@ export const tableStyle: Rule = {
             }
             edits.push(...rowEdits);
 
+            // widths is mapped one-to-one from align above.
             const delimiterRow =
                 '| ' +
-                align.map((a, col) => (compact ? compactDelimiterCell(a) : delimiterCell(widths[col], a))).join(' | ') +
+                align
+                    .map((a, col) => (compact ? compactDelimiterCell(a) : delimiterCell(widths[col]!, a)))
+                    .join(' | ') +
                 ' |';
             // The row's own indentation is kept, like every other row's; its
             // trailing whitespace is replaced along with the cells.

@@ -27,7 +27,8 @@ export const collapseBlankLines: Rule = {
             // runEndLine is the first line index after the run.
             if (runStart === -1) return;
             const runLength = runEndLine - runStart;
-            const start = lineStarts[runStart];
+            // runStart was recorded while iterating these line starts.
+            const start = lineStarts[runStart]!;
             const end = lineEnd(runEndLine - 1);
             runStart = -1;
             if (runLength < 2) return;
@@ -35,8 +36,8 @@ export const collapseBlankLines: Rule = {
             edits.push({ start, end, replacement: '\n' });
         };
 
-        for (let i = 0; i < lineStarts.length; i++) {
-            if (isBlankLine(text, lineStarts[i], lineEnd(i))) {
+        for (const [i, start] of lineStarts.entries()) {
+            if (isBlankLine(text, start, lineEnd(i))) {
                 if (runStart === -1) runStart = i;
             } else {
                 flushRun(i);

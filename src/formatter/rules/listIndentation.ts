@@ -175,8 +175,9 @@ function continuationEdits(
     const nested = nestedListSpans(ctx, item, depth, layout.newContentCol);
     const edits = new Map<number, Edit | null>();
 
+    // Both endpoints come from lineIndexOfOffset over ctx.lineStarts.
     for (let line = layout.markerLine + 1; line <= layout.lastLine; line++) {
-        const start = ctx.lineStarts[line];
+        const start = ctx.lineStarts[line]!;
         const end = ctx.lineStarts[line + 1] ?? ctx.text.length;
         const blank = isBlankLine(ctx.text, start, end);
         const ws = leadingWhitespace(ctx.text, start, end);
@@ -368,9 +369,10 @@ function measureItem(ctx: ListContext, list: List, item: ListItem, indentCols: n
     const taskMarker = matchTaskMarker(text, item, contentOffset);
 
     const markerLine = lineIndexOfOffset(lineStarts, startOffset);
-    const markerEndCol = columnWidth(text.slice(lineStarts[markerLine], startOffset + marker.length));
+    const markerLineStart = lineStarts[markerLine]!; // lineIndexOfOffset returns an index in lineStarts.
+    const markerEndCol = columnWidth(text.slice(markerLineStart, startOffset + marker.length));
     // An empty marker line's content column is markerEnd + 1 per CommonMark.
-    const oldContentCol = emptyItem ? markerEndCol + 1 : columnWidth(text.slice(lineStarts[markerLine], contentOffset));
+    const oldContentCol = emptyItem ? markerEndCol + 1 : columnWidth(text.slice(markerLineStart, contentOffset));
     // More than 4 columns after the marker means the item starts with
     // indented code; collapsing that spacing would change meaning.
     if (!emptyItem && oldContentCol - markerEndCol > 4) return null;
@@ -387,7 +389,7 @@ function measureItem(ctx: ListContext, list: List, item: ListItem, indentCols: n
     return {
         markerLine,
         lastLine: lineIndexOfOffset(lineStarts, Math.max(endOffset - 1, startOffset)),
-        markerEdit: markerEdit(ctx, lineStarts[markerLine], {
+        markerEdit: markerEdit(ctx, markerLineStart, {
             contentOffset,
             marker,
             taskMarker,
@@ -427,7 +429,8 @@ function canRoundToTabStop(ctx: ListContext, item: ListItem, oldContentCol: numb
         if (startOffset === undefined) return false;
         if (lineIndexOfOffset(ctx.lineStarts, startOffset) === markerLine) return false;
         // Only a block sitting exactly on the content column shifts predictably.
-        const lineStart = ctx.lineStarts[lineIndexOfOffset(ctx.lineStarts, startOffset)];
+        // lineIndexOfOffset returns an index in these line starts.
+        const lineStart = ctx.lineStarts[lineIndexOfOffset(ctx.lineStarts, startOffset)]!;
         if (columnWidth(ctx.text.slice(lineStart, startOffset)) !== oldContentCol) return false;
 
         // A nested list is re-indented by recursion, which rounds to the same
@@ -555,7 +558,8 @@ function markerEdit(ctx: ListContext, start: number, prefix: MarkerPrefix): Edit
 function startsMidLine(text: string, lineStarts: number[], list: List): boolean {
     const startOffset = list.position?.start?.offset;
     if (startOffset === undefined) return false;
-    const lineStart = lineStarts[lineIndexOfOffset(lineStarts, startOffset)];
+    // lineIndexOfOffset returns an index in these line starts.
+    const lineStart = lineStarts[lineIndexOfOffset(lineStarts, startOffset)]!;
     return /\S/.test(text.slice(lineStart, startOffset));
 }
 

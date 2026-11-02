@@ -121,9 +121,10 @@ function collectLineEdits(
     lineEndOffset: number,
     protectedRanges: OffsetRange[]
 ): Edit[] | null {
-    if (markers.length === 0) return []; // lazy continuation line, no marker to normalize
+    const lastMarker = markers[markers.length - 1];
+    if (!lastMarker) return []; // lazy continuation line, no marker to normalize
 
-    const markerEnd = markers[markers.length - 1].end;
+    const markerEnd = lastMarker.end;
 
     // The marker's position itself sits inside literal content that started
     // on an earlier line (e.g. an interior line of a fenced/indented code
@@ -136,8 +137,10 @@ function collectLineEdits(
     // Between two structural markers is always pure whitespace, and any gap
     // the parser accepted is within the per-level budget, so shrinking it to
     // one space never changes what the next parse recognizes.
-    for (let i = 0; i < markers.length - 1; i++) {
-        edits.push({ start: markers[i].end, end: markers[i + 1].start, replacement: ' ' });
+    let previous: OffsetRange | undefined;
+    for (const marker of markers) {
+        if (previous) edits.push({ start: previous.end, end: marker.start, replacement: ' ' });
+        previous = marker;
     }
 
     const wsMatch = /^[ \t]*/.exec(text.slice(markerEnd, lineEndOffset))!;
