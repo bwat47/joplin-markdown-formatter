@@ -49,6 +49,16 @@ export function lineIndexOfOffset(lineStarts: number[], offset: number): number 
 }
 
 /**
+ * Start offset of line `index`. Throws rather than returning `undefined` so an
+ * out-of-range index fails loudly instead of producing `NaN` edit offsets.
+ */
+export function lineStartAt(lineStarts: readonly number[], index: number): number {
+    const start = lineStarts[index];
+    if (start === undefined) throw new Error(`Line index ${index} out of range`);
+    return start;
+}
+
+/**
  * Display width of a line prefix, expanding tabs to the next multiple of
  * `tabSize` (CommonMark uses a tab stop of 4). Non-tab characters count as
  * one column each, e.g. `columnWidth('\t- ') === 6`.

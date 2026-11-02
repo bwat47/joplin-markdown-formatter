@@ -1,4 +1,4 @@
-import { computeLineStarts, isBlankLine } from '../lines';
+import { computeLineStarts, isBlankLine, lineStartAt } from '../lines';
 import { getProtectedRanges, intersectsProtectedRange } from '../protectedRanges';
 import type { Edit, Rule, RuleContext } from '../types';
 
@@ -27,8 +27,7 @@ export const collapseBlankLines: Rule = {
             // runEndLine is the first line index after the run.
             if (runStart === -1) return;
             const runLength = runEndLine - runStart;
-            // runStart was recorded while iterating these line starts.
-            const start = lineStarts[runStart]!;
+            const start = lineStartAt(lineStarts, runStart);
             const end = lineEnd(runEndLine - 1);
             runStart = -1;
             if (runLength < 2) return;

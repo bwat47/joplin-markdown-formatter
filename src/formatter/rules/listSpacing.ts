@@ -1,7 +1,7 @@
 import type { List, ListItem } from 'mdast';
 import type { Node } from 'unist';
 
-import { computeLineStarts, isBlankLine, lineIndexOfOffset } from '../lines';
+import { computeLineStarts, isBlankLine, lineIndexOfOffset, lineStartAt } from '../lines';
 import type { Edit, Rule, RuleContext } from '../types';
 import { walkWithAncestors } from '../walk';
 
@@ -63,7 +63,6 @@ export const listSpacing: Rule = {
 
     apply({ text, tree, options }: RuleContext): Edit[] {
         const edits: Edit[] = [];
-        // All indexed starts below use lineIndexOfOffset or indices between its results.
         const lineStarts = computeLineStarts(text);
         const lineEnd = (i: number): number => lineStarts[i + 1] ?? text.length;
 
@@ -72,8 +71,8 @@ export const listSpacing: Rule = {
             const firstLine = lineIndexOfOffset(lineStarts, fromOffset) + 1;
             const lastLine = lineIndexOfOffset(lineStarts, toOffset) - 1;
             for (let i = firstLine; i <= lastLine; i++) {
-                if (isBlankLine(text, lineStarts[i]!, lineEnd(i))) {
-                    edits.push({ start: lineStarts[i]!, end: lineEnd(i), replacement: '' });
+                if (isBlankLine(text, lineStartAt(lineStarts, i), lineEnd(i))) {
+                    edits.push({ start: lineStartAt(lineStarts, i), end: lineEnd(i), replacement: '' });
                 }
             }
         };
@@ -83,7 +82,7 @@ export const listSpacing: Rule = {
             const firstLine = lineIndexOfOffset(lineStarts, fromOffset) + 1;
             const lastLine = lineIndexOfOffset(lineStarts, toOffset) - 1;
             for (let i = firstLine; i <= lastLine; i++) {
-                if (isBlankLine(text, lineStarts[i]!, lineEnd(i))) return true;
+                if (isBlankLine(text, lineStartAt(lineStarts, i), lineEnd(i))) return true;
             }
             return false;
         };
@@ -91,7 +90,7 @@ export const listSpacing: Rule = {
         const insertedLineStarts = new Set<number>();
         const ensureBlankLineBetween = (fromOffset: number, toOffset: number): void => {
             if (hasBlankLineBetween(fromOffset, toOffset)) return;
-            const nextLineStart = lineStarts[lineIndexOfOffset(lineStarts, toOffset)]!;
+            const nextLineStart = lineStartAt(lineStarts, lineIndexOfOffset(lineStarts, toOffset));
             if (insertedLineStarts.has(nextLineStart)) return;
             insertedLineStarts.add(nextLineStart);
             edits.push({ start: nextLineStart, end: nextLineStart, replacement: '\n' });

@@ -1,6 +1,6 @@
 import type { Node } from 'unist';
 
-import { computeLineStarts, isBlankLine, lineIndexOfOffset } from '../lines';
+import { computeLineStarts, isBlankLine, lineIndexOfOffset, lineStartAt } from '../lines';
 import type { Edit, FormatterOptions, Rule, RuleContext } from '../types';
 import { walkWithAncestors } from '../walk';
 
@@ -80,22 +80,25 @@ export function addSpacingAbove(
     lineIndex: number,
     addEdit: (edit: Edit) => void
 ): void {
-    // lineIndex is a valid index from lineIndexOfOffset; scans stay within the array.
     if (lineIndex === 0) return;
 
     const previous = lineIndex - 1;
-    if (!isBlankLine(text, lineStarts[previous]!, lineEnd(previous))) {
-        addEdit({ start: lineStarts[lineIndex]!, end: lineStarts[lineIndex]!, replacement: '\n' });
+    if (!isBlankLine(text, lineStartAt(lineStarts, previous), lineEnd(previous))) {
+        addEdit({
+            start: lineStartAt(lineStarts, lineIndex),
+            end: lineStartAt(lineStarts, lineIndex),
+            replacement: '\n',
+        });
         return;
     }
 
     let runStart = previous;
-    while (runStart > 0 && isBlankLine(text, lineStarts[runStart - 1]!, lineEnd(runStart - 1))) {
+    while (runStart > 0 && isBlankLine(text, lineStartAt(lineStarts, runStart - 1), lineEnd(runStart - 1))) {
         runStart--;
     }
     if (runStart === 0) return;
 
-    addEdit({ start: lineStarts[runStart]!, end: lineStarts[lineIndex]!, replacement: '\n' });
+    addEdit({ start: lineStartAt(lineStarts, runStart), end: lineStartAt(lineStarts, lineIndex), replacement: '\n' });
 }
 
 export function addSpacingBelow(
@@ -105,21 +108,20 @@ export function addSpacingBelow(
     lineIndex: number,
     addEdit: (edit: Edit) => void
 ): void {
-    // lineIndex is a valid index from lineIndexOfOffset; scans stay within the array.
     const next = lineIndex + 1;
     if (next >= lineStarts.length) return;
 
-    if (!isBlankLine(text, lineStarts[next]!, lineEnd(next))) {
+    if (!isBlankLine(text, lineStartAt(lineStarts, next), lineEnd(next))) {
         const insertAt = lineEnd(lineIndex);
         addEdit({ start: insertAt, end: insertAt, replacement: '\n' });
         return;
     }
 
     let runEnd = next + 1;
-    while (runEnd < lineStarts.length && isBlankLine(text, lineStarts[runEnd]!, lineEnd(runEnd))) {
+    while (runEnd < lineStarts.length && isBlankLine(text, lineStartAt(lineStarts, runEnd), lineEnd(runEnd))) {
         runEnd++;
     }
     if (runEnd === lineStarts.length) return;
 
-    addEdit({ start: lineStarts[next]!, end: lineStarts[runEnd]!, replacement: '\n' });
+    addEdit({ start: lineStartAt(lineStarts, next), end: lineStartAt(lineStarts, runEnd), replacement: '\n' });
 }

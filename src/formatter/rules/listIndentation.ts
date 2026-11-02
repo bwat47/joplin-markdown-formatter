@@ -1,6 +1,13 @@
 import type { List, ListItem } from 'mdast';
 
-import { columnWidth, computeLineStarts, indentBeyondColumn, isBlankLine, lineIndexOfOffset } from '../lines';
+import {
+    columnWidth,
+    computeLineStarts,
+    indentBeyondColumn,
+    isBlankLine,
+    lineIndexOfOffset,
+    lineStartAt,
+} from '../lines';
 import { getProtectedRanges, intersectsProtectedRange, type OffsetRange } from '../protectedRanges';
 import type { Edit, Indentation, Rule, RuleContext } from '../types';
 
@@ -175,9 +182,8 @@ function continuationEdits(
     const nested = nestedListSpans(ctx, item, depth, layout.newContentCol);
     const edits = new Map<number, Edit | null>();
 
-    // Both endpoints come from lineIndexOfOffset over ctx.lineStarts.
     for (let line = layout.markerLine + 1; line <= layout.lastLine; line++) {
-        const start = ctx.lineStarts[line]!;
+        const start = lineStartAt(ctx.lineStarts, line);
         const end = ctx.lineStarts[line + 1] ?? ctx.text.length;
         const blank = isBlankLine(ctx.text, start, end);
         const ws = leadingWhitespace(ctx.text, start, end);
@@ -369,7 +375,7 @@ function measureItem(ctx: ListContext, list: List, item: ListItem, indentCols: n
     const taskMarker = matchTaskMarker(text, item, contentOffset);
 
     const markerLine = lineIndexOfOffset(lineStarts, startOffset);
-    const markerLineStart = lineStarts[markerLine]!; // lineIndexOfOffset returns an index in lineStarts.
+    const markerLineStart = lineStartAt(lineStarts, markerLine);
     const markerEndCol = columnWidth(text.slice(markerLineStart, startOffset + marker.length));
     // An empty marker line's content column is markerEnd + 1 per CommonMark.
     const oldContentCol = emptyItem ? markerEndCol + 1 : columnWidth(text.slice(markerLineStart, contentOffset));
@@ -429,8 +435,7 @@ function canRoundToTabStop(ctx: ListContext, item: ListItem, oldContentCol: numb
         if (startOffset === undefined) return false;
         if (lineIndexOfOffset(ctx.lineStarts, startOffset) === markerLine) return false;
         // Only a block sitting exactly on the content column shifts predictably.
-        // lineIndexOfOffset returns an index in these line starts.
-        const lineStart = ctx.lineStarts[lineIndexOfOffset(ctx.lineStarts, startOffset)]!;
+        const lineStart = lineStartAt(ctx.lineStarts, lineIndexOfOffset(ctx.lineStarts, startOffset));
         if (columnWidth(ctx.text.slice(lineStart, startOffset)) !== oldContentCol) return false;
 
         // A nested list is re-indented by recursion, which rounds to the same
@@ -558,8 +563,7 @@ function markerEdit(ctx: ListContext, start: number, prefix: MarkerPrefix): Edit
 function startsMidLine(text: string, lineStarts: number[], list: List): boolean {
     const startOffset = list.position?.start?.offset;
     if (startOffset === undefined) return false;
-    // lineIndexOfOffset returns an index in these line starts.
-    const lineStart = lineStarts[lineIndexOfOffset(lineStarts, startOffset)]!;
+    const lineStart = lineStartAt(lineStarts, lineIndexOfOffset(lineStarts, startOffset));
     return /\S/.test(text.slice(lineStart, startOffset));
 }
 
