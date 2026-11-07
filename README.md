@@ -100,7 +100,7 @@ Protected content such as fenced code blocks, indented code blocks, inline code,
 
 ## Development
 
-Install dependencies:
+Requires Node 22 or later. Install dependencies:
 
 ```bash
 npm install
@@ -112,7 +112,7 @@ Run tests:
 npm test
 ```
 
-Lint TypeScript:
+Lint TypeScript and build scripts:
 
 ```bash
 npm run lint
@@ -124,7 +124,7 @@ Build the plugin archive:
 npm run dist
 ```
 
-The distributable `.jpl` archive is created under `publish/`.
+The distributable `.jpl` archive is created under `publish/`. See [Building the plugin](docs/BUILDING.md) for build details and version/API maintenance commands.
 
 ## License
 

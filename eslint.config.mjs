@@ -12,7 +12,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig([
-    globalIgnores(['api/**', 'dist/**', 'webpack.config.js']),
+    globalIgnores(['api/**', '.api-staging-*/**', 'dist/**']),
 
     js.configs.recommended,
     sonarjs.configs.recommended,
@@ -63,10 +63,11 @@ export default defineConfig([
         },
     },
 
-    // JavaScript config files do not need typed linting.
+    // Node build scripts and JavaScript config files do not need typed linting.
     {
-        files: ['**/*.js'],
+        files: ['**/*.{js,mjs,cjs}'],
         extends: [tseslint.configs.disableTypeChecked],
+        languageOptions: { globals: globals.node },
     },
 
     // Vitest tests use an assertion-aware version of the unbound-method rule.
