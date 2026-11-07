@@ -1,2 +1,3 @@
 api/
-*.md
+package-lock.json
+src/formatter/fixtures/**/*.md

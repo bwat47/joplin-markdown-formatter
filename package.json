@@ -8,7 +8,8 @@
         "update": "npm install -g generator-joplin && yo joplin --node-package-manager npm --update --force",
         "lint": "eslint --ext .ts src/",
         "lint:fix": "eslint --ext .ts src/ --fix",
-        "format": "prettier --write \"src/**/*.ts\"",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
         "test": "vitest run",
         "test:watch": "vitest",
         "knip": "knip"
