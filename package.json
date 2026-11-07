@@ -2,16 +2,16 @@
     "name": "joplin-plugin-markdown-formatter",
     "version": "1.6.12",
     "scripts": {
-        "dist": "npm run typecheck && node scripts/build.mjs",
+        "dist": "npm run typecheck && joplin-plugin-scripts build",
         "prepare": "npm run dist",
-        "updateVersion": "node scripts/updateVersion.mjs",
-        "updateApi": "node scripts/updateApi.mjs",
+        "updateVersion": "joplin-plugin-scripts update-version",
+        "updateApi": "joplin-plugin-scripts update-api",
         "typecheck": "tsc --noEmit",
-        "lint": "eslint src/ scripts/",
-        "lint:fix": "eslint src/ scripts/ --fix",
+        "lint": "eslint src/ test/",
+        "lint:fix": "eslint src/ test/ --fix",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "test": "vitest run && node --test scripts/*.test.mjs",
+        "test": "vitest run && node --test test/*.test.mjs",
         "test:watch": "vitest",
         "knip": "knip"
     },
@@ -26,6 +26,7 @@
         "publish"
     ],
     "devDependencies": {
+        "@bwat47/joplin-plugin-scripts": "^1.0.0",
         "@eslint/js": "^10.0.1",
         "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
         "@types/mdast": "^4.0.4",
@@ -42,7 +43,6 @@
         "globals": "^17.6.0",
         "knip": "^6.44.2",
         "prettier": "^3.9.10",
-        "tar": "^7.5.9",
         "typescript": "^6.0.3",
         "typescript-eslint": "8.72.1",
         "vitest": "^5.1.0"
