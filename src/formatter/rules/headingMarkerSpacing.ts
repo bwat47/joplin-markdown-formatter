@@ -39,7 +39,7 @@ function addAtxHeadingSpacingEdits(text: string, start: number, end: number, edi
     // Only the last whitespace character before the closing sequence is matched
     // (`[\t ]+` here would backtrack quadratically over a long whitespace run);
     // the rest of the separator is found by scanning back from the markers.
-    const closing = /[\t ](#+)[\t ]*$/.exec(source);
+    const closing = /[\t ]#+[\t ]*$/.exec(source);
     if (!closing) return;
 
     const markerStart = closing.index + 1;

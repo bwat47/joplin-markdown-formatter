@@ -79,7 +79,7 @@ function addAtxHeadingEdits(text: string, heading: Heading, desiredDepth: number
     if (start === undefined || end === undefined) return false;
 
     const source = text.slice(start, end);
-    const opening = /^(#{1,6})(?=[\t ]|$)/.exec(source);
+    const opening = /^#{1,6}(?=[\t ]|$)/.exec(source);
     if (!opening) return false;
 
     const marker = '#'.repeat(desiredDepth);

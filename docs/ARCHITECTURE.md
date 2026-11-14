@@ -97,7 +97,7 @@ Rule-specific behavior and defaults belong with the option types, settings defin
 
 The formatter and diff engine are pure modules and are tested without Joplin. Formatter fixtures under [`src/formatter/fixtures/`](../src/formatter/fixtures/) assert both expected output and idempotency; focused unit tests cover edit validation, structural verification, individual rules, editor integration, and diff rendering.
 
-The shared `@bwat47/joplin-plugin-scripts` package bundles the plugin and the content scripts registered in [`plugin.config.json`](../plugin.config.json) with esbuild, copies runtime assets from `src/`, and creates the `.jpl` archive and publish metadata. Test files and formatter fixtures are excluded from the packaged plugin. See [BUILDING.md](BUILDING.md) for build and maintenance commands.
+The shared `@bwat47/joplin-plugin-scripts` package bundles the plugin and the content scripts registered in [`plugin.config.json`](../plugin.config.json) with esbuild, copies runtime assets from `src/`, and creates the `.jpl` archive and publish metadata. Test files and formatter fixtures are excluded from the packaged plugin. `npm run dist` typechecks first, then delegates to that package; build, packaging, version, and API-update behavior lives there rather than in local scripts. Content scripts target the browser and keep Joplin's CodeMirror and Lezer libraries external.
 
 ## Adding a formatter rule
 

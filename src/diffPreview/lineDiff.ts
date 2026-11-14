@@ -210,27 +210,37 @@ function groupIntoHunks(lines: AnchoredLine[], contextLines: number): DiffHunk[]
         }
 
         const start = Math.max(0, index - contextLines);
-        let lastChange = index;
-        let cursor = index + 1;
-        while (cursor < lines.length) {
-            if (lines[cursor]!.kind !== 'context') {
-                lastChange = cursor;
-                cursor += 1;
-                continue;
-            }
-            let run = 0;
-            while (cursor + run < lines.length && lines[cursor + run]!.kind === 'context') run += 1;
-            // A long run ends the hunk; so does a run that reaches the end of
-            // the document, since there is no further change to absorb.
-            if (run > contextLines * 2 || cursor + run >= lines.length) break;
-            cursor += run;
-        }
-
+        const lastChange = findLastChangeInHunk(lines, index, contextLines);
         const end = Math.min(lines.length, lastChange + 1 + contextLines);
         hunks.push(toHunk(lines.slice(start, end)));
         index = end;
     }
     return hunks;
+}
+
+/**
+ * Returns the index of the last changed line in the hunk that starts with the
+ * change at `firstChange`, absorbing later changes separated by no more than
+ * twice `contextLines` of unchanged text.
+ */
+function findLastChangeInHunk(lines: AnchoredLine[], firstChange: number, contextLines: number): number {
+    // Indexed reads in this scan are bounded by lines.length.
+    let lastChange = firstChange;
+    let cursor = firstChange + 1;
+    while (cursor < lines.length) {
+        if (lines[cursor]!.kind !== 'context') {
+            lastChange = cursor;
+            cursor += 1;
+            continue;
+        }
+        let run = 0;
+        while (cursor + run < lines.length && lines[cursor + run]!.kind === 'context') run += 1;
+        // A long run ends the hunk; so does a run that reaches the end of
+        // the document, since there is no further change to absorb.
+        if (run > contextLines * 2 || cursor + run >= lines.length) break;
+        cursor += run;
+    }
+    return lastChange;
 }
 
 function toHunk(lines: AnchoredLine[]): DiffHunk {

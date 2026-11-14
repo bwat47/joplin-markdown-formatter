@@ -13,6 +13,35 @@ function applyChanges(oldText: string, changes: Array<{ from: number; to: number
     return result;
 }
 
+/** Runs the content script against a fake editor and captures its registered commands. */
+function registerCommands(initialText: string) {
+    let text = initialText;
+    const commands = new Map<string, (...args: unknown[]) => unknown>();
+    const dispatch = vi.fn((spec: { changes: Array<{ from: number; to: number; insert: string }> }) => {
+        text = applyChanges(text, spec.changes);
+    });
+
+    createCodeMirrorPlugin().plugin({
+        cm6: {},
+        editor: {
+            state: {
+                doc: {
+                    toString: () => text,
+                    get length() {
+                        return text.length;
+                    },
+                },
+            },
+            dispatch,
+        },
+        registerCommand: (name: string, callback: (...args: unknown[]) => unknown) => {
+            commands.set(name, callback);
+        },
+    });
+
+    return { commands, dispatch, getText: () => text };
+}
+
 describe('computeChanges', () => {
     test('identical texts produce no changes', () => {
         expect(computeChanges('abc', 'abc')).toEqual([]);
@@ -56,34 +85,6 @@ describe('computeChanges', () => {
 });
 
 describe('CodeMirror content script commands', () => {
-    function registerCommands(initialText: string) {
-        let text = initialText;
-        const commands = new Map<string, (...args: unknown[]) => unknown>();
-        const dispatch = vi.fn((spec: { changes: Array<{ from: number; to: number; insert: string }> }) => {
-            text = applyChanges(text, spec.changes);
-        });
-
-        createCodeMirrorPlugin().plugin({
-            cm6: {},
-            editor: {
-                state: {
-                    doc: {
-                        toString: () => text,
-                        get length() {
-                            return text.length;
-                        },
-                    },
-                },
-                dispatch,
-            },
-            registerCommand: (name: string, callback: (...args: unknown[]) => unknown) => {
-                commands.set(name, callback);
-            },
-        });
-
-        return { commands, dispatch, getText: () => text };
-    }
-
     test('GET_NOTE_TEXT_COMMAND returns the current editor text', () => {
         const { commands } = registerCommands('live text');
 

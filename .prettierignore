@@ -1,4 +1,0 @@
-api/
-.api-staging-*/
-package-lock.json
-src/formatter/fixtures/**/*.md

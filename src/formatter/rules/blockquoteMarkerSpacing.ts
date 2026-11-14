@@ -146,8 +146,8 @@ function collectLineEdits(
     const wsMatch = /^[ \t]*/.exec(text.slice(markerEnd, lineEndOffset))!;
     const wsEnd = markerEnd + wsMatch[0].length;
 
-    // Cap the editable span at the nearest protected range beginning within
-    // it (e.g. the required indentation of an indented code block).
+    // Cap the editable span at the nearest protected range that begins inside
+    // the span (e.g. the required indentation of an indented code block).
     let cap = wsEnd;
     for (const range of protectedRanges) {
         if (range.start >= markerEnd && range.start < cap) cap = range.start;

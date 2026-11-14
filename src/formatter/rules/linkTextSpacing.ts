@@ -34,7 +34,7 @@ const LINE_BREAK = /[\r\n]/;
 function editableRuns(link: Link | LinkReference, text: string, region: Span): { runs: Span[]; breaks: Span[] } {
     const spans: Span[] = [];
     const breaks: Span[] = [];
-    const covered = new Array<boolean>(region.end - region.start).fill(false);
+    const covered = Array.from({ length: region.end - region.start }, () => false);
     const cover = (from: number, to: number) => {
         for (let offset = Math.max(from, region.start); offset < Math.min(to, region.end); offset += 1) {
             covered[offset - region.start] = true;

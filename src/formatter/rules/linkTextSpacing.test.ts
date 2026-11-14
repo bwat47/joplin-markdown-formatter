@@ -6,6 +6,7 @@ const options = {
 };
 
 const format = (input: string): string => expectIdempotent(input, options).text;
+const formatSpaces = (input: string): string => expectIdempotent(input, { ...options, linkTextSpacing: 'spaces' }).text;
 
 describe('linkTextSpacing', () => {
     test('trims leading and trailing whitespace inside link text', () => {
@@ -230,9 +231,6 @@ describe('linkTextSpacing', () => {
     });
 
     describe("'spaces' mode", () => {
-        const formatSpaces = (input: string): string =>
-            expectIdempotent(input, { ...options, linkTextSpacing: 'spaces' }).text;
-
         test('collapses and trims whitespace within a line', () => {
             expect(formatSpaces('[  a   link  ](https://www.example.com/)')).toBe('[a link](https://www.example.com/)');
         });

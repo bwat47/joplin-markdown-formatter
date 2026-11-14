@@ -70,21 +70,8 @@ export const tableStyle: Rule = {
             const delimiter = tableDelimiterRows.find((row) => row.start >= tableStart && row.end <= tableEnd);
             if (!delimiter) return;
 
-            // Rows are staged so a row without offsets abandons the whole table:
-            // rewriting some rows and not the delimiter row would corrupt it.
-            const rowEdits: Edit[] = [];
-            for (const [index, row] of rows.entries()) {
-                const start = row.position?.start.offset;
-                const end = row.position?.end.offset;
-                if (start === undefined || end === undefined) return;
-                // cellTexts is mapped one-to-one from rows above.
-                const cells = cellTexts[index]!;
-                if (cells.length === 0) continue;
-                const replacement = renderRow(cells);
-                if (text.slice(start, end) !== replacement) {
-                    rowEdits.push({ start, end, replacement });
-                }
-            }
+            const rowEdits = stageRowEdits(text, rows, cellTexts, renderRow);
+            if (!rowEdits) return;
             edits.push(...rowEdits);
 
             // widths is mapped one-to-one from align above.
@@ -94,19 +81,56 @@ export const tableStyle: Rule = {
                     .map((a, col) => (compact ? compactDelimiterCell(a) : delimiterCell(widths[col]!, a)))
                     .join(' | ') +
                 ' |';
-            // The row's own indentation is kept, like every other row's; its
-            // trailing whitespace is replaced along with the cells.
-            const delimiterText = text.slice(delimiter.start, delimiter.end);
-            const start = delimiter.start + delimiterText.length - delimiterText.trimStart().length;
-            const end = delimiter.end;
-            if (text.slice(start, end) !== delimiterRow) {
-                edits.push({ start, end, replacement: delimiterRow });
-            }
+            const delimiterEdit = delimiterRowEdit(text, delimiter, delimiterRow);
+            if (delimiterEdit) edits.push(delimiterEdit);
         });
 
         return edits;
     },
 };
+
+/**
+ * Edits that rewrite each row with cells to `renderRow`'s output. Rows are
+ * staged so a row without offsets abandons the whole table (returns
+ * `undefined`): rewriting some rows and not the delimiter row would corrupt it.
+ */
+function stageRowEdits(
+    text: string,
+    rows: TableRow[],
+    cellTexts: string[][],
+    renderRow: (cells: string[]) => string
+): Edit[] | undefined {
+    const rowEdits: Edit[] = [];
+    for (const [index, row] of rows.entries()) {
+        const start = row.position?.start.offset;
+        const end = row.position?.end.offset;
+        if (start === undefined || end === undefined) return undefined;
+        // cellTexts is mapped one-to-one from rows.
+        const cells = cellTexts[index]!;
+        if (cells.length === 0) continue;
+        const replacement = renderRow(cells);
+        if (text.slice(start, end) !== replacement) {
+            rowEdits.push({ start, end, replacement });
+        }
+    }
+    return rowEdits;
+}
+
+/**
+ * Replaces the delimiter row with `delimiterRow`, or returns `undefined` when it
+ * already matches. The row's own indentation is kept, like every other row's;
+ * its trailing whitespace is replaced along with the cells.
+ */
+function delimiterRowEdit(
+    text: string,
+    delimiter: { start: number; end: number },
+    delimiterRow: string
+): Edit | undefined {
+    const delimiterText = text.slice(delimiter.start, delimiter.end);
+    const start = delimiter.start + delimiterText.length - delimiterText.trimStart().length;
+    const end = delimiter.end;
+    return text.slice(start, end) === delimiterRow ? undefined : { start, end, replacement: delimiterRow };
+}
 
 /** Cell source text with the boundary pipes and surrounding whitespace stripped. */
 function extractCellText(text: string, cell: TableRow['children'][number]): string {

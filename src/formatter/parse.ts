@@ -15,11 +15,6 @@
  * and never see a parser token.
  */
 
-// Type-only: loads the GFM table token names (`tableDelimiterRow`, ...) into
-// micromark's token type map. micromark-extension-gfm bundles the table syntax
-// at runtime but does not load these typings.
-import type {} from 'micromark-extension-gfm-table';
-
 import type { Root } from 'mdast';
 import { fromMarkdown } from 'mdast-util-from-markdown';
 import { frontmatterFromMarkdown } from 'mdast-util-frontmatter';
@@ -27,6 +22,11 @@ import { gfmFromMarkdown } from 'mdast-util-gfm';
 import { mathFromMarkdown } from 'mdast-util-math';
 import { frontmatter } from 'micromark-extension-frontmatter';
 import { gfm } from 'micromark-extension-gfm';
+// Type-only: loads the GFM table token names (`tableDelimiterRow`, ...) into
+// micromark's token type map. micromark-extension-gfm bundles the table syntax
+// at runtime but does not load these typings.
+// oxlint-disable-next-line import/no-empty-named-blocks, unicorn/require-module-specifiers -- augmentation-only import
+import type {} from 'micromark-extension-gfm-table';
 import { math } from 'micromark-extension-math';
 
 import type { OffsetRange } from './protectedRanges';

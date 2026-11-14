@@ -35,7 +35,7 @@ export const codeBlockLanguage: Rule = {
 
             const lineIndex = lineIndexOfOffset(lineStarts, start);
             const openingLine = text.slice(start, lineEnd(lineIndex));
-            const match = /^([ \t]{0,3})(`{3,}|~{3,})([ \t]*)(\r?\n|$)/.exec(openingLine);
+            const match = /^([ \t]{0,3})(`{3,}|~{3,})([ \t]*)(?:\r?\n|$)/.exec(openingLine);
             if (!match) return;
 
             // All three captures participate whenever the opening fence matches.

@@ -112,10 +112,11 @@ Run tests:
 npm test
 ```
 
-Lint TypeScript and build scripts:
+Lint (Oxlint, then fallow dead-code and complexity checks) and check formatting (Oxfmt):
 
 ```bash
 npm run lint
+npm run format:check
 ```
 
 Build the plugin archive:
@@ -124,7 +125,9 @@ Build the plugin archive:
 npm run dist
 ```
 
-The distributable `.jpl` archive is created under `publish/`. See [Building the plugin](docs/BUILDING.md) for build details and version/API maintenance commands.
+The build creates the installable plugin at `publish/com.bwat47.joplin-markdown-formatter.jpl`.
+
+Before releasing, install the `.jpl` in Joplin on desktop and mobile. Check the formatting command, diff preview, guarded editor updates, and undo/redo.
 
 ## License
 
