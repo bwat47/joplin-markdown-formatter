@@ -29,7 +29,7 @@
     "devDependencies": {
         "@bwat47/joplin-plugin-scripts": "^1.5.0",
         "@types/mdast": "^4.0.4",
-        "@types/node": "^25.9.4",
+        "@types/node": "^24.19.2",
         "@types/unist": "^3.0.3",
         "eslint-plugin-regexp": "^3.3.3",
         "fallow": "^3.43.0",
