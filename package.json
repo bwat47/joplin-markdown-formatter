@@ -27,7 +27,7 @@
         "publish"
     ],
     "devDependencies": {
-        "@bwat47/joplin-plugin-scripts": "^1.8.0",
+        "@bwat47/joplin-plugin-scripts": "^2.0.0",
         "@types/mdast": "^4.0.4",
         "@types/node": "^24.19.2",
         "@types/unist": "^3.0.3",

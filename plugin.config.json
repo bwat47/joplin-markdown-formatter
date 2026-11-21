@@ -1,4 +1,5 @@
 {
     "extraScripts": ["contentScripts/codeMirror.ts"],
-    "buildOptions": { "target": "es2020" }
+    "buildOptions": { "target": "es2020" },
+    "mainBuildOptions": { "platform": "browser" }
 }
