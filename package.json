@@ -27,17 +27,17 @@
         "publish"
     ],
     "devDependencies": {
-        "@bwat47/joplin-plugin-scripts": "^1.6.0",
+        "@bwat47/joplin-plugin-scripts": "^1.8.0",
         "@types/mdast": "^4.0.4",
         "@types/node": "^24.19.2",
         "@types/unist": "^3.0.3",
         "eslint-plugin-regexp": "^3.3.3",
-        "fallow": "^3.43.0",
-        "oxfmt": "^0.78.0",
-        "oxlint": "^1.93.0",
-        "oxlint-tsgolint": "^7.0.2007",
+        "fallow": "^3.45.0",
+        "oxfmt": "^0.79.0",
+        "oxlint": "^1.94.0",
+        "oxlint-tsgolint": "^7.0.2008",
         "typescript": "^7.0.2",
-        "vitest": "^5.1.0"
+        "vitest": "^5.1.1"
     },
     "dependencies": {
         "diff-match-patch-es": "^2.0.1",
