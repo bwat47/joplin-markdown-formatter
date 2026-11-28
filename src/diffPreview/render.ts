@@ -7,7 +7,7 @@
 
 import type { DiffHunk, DiffLine } from './lineDiff';
 
-export interface DiffPreviewContent {
+interface DiffPreviewContent {
     hunks: DiffHunk[];
     /** Short change summary shown under the title, e.g. "12 characters added, 3 characters removed". */
     summary: string;

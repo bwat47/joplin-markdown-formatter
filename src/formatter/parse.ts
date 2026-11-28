@@ -37,7 +37,7 @@ const mathOptions = {
     singleDollarTextMath: false,
 };
 
-export interface ParsedMarkdown {
+interface ParsedMarkdown {
     tree: Root;
     /** Every `>` the parser matched as a blockquote marker, in source order. */
     blockquoteMarkers: OffsetRange[];

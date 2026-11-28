@@ -3,10 +3,6 @@
     "entry": ["src/index.ts", "src/contentScripts/codeMirror.ts", "src/diffPreview/styles.css"],
     "supportEntry": ["src/**/*.test.ts", "src/formatter/testUtils.ts"],
     "ignorePatterns": ["**/*.d.ts", "api/**"],
-    "ignoreExportsUsedInFile": {
-        "type": true,
-        "interface": true
-    },
     "typeAware": {
         "enabled": true
     },

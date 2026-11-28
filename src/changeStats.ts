@@ -1,6 +1,6 @@
 import { DIFF_DELETE, DIFF_INSERT, diffCleanupEfficiency, diffMain } from 'diff-match-patch-es';
 
-export interface CharacterChangeStats {
+interface CharacterChangeStats {
     added: number;
     removed: number;
 }
